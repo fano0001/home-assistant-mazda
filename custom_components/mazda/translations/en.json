@@ -87,6 +87,9 @@
             "ev_remaining_range": {
                 "name": "Remaining range"
             },
+            "ev_remaining_range_bev": {
+                "name": "Remaining range BEV"
+            },
             "front_left_tire_pressure": {
                 "name": "Front left tire pressure"
             },
