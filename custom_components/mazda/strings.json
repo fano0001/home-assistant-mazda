@@ -104,6 +104,9 @@
       },
       "ev_remaining_range": {
         "name": "Remaining range"
+      },
+      "ev_remaining_range_bev": {
+        "name": "Remaining range BEV"
       }
     },
     "switch": {

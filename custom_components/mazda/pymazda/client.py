@@ -206,6 +206,7 @@ class Client:  # noqa: D101
             "chargeInfo": {
                 "batteryLevelPercentage": charge_info.get("SmaphSOC"),
                 "drivingRangeKm": charge_info.get("SmaphRemDrvDistKm"),
+                "drivingRangeBevKm" charge_info.get("BatRemDrvDistKm"),
                 "pluggedIn": charge_info.get("ChargerConnectorFitting") == 1,
                 "charging": charge_info.get("ChargeStatusSub") == 6,
                 "basicChargeTimeMinutes": charge_info.get("MaxChargeMinuteAC"),

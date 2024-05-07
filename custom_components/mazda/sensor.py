@@ -96,6 +96,12 @@ def _ev_remaining_range_supported(data):
         and data["evStatus"]["chargeInfo"]["drivingRangeKm"] is not None
     )
 
+def _ev_remaining_bev_range_supported(data):
+    """Determine if remaining range bev is supported."""
+    return (
+        data["isElectric"]
+        and data["evStatus"]["chargeInfo"]["drivingRangeBevKm"] is not None
+    )
 
 def _fuel_distance_remaining_value(data):
     """Get the fuel distance remaining value."""
@@ -139,6 +145,10 @@ def _ev_remaining_charging_time_value(data):
 def _ev_remaining_range_value(data):
     """Get the remaining range value."""
     return round(data["evStatus"]["chargeInfo"]["drivingRangeKm"])
+
+def _ev_remaining_range_bev_value(data):
+    """Get the remaining range BEV value."""
+    return round(data["evStatus"]["chargeInfo"]["drivingRangeBevKm"])
 
 
 SENSOR_ENTITIES = [
@@ -238,6 +248,16 @@ SENSOR_ENTITIES = [
         state_class=SensorStateClass.MEASUREMENT,
         is_supported=_ev_remaining_range_supported,
         value=_ev_remaining_range_value,
+    ),
+    MazdaSensorEntityDescription(
+        key="ev_remaining_range_bev",
+        translation_key="ev_remaining_range_bev",
+        icon="mdi:ev-station",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=_ev_remaining_bev_range_supported,
+        value=_ev_remaining_range_bev_value,
     ),
 ]
 
