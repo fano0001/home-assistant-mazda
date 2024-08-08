@@ -3,8 +3,8 @@
   "name": "Mazda Connected Services ng",
   "codeowners": [],
   "config_flow": true,
-  "documentation": "https://github.com/fan00001/home-assistant-mazda/",
+  "documentation": "https://github.com/fano0001/home-assistant-mazda/",
   "issue_tracker": "https://github.com/fano0001/home-assistant-mazda/issues",
   "iot_class": "cloud_polling",
-  "version": "1.2.2"
+  "version": "1.2.4"
 }
