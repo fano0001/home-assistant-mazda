@@ -4,7 +4,7 @@ send_poi:
       required: true
       selector:
         device:
-          integration: mazda
+          integration: mazda_cs
     latitude:
       example: 12.34567
       required: true
