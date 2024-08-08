@@ -1,0 +1,121 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Der Account wurde bereits registriert",
+            "reauth_successful": "Die erneute Authentifizierung war erfolgreich"
+        },
+        "error": {
+            "account_locked": "Account gesperrt. Bitte versuch es später erneut.",
+            "cannot_connect": "Verbindungsfehler",
+            "invalid_auth": "Ungültige Authentifizierung",
+            "unknown": "Unerwarteter Fehler"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "email": "Email",
+                    "password": "Passwort",
+                    "region": "Region"
+                },
+                "description": "Eingabe der Email Adresse und des Passwort, welches für die MyMazda Mobile App verwendet wird."
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "driver_door": {
+                "name": "Fahrertür"
+            },
+            "ev_plugged_in": {
+                "name": "Eingesteckt"
+            },
+            "hood": {
+                "name": "Motorhaube"
+            },
+            "passenger_door": {
+                "name": "Beifahrertür"
+            },
+            "rear_left_door": {
+                "name": "Linke Hintertür"
+            },
+            "rear_right_door": {
+                "name": "Rechte hintertür"
+            },
+            "trunk": {
+                "name": "Kofferraum"
+            }
+        },
+        "button": {
+            "refresh_vehicle_status": {
+                "name": "Status updaten"
+            },
+            "start_engine": {
+                "name": "Motor starten"
+            },
+            "stop_engine": {
+                "name": "Motor ausschalten"
+            },
+            "turn_off_hazard_lights": {
+                "name": "Warnblinklicht ausschalten"
+            },
+            "turn_on_hazard_lights": {
+                "name": "Warnblinklicht einschalten"
+            }
+        },
+        "climate": {
+            "climate": {
+                "name": "Klimaanlage"
+            }
+        },
+        "device_tracker": {
+            "device_tracker": {
+                "name": "Auto tracker"
+            }
+        },
+        "lock": {
+            "lock": {
+                "name": "Schlösser"
+            }
+        },
+        "sensor": {
+            "ev_charge_level": {
+                "name": "Batterieladestand"
+            },
+            "ev_remaining_charging_time": {
+                "name" : "Verbleibende Ladezeit (AC)"
+            },
+            "ev_remaining_range": {
+                "name": "Reichweite"
+            },
+            "ev_remaining_range_bev": {
+                "name": "Reichweite elektrisch"
+            },
+            "front_left_tire_pressure": {
+                "name": "Reifendruck vorne links"
+            },
+            "front_right_tire_pressure": {
+                "name": "Reifendruck vorne rechts"
+            },
+            "fuel_distance_remaining": {
+                "name": "Reichweite benzin"
+            },
+            "fuel_remaining_percentage": {
+                "name": "Tank Füllstand in %"
+            },
+            "odometer": {
+                "name": "Kilometerstand"
+            },
+            "rear_left_tire_pressure": {
+                "name": "Reifendruck hinten links"
+            },
+            "rear_right_tire_pressure": {
+                "name": "Reifendruck hinten rechts"
+            }
+        },
+        "switch": {
+            "charging": {
+                "name": "Aufladen"
+            }
+        }
+    }
+}
