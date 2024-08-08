@@ -1,6 +1,6 @@
 """Constants for the Mazda Connected Services integration."""
 
-DOMAIN = "mazda"
+DOMAIN = "mazda_cs"
 
 DATA_CLIENT = "mazda_client"
 DATA_COORDINATOR = "coordinator"
