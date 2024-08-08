@@ -1,5 +1,5 @@
 {
-  "domain": "mazda_CS",
+  "domain": "mazda_cs",
   "name": "Mazda Connected Services",
   "codeowners": [],
   "config_flow": true,
