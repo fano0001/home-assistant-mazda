@@ -130,10 +130,32 @@ class Connection:
 
         if websession is None:
             self._session = aiohttp.ClientSession(
-                connector=aiohttp.TCPConnector(keepalive_timeout=KEEP_ALIVE_TIMEOUT)
+                connector=aiohttp.TCPConnector(
+                    keepalive_timeout=KEEP_ALIVE_TIMEOUT,
+                    limit=10,  # Max connections
+                    limit_per_host=5,  # Max connections per host
+                    enable_cleanup_closed=True,  # Clean up closed connections
+                    force_close=False,  # Keep connections alive
+                    ssl=ssl_context
+                ),
+                timeout=aiohttp.ClientTimeout(
+                    total=BASE_TIMEOUT,
+                    connect=10,
+                    sock_connect=10,
+                    sock_read=30
+                ),
+                raise_for_status=True
             )
         else:
             self._session = websession
+            
+        # Initialize connection pool metrics
+        self._connection_pool = {
+            'total_connections': 0,
+            'active_connections': 0,
+            'idle_connections': 0,
+            'connection_errors': 0
+        }
 
         self.logger = logging.getLogger(__name__)
 

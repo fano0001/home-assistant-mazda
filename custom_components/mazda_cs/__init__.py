@@ -9,17 +9,17 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
-async def with_timeout(task, timeout_seconds=60):
+async def with_timeout(task, timeout_seconds=30):
     """Run an async task with a timeout."""
     try:
         async with timeout(timeout_seconds):
             return await task
     except asyncio.TimeoutError:
-        _LOGGER.error("Timeout occurred while waiting for Mazda API response")
-        raise
+        _LOGGER.warning("Timeout occurred while waiting for Mazda API response")
+        return None
     except Exception as ex:
-        _LOGGER.error("Error occurred during Mazda API request: %s", ex)
-        raise
+        _LOGGER.warning("Error occurred during Mazda API request: %s", ex)
+        return None
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_REGION, Platform
@@ -241,35 +241,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 raise UpdateFailed("Health check failed")
                 
             vehicles = await with_timeout(mazda_client.get_vehicles(), HEALTH_CHECK_TIMEOUT)
+            if vehicles is None:
+                _LOGGER.warning("Failed to get vehicle list")
+                return hass.data[DOMAIN][entry.entry_id][DATA_VEHICLES] or []
 
             # The Mazda API can throw an error when multiple simultaneous requests are
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
-                try:
-                    vehicle["status"] = await asyncio.wait_for(
-                        mazda_client.get_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
+                vehicle["status"] = await with_timeout(
+                    mazda_client.get_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
+                )
+                
+                # If vehicle is electric, get additional EV-specific status info
+                if vehicle["isElectric"] and vehicle["status"] is not None:
+                    vehicle["evStatus"] = await with_timeout(
+                        mazda_client.get_ev_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
                     )
-
-                    # If vehicle is electric, get additional EV-specific status info
-                    if vehicle["isElectric"]:
-                        vehicle["evStatus"] = await asyncio.wait_for(
-                            mazda_client.get_ev_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
-                        )
-                        vehicle["hvacSetting"] = await asyncio.wait_for(
-                            mazda_client.get_hvac_setting(vehicle["id"]), HEALTH_CHECK_TIMEOUT
-                        )
-                except MazdaAPIEncryptionException as ex:
-                    _LOGGER.warning("Encryption error for vehicle %s: %s", vehicle["id"], ex)
-                    continue
-                except MazdaTokenExpiredException as ex:
-                    _LOGGER.warning("Token expired for vehicle %s: %s", vehicle["id"], ex)
-                    continue
-                except MazdaException as ex:
-                    _LOGGER.warning("Error updating status for vehicle %s: %s", vehicle["id"], ex)
-                    continue
-                except Exception as ex:
-                    _LOGGER.warning("Unexpected error updating status for vehicle %s: %s", vehicle["id"], ex)
-                    continue
+                    vehicle["hvacSetting"] = await with_timeout(
+                        mazda_client.get_hvac_setting(vehicle["id"]), HEALTH_CHECK_TIMEOUT
+                    )
 
             hass.data[DOMAIN][entry.entry_id][DATA_VEHICLES] = vehicles
             return vehicles
