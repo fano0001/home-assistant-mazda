@@ -1,5 +1,9 @@
+import asyncio
 import datetime  # noqa: D100
 import json
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 from .controller import Controller
 from .exceptions import MazdaConfigException
@@ -27,11 +31,26 @@ class Client:  # noqa: D101
         if self._use_cached_vehicle_list and self._cached_vehicle_list is not None:
             return self._cached_vehicle_list
 
-        vec_base_infos_response = await self.controller.get_vec_base_infos()
-
+        max_retries = 3
+        retry_delay = 5  # seconds
         vehicles = []
+        
+        for attempt in range(max_retries):
+            try:
+                vec_base_infos_response = await asyncio.wait_for(
+                    self.controller.get_vec_base_infos(),
+                    timeout=30
+                )
+                break
+            except (asyncio.TimeoutError, Exception) as ex:
+                if attempt == max_retries - 1:
+                    _LOGGER.error(f"Failed to get vehicle list after {max_retries} attempts: {ex}")
+                    raise
+                _LOGGER.warning(f"Retrying vehicle list retrieval (attempt {attempt + 1}/{max_retries})")
+                await asyncio.sleep(retry_delay)
+
         for i, current_vec_base_info in enumerate(
-            vec_base_infos_response.get("vecBaseInfos")
+            vec_base_infos_response.get("vecBaseInfos", [])
         ):
             current_vehicle_flags = vec_base_infos_response.get("vehicleFlags")[i]
 
@@ -43,9 +62,28 @@ class Client:  # noqa: D101
                 current_vec_base_info.get("Vehicle").get("vehicleInformation")
             )
 
-            nickname = await self.controller.get_nickname(
-                current_vec_base_info.get("vin")
-            )
+            # Add retry logic for nickname retrieval
+            max_retries = 3
+            retry_delay = 5  # seconds
+            
+            for attempt in range(max_retries):
+                try:
+                    nickname = await asyncio.wait_for(
+                        self.controller.get_nickname(current_vec_base_info.get("vin")),
+                        timeout=30  # Increase timeout to 30 seconds
+                    )
+                    break
+                except (asyncio.TimeoutError, Exception) as ex:
+                    if attempt == max_retries - 1:
+                        _LOGGER.warning(
+                            f"Failed to get nickname after {max_retries} attempts: {ex}"
+                        )
+                        nickname = ""  # Use empty string if all retries fail
+                    else:
+                        _LOGGER.debug(
+                            f"Retrying nickname retrieval (attempt {attempt + 1}/{max_retries})"
+                        )
+                        await asyncio.sleep(retry_delay)
 
             vehicle = {
                 "vin": current_vec_base_info.get("vin"),

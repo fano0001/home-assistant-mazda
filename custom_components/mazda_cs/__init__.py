@@ -2,11 +2,17 @@
 from __future__ import annotations
 
 import asyncio
+from asyncio import timeout
 from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING
 
 import voluptuous as vol
+
+async def with_timeout(task, timeout_seconds=30):
+    """Run an async task with a timeout."""
+    async with timeout(timeout_seconds):
+        return await task
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_REGION, Platform
@@ -20,6 +26,7 @@ from homeassistant.helpers import (
     aiohttp_client,
     config_validation as cv,
     device_registry as dr,
+    event as event_helper,
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
@@ -27,6 +34,8 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
+
+from .entity import MazdaEntity
 
 from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN
 from .pymazda.client import Client as MazdaAPI
@@ -50,12 +59,77 @@ PLATFORMS = [
     Platform.SWITCH,
 ]
 
+# Health check constants
+HEALTH_CHECK_INTERVAL = timedelta(minutes=5)
+HEALTH_CHECK_TIMEOUT = 30  # seconds
 
-async def with_timeout(task, timeout_seconds=30):
-    """Run an async task with a timeout."""
-    async with asyncio.timeout(timeout_seconds):
-        return await task
-
+async def perform_health_check(client: MazdaAPI) -> bool:
+    """Perform a health check of the Mazda API connection."""
+    retries = 3
+    retry_delay = 5  # seconds
+    
+    for attempt in range(retries):
+        try:
+            # Test API connectivity by getting vehicle list
+            async with timeout(HEALTH_CHECK_TIMEOUT):
+                vehicles = await client.get_vehicles()
+                
+                # Verify we received valid vehicle data
+                if not isinstance(vehicles, list):
+                    _LOGGER.warning("Invalid vehicle data received during health check")
+                    if attempt < retries - 1:
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    return False
+                    
+                # Verify the list contains valid vehicle objects
+                if len(vehicles) > 0 and not all(isinstance(v, dict) for v in vehicles):
+                    _LOGGER.warning("Invalid vehicle data format received during health check")
+                    if attempt < retries - 1:
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    return False
+                    
+                return True
+                
+        except MazdaAuthenticationException as ex:
+            _LOGGER.error("Authentication failed during health check: %s", ex)
+            return False
+        except MazdaAPIEncryptionException as ex:
+            _LOGGER.error("Encryption error during health check: %s", ex)
+            return False
+        except MazdaTokenExpiredException as ex:
+            _LOGGER.error("Token expired during health check: %s", ex)
+            return False
+        except MazdaAccountLockedException as ex:
+            _LOGGER.error("Account locked during health check: %s", ex)
+            return False
+        except MazdaException as ex:
+            if attempt < retries - 1:
+                _LOGGER.warning("Mazda API error during health check (attempt %d/%d): %s", 
+                              attempt + 1, retries, ex)
+                await asyncio.sleep(retry_delay)
+                continue
+            _LOGGER.error("Mazda API error during health check: %s", ex)
+            return False
+        except asyncio.TimeoutError as ex:
+            if attempt < retries - 1:
+                _LOGGER.warning("Timeout during health check (attempt %d/%d): %s", 
+                              attempt + 1, retries, ex)
+                await asyncio.sleep(retry_delay)
+                continue
+            _LOGGER.error("Timeout during health check: %s", ex)
+            return False
+        except Exception as ex:
+            if attempt < retries - 1:
+                _LOGGER.warning("Unexpected error during health check (attempt %d/%d): %s", 
+                              attempt + 1, retries, ex)
+                await asyncio.sleep(retry_delay)
+                continue
+            _LOGGER.error("Unexpected error during health check: %s", ex)
+            return False
+            
+    return False
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Mazda Connected Services from a config entry."""
@@ -80,6 +154,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ) as ex:
         _LOGGER.error("Error occurred during Mazda login request: %s", ex)
         raise ConfigEntryNotReady from ex
+
+    # Vehicle health monitoring is handled through the sensor platform
+    # See sensor.py for implementation details
 
     async def async_handle_service_call(service_call: ServiceCall) -> None:
         """Handle a service call."""
@@ -151,109 +228,98 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def async_update_data():
         """Fetch data from Mazda API."""
         try:
-            vehicles = await with_timeout(mazda_client.get_vehicles())
+            # Perform health check before updating data
+            health_check_result = await perform_health_check(mazda_client)
+            if not health_check_result:
+                raise UpdateFailed("Health check failed")
+                
+            vehicles = await with_timeout(mazda_client.get_vehicles(), HEALTH_CHECK_TIMEOUT)
 
             # The Mazda API can throw an error when multiple simultaneous requests are
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
-                vehicle["status"] = await with_timeout(
-                    mazda_client.get_vehicle_status(vehicle["id"])
-                )
+                try:
+                    vehicle["status"] = await asyncio.wait_for(
+                        mazda_client.get_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
+                    )
 
-                # If vehicle is electric, get additional EV-specific status info
-                if vehicle["isElectric"]:
-                    vehicle["evStatus"] = await with_timeout(
-                        mazda_client.get_ev_vehicle_status(vehicle["id"])
-                    )
-                    vehicle["hvacSetting"] = await with_timeout(
-                        mazda_client.get_hvac_setting(vehicle["id"])
-                    )
+                    # If vehicle is electric, get additional EV-specific status info
+                    if vehicle["isElectric"]:
+                        vehicle["evStatus"] = await asyncio.wait_for(
+                            mazda_client.get_ev_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
+                        )
+                        vehicle["hvacSetting"] = await asyncio.wait_for(
+                            mazda_client.get_hvac_setting(vehicle["id"]), HEALTH_CHECK_TIMEOUT
+                        )
+                except MazdaAPIEncryptionException as ex:
+                    _LOGGER.warning("Encryption error for vehicle %s: %s", vehicle["id"], ex)
+                    continue
+                except MazdaTokenExpiredException as ex:
+                    _LOGGER.warning("Token expired for vehicle %s: %s", vehicle["id"], ex)
+                    continue
+                except MazdaException as ex:
+                    _LOGGER.warning("Error updating status for vehicle %s: %s", vehicle["id"], ex)
+                    continue
+                except Exception as ex:
+                    _LOGGER.warning("Unexpected error updating status for vehicle %s: %s", vehicle["id"], ex)
+                    continue
 
             hass.data[DOMAIN][entry.entry_id][DATA_VEHICLES] = vehicles
-
             return vehicles
         except MazdaAuthenticationException as ex:
             raise ConfigEntryAuthFailed("Not authenticated with Mazda API") from ex
+        except MazdaAPIEncryptionException as ex:
+            _LOGGER.error("Encryption error during update: %s", ex)
+            raise UpdateFailed("Encryption error") from ex
+        except MazdaTokenExpiredException as ex:
+            _LOGGER.error("Token expired during update: %s", ex)
+            raise UpdateFailed("Token expired") from ex
+        except MazdaException as ex:
+            _LOGGER.error("Mazda API error during update: %s", ex)
+            raise UpdateFailed("Mazda API error") from ex
+        except asyncio.TimeoutError as ex:
+            _LOGGER.error("Timeout during update: %s", ex)
+            raise UpdateFailed("Timeout") from ex
         except Exception as ex:
-            _LOGGER.exception(
-                "Unknown error occurred during Mazda update request: %s", ex
-            )
-            raise UpdateFailed(ex) from ex
+            _LOGGER.exception("Unknown error occurred during Mazda update request: %s", ex)
+            raise UpdateFailed("Unknown error") from ex
 
+    # Set up coordinator and initial data
+    hass.data.setdefault(DOMAIN, {})
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
         name=DOMAIN,
         update_method=async_update_data,
-        update_interval=timedelta(seconds=180),
+        update_interval=timedelta(minutes=5),
     )
 
-    hass.data.setdefault(DOMAIN, {})
+    # Perform initial data refresh with retries
+    retries = 3
+    for attempt in range(retries):
+        try:
+            await coordinator.async_refresh()
+            break
+        except Exception as ex:
+            if attempt == retries - 1:
+                _LOGGER.error("Failed to perform initial data refresh after %d attempts: %s", retries, ex)
+                raise ConfigEntryNotReady from ex
+            _LOGGER.warning("Initial data refresh failed (attempt %d/%d), retrying in 5 seconds: %s", 
+                          attempt + 1, retries, ex)
+            await asyncio.sleep(5)
+
     hass.data[DOMAIN][entry.entry_id] = {
         DATA_CLIENT: mazda_client,
         DATA_COORDINATOR: coordinator,
         DATA_REGION: region,
-        DATA_VEHICLES: [],
+        DATA_VEHICLES: coordinator.data or [],
     }
 
-    # Fetch initial data so we have data when entities subscribe
-    await coordinator.async_config_entry_first_refresh()
-
-    # Setup components
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Register services
-    hass.services.async_register(
-        DOMAIN,
-        "send_poi",
-        async_handle_service_call,
-        schema=service_schema_send_poi,
-    )
+    # Set up platforms only if initial data fetch succeeded
+    if coordinator.data is not None:
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    else:
+        _LOGGER.error("Failed to fetch initial vehicle data")
+        raise ConfigEntryNotReady("Failed to fetch initial vehicle data")
 
     return True
-
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-    # Only remove services if it is the last config entry
-    if len(hass.data[DOMAIN]) == 1:
-        hass.services.async_remove(DOMAIN, "send_poi")
-
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-    return unload_ok
-
-
-class MazdaEntity(CoordinatorEntity):
-    """Defines a base Mazda entity."""
-
-    _attr_has_entity_name = True
-
-    def __init__(self, client, coordinator, index):
-        """Initialize the Mazda entity."""
-        super().__init__(coordinator)
-        self.client = client
-        self.index = index
-        self.vin = self.data["vin"]
-        self.vehicle_id = self.data["id"]
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.vin)},
-            manufacturer="Mazda",
-            model=f"{self.data['modelYear']} {self.data['carlineName']}",
-            name=self.vehicle_name,
-        )
-
-    @property
-    def data(self):
-        """Shortcut to access coordinator data for the entity."""
-        return self.coordinator.data[self.index]
-
-    @property
-    def vehicle_name(self):
-        """Return the vehicle name, to be used as a prefix for names of other entities."""
-        if "nickname" in self.data and len(self.data["nickname"]) > 0:
-            return self.data["nickname"]
-        return f"{self.data['modelYear']} {self.data['carlineName']}"

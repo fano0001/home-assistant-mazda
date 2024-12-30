@@ -5,6 +5,10 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
+from homeassistant.helpers import logging
+
+_LOGGER = logging.getLogger(__name__)
+
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -17,11 +21,11 @@ from . import (
     MazdaAPI as MazdaAPIClient,
     MazdaAPIEncryptionException,
     MazdaAuthenticationException,
-    MazdaEntity,
     MazdaException,
     MazdaTokenExpiredException,
 )
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from .entity import MazdaEntity
+from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN, BUTTON_TYPE_REFRESH
 from .pymazda.exceptions import MazdaLoginFailedException
 
 
@@ -54,9 +58,19 @@ async def handle_refresh_vehicle_status(
     coordinator: DataUpdateCoordinator,
 ) -> None:
     """Handle a request to refresh the vehicle status."""
-    await handle_button_press(client, key, vehicle_id, coordinator)
-
-    await coordinator.async_request_refresh()
+    try:
+        # Force a fresh data update from the API
+        await client.get_vehicle_status(vehicle_id)
+        await coordinator.async_request_refresh()
+    except (
+        MazdaException,
+        MazdaAuthenticationException,
+        MazdaAccountLockedException,
+        MazdaTokenExpiredException,
+        MazdaAPIEncryptionException,
+        MazdaLoginFailedException,
+    ) as ex:
+        raise HomeAssistantError(f"Failed to refresh vehicle status: {str(ex)}") from ex
 
 
 @dataclass
@@ -98,11 +112,23 @@ BUTTON_ENTITIES = [
         is_supported=lambda data: not data["isElectric"],
     ),
     MazdaButtonEntityDescription(
+        key="lock_doors",
+        translation_key="lock_doors",
+        icon="mdi:lock",
+        is_supported=lambda data: True,
+    ),
+    MazdaButtonEntityDescription(
+        key="unlock_doors",
+        translation_key="unlock_doors",
+        icon="mdi:lock-open",
+        is_supported=lambda data: True,
+    ),
+    MazdaButtonEntityDescription(
         key="refresh_vehicle_status",
         translation_key="refresh_vehicle_status",
         icon="mdi:refresh",
         async_press=handle_refresh_vehicle_status,
-        is_supported=lambda data: data["isElectric"],
+        is_supported=lambda data: True,
     ),
 ]
 
@@ -116,12 +142,27 @@ async def async_setup_entry(
     client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
 
-    async_add_entities(
-        MazdaButtonEntity(client, coordinator, index, description)
-        for index, data in enumerate(coordinator.data)
-        for description in BUTTON_ENTITIES
-        if description.is_supported(data)
-    )
+    _LOGGER.debug("Starting Mazda button setup")
+    _LOGGER.debug("Coordinator data structure: %s", type(coordinator.data))
+    _LOGGER.debug("Number of vehicles: %d", len(coordinator.data))
+
+    entities = []
+    for index, data in enumerate(coordinator.data):
+        _LOGGER.debug("Processing vehicle index %d", index)
+        for description in BUTTON_ENTITIES:
+            if description.key == "refresh_vehicle_status":
+                _LOGGER.debug("Found refresh button description")
+                if description.is_supported(data):
+                    _LOGGER.debug("Creating refresh button for vehicle index %d", index)
+                    entities.append(MazdaButtonEntity(client, coordinator, index, description))
+                else:
+                    _LOGGER.debug("Refresh button not supported for vehicle index %d", index)
+            else:
+                if description.is_supported(data):
+                    entities.append(MazdaButtonEntity(client, coordinator, index, description))
+    
+    _LOGGER.debug("Total button entities to add: %d", len(entities))
+    async_add_entities(entities)
 
 
 class MazdaButtonEntity(MazdaEntity, ButtonEntity):
@@ -141,9 +182,22 @@ class MazdaButtonEntity(MazdaEntity, ButtonEntity):
         self.entity_description = description
 
         self._attr_unique_id = f"{self.vin}_{description.key}"
+        
+        if description.key == "door_lock_control":
+            self._attr_extra_state_attributes = {
+                "lock_status": self.data["status"]["lockStatus"]["doors"].lower()
+            }
 
     async def async_press(self) -> None:
         """Press the button."""
-        await self.entity_description.async_press(
-            self.client, self.entity_description.key, self.vehicle_id, self.coordinator
-        )
+        if self.entity_description.key == "door_lock_control":
+            current_status = self.data["status"]["lockStatus"]["doors"].lower()
+            if current_status in ["locked", "locking"]:
+                await self.client.unlock_doors(self.vehicle_id)
+            else:
+                await self.client.lock_doors(self.vehicle_id)
+            await self.coordinator.async_request_refresh()
+        else:
+            await self.entity_description.async_press(
+                self.client, self.entity_description.key, self.vehicle_id, self.coordinator
+            )

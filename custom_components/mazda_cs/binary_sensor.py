@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from homeassistant.helpers import logging
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -14,8 +15,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import MazdaEntity
+from .entity import MazdaEntity
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -104,6 +107,10 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+
+    if coordinator.data is None:
+        _LOGGER.error("Coordinator data is not available")
+        return
 
     async_add_entities(
         MazdaBinarySensorEntity(client, coordinator, index, description)

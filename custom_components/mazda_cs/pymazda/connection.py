@@ -62,8 +62,10 @@ SSL_SIGNATURE_ALGORITHMS = [
     "DSA+SHA384",
     "DSA+SHA512",
 ]
-with SSLContextConfigurator(ssl_context, libssl_path="libssl.so.3") as ssl_context_configurator:
-    ssl_context_configurator.configure_signature_algorithms(":".join(SSL_SIGNATURE_ALGORITHMS))
+# Windows-specific SSL context configuration
+ssl_context.set_alpn_protocols(['http/1.1'])
+ssl_context.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
+ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
 
 REGION_CONFIG = {
     "MNAO": {
@@ -93,12 +95,16 @@ APP_VERSION = "8.5.2"
 USHER_SDK_VERSION = "11.3.0700.001"
 
 MAX_RETRIES = 4
-
+BASE_TIMEOUT = 60  # seconds
+KEEP_ALIVE_TIMEOUT = 300  # seconds
+RATE_LIMIT_WINDOW = 60  # seconds
+MAX_REQUESTS_PER_WINDOW = 100
 
 class Connection:
     """Main class for handling MyMazda API connection."""
 
     def __init__(self, email, password, region, websession=None):  # noqa: D107
+        self._request_timestamps = []
         self.email = email
         self.password = password
 
@@ -122,7 +128,9 @@ class Connection:
         self.sensor_data_builder = SensorDataBuilder()
 
         if websession is None:
-            self._session = aiohttp.ClientSession()
+            self._session = aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(keepalive_timeout=KEEP_ALIVE_TIMEOUT)
+            )
         else:
             self._session = websession
 
@@ -210,7 +218,7 @@ class Connection:
         )
         return base64.b64encode(encryptedBuffer).decode("utf-8")
 
-    async def api_request(  # noqa: D102
+    async def api_request(
         self,
         method,
         uri,
@@ -219,9 +227,28 @@ class Connection:
         needs_keys=True,
         needs_auth=False,
     ):
-        return await self.__api_request_retry(
-            method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries=0
-        )
+        """Make an API request with detailed error handling and logging."""
+        self.logger.debug(f"Starting API request to {uri}")
+        try:
+            # Detailed request tracking
+            request_id = f"req_{self.__get_timestamp_str_ms()}"
+            self.logger.debug(f"Request ID: {request_id}")
+            
+            # Validate input parameters
+            if not isinstance(query_dict, dict):
+                raise MazdaConfigException("query_dict must be a dictionary")
+            if not isinstance(body_dict, dict):
+                raise MazdaConfigException("body_dict must be a dictionary")
+                
+            return await self.__api_request_retry(
+                method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries=0
+            )
+        except MazdaException as ex:
+            self.logger.error(f"API request failed: {str(ex)}")
+            raise
+        except Exception as ex:
+            self.logger.error(f"Unexpected error during API request: {str(ex)}")
+            raise MazdaException(f"Unexpected error: {str(ex)}") from ex
 
     async def __api_request_retry(
         self,
@@ -233,79 +260,115 @@ class Connection:
         needs_auth=False,
         num_retries=0,
     ):
+        """Handle API request retries with detailed error tracking."""
         if num_retries > MAX_RETRIES:
-            raise MazdaException("Request exceeded max number of retries")
+            error_msg = f"Request to {uri} failed after {MAX_RETRIES} retries"
+            self.logger.error(error_msg)
+            raise MazdaException(error_msg)
 
-        if needs_keys:
-            await self.__ensure_keys_present()
-        if needs_auth:
-            await self.__ensure_token_is_valid()
+        # Enhanced rate limiting tracking
+        now = time.time()
+        self._request_timestamps = [t for t in self._request_timestamps if t > now - RATE_LIMIT_WINDOW]
+        
+        # Calculate rate limit metrics
+        requests_in_window = len(self._request_timestamps)
+        rate_limit_percentage = (requests_in_window / MAX_REQUESTS_PER_WINDOW) * 100
+        
+        if requests_in_window >= MAX_REQUESTS_PER_WINDOW:
+            wait_time = RATE_LIMIT_WINDOW - (now - self._request_timestamps[0])
+            self.logger.warning(
+                f"Rate limit reached ({requests_in_window}/{MAX_REQUESTS_PER_WINDOW} requests in last {RATE_LIMIT_WINDOW}s, {rate_limit_percentage:.1f}%). "
+                f"Waiting {wait_time:.1f} seconds before retry."
+            )
+            await asyncio.sleep(wait_time)
+        elif rate_limit_percentage > 80:
+            self.logger.info(
+                f"Approaching rate limit ({requests_in_window}/{MAX_REQUESTS_PER_WINDOW} requests in last {RATE_LIMIT_WINDOW}s, {rate_limit_percentage:.1f}%)"
+            )
 
-        retry_message = (
-            (" - attempt #" + str(num_retries + 1)) if (num_retries > 0) else ""
-        )
+        # Validate keys and authentication
+        try:
+            if needs_keys:
+                self.logger.debug("Validating encryption keys")
+                await self.__ensure_keys_present()
+            if needs_auth:
+                self.logger.debug("Validating access token")
+                await self.__ensure_token_is_valid()
+        except MazdaException as ex:
+            self.logger.error(f"Pre-request validation failed: {str(ex)}")
+            raise
+
+        # Detailed request logging
+        retry_message = f" (attempt {num_retries + 1}/{MAX_RETRIES})" if num_retries > 0 else ""
         self.logger.debug(
-            f"Sending {method} request to {uri}{retry_message}"  # noqa: G004
-        )  # noqa: G004
+            f"Sending {method} request to {uri}{retry_message}\n"
+            f"Query params: {query_dict}\n"
+            f"Body: {body_dict}"
+        )
+        
+        # Track request timing
+        request_start = time.time()
+        self._request_timestamps.append(request_start)
+        self.logger.debug(f"Request started at {request_start}")
 
         try:
-            return await self.__send_api_request(
-                method, uri, query_dict, body_dict, needs_keys, needs_auth
+            response = await self.__send_api_request(
+                method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries
             )
-        except MazdaAPIEncryptionException:
-            self.logger.info(
-                "Server reports request was not encrypted properly. Retrieving new encryption keys."
+            request_duration = time.time() - request_start
+            self.logger.debug(f"Request completed in {request_duration:.2f} seconds")
+            return response
+            
+        except MazdaAPIEncryptionException as ex:
+            self.logger.error(
+                "Encryption error: Server rejected encrypted request. Details: "
+                f"URI: {uri}, Error: {str(ex)}"
             )
+            self.logger.info("Attempting to retrieve new encryption keys")
             await self.__retrieve_keys()
             return await self.__api_request_retry(
-                method,
-                uri,
-                query_dict,
-                body_dict,
-                needs_keys,
-                needs_auth,
-                num_retries + 1,
+                method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries + 1
             )
-        except MazdaTokenExpiredException:
-            self.logger.info(
-                "Server reports access token was expired. Retrieving new access token."
+            
+        except MazdaTokenExpiredException as ex:
+            self.logger.error(
+                "Token expired: Server rejected request due to expired token. Details: "
+                f"URI: {uri}, Error: {str(ex)}"
             )
+            self.logger.info("Attempting to refresh access token")
             await self.login()
             return await self.__api_request_retry(
-                method,
-                uri,
-                query_dict,
-                body_dict,
-                needs_keys,
-                needs_auth,
-                num_retries + 1,
+                method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries + 1
             )
-        except MazdaLoginFailedException:
-            self.logger.warning("Login failed for an unknown reason. Trying again.")
+            
+        except MazdaLoginFailedException as ex:
+            self.logger.error(
+                "Login failed: Authentication unsuccessful. Details: "
+                f"URI: {uri}, Error: {str(ex)}"
+            )
+            self.logger.info("Attempting to re-authenticate")
             await self.login()
             return await self.__api_request_retry(
-                method,
-                uri,
-                query_dict,
-                body_dict,
-                needs_keys,
-                needs_auth,
-                num_retries + 1,
+                method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries + 1
             )
-        except MazdaRequestInProgressException:
-            self.logger.info(
-                "Request failed because another request was already in progress. Waiting 30 seconds and trying again."
+            
+        except MazdaRequestInProgressException as ex:
+            self.logger.error(
+                "Request conflict: Another request is already in progress. Details: "
+                f"URI: {uri}, Error: {str(ex)}"
             )
+            self.logger.info("Waiting 30 seconds before retry")
             await asyncio.sleep(30)
             return await self.__api_request_retry(
-                method,
-                uri,
-                query_dict,
-                body_dict,
-                needs_keys,
-                needs_auth,
-                num_retries + 1,
+                method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries + 1
             )
+            
+        except Exception as ex:
+            self.logger.error(
+                "Unexpected error during API request. Details: "
+                f"URI: {uri}, Method: {method}, Error: {str(ex)}"
+            )
+            raise MazdaException(f"Unexpected error: {str(ex)}") from ex
 
     async def __send_api_request(
         self,
@@ -315,7 +378,16 @@ class Connection:
         body_dict={},
         needs_keys=True,
         needs_auth=False,
+        num_retries=0,
     ):
+        """Send an API request with retry logic and exponential backoff."""
+        # Calculate exponential backoff delay
+        delay = min(2 ** num_retries, 60)  # Cap at 60 seconds
+        if num_retries > MAX_RETRIES:
+            raise MazdaException(f"Max retries ({MAX_RETRIES}) exceeded")
+        if delay > 0:
+            self.logger.debug(f"Waiting {delay} seconds before retry")
+            await asyncio.sleep(delay)
         timestamp = self.__get_timestamp_str_ms()
 
         original_query_str = ""
@@ -344,6 +416,12 @@ class Connection:
             "X-acf-sensor-data": self.sensor_data_builder.generate_sensor_data(),
             "req-id": "req_" + timestamp,
             "timestamp": timestamp,
+            "language": "en",
+            "region": "us",
+            "locale": "en-US",
+            "Connection": "keep-alive",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.9"
         }
 
         if "checkVersion" in uri:
@@ -357,12 +435,15 @@ class Connection:
                 original_body_str, timestamp
             )
 
+        timeout = aiohttp.ClientTimeout(total=BASE_TIMEOUT)
+        
         response = await self._session.request(
             method,
             self.base_url + uri,
             headers=headers,
             data=encrypted_body_Str,
             ssl=ssl_context,
+            timeout=timeout
         )
 
         response_json = await response.json()

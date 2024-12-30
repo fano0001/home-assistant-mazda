@@ -1,5 +1,6 @@
 """Platform for Mazda switch integration."""
 from typing import Any
+import logging
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -10,6 +11,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from . import MazdaAPI as MazdaAPIClient, MazdaEntity
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
 
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -19,6 +21,10 @@ async def async_setup_entry(
     """Set up the switch platform."""
     client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+
+    if coordinator.data is None:
+        _LOGGER.error("Coordinator data is not available")
+        return
 
     async_add_entities(
         MazdaChargingSwitch(client, coordinator, index)
@@ -52,19 +58,15 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
     async def refresh_status_and_write_state(self):
         """Request a status update, retrieve it through the coordinator, and write the state."""
         await self.client.refresh_vehicle_status(self.vehicle_id)
-
         await self.coordinator.async_request_refresh()
-
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging the vehicle."""
         await self.client.start_charging(self.vehicle_id)
-
         await self.refresh_status_and_write_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Stop charging the vehicle."""
         await self.client.stop_charging(self.vehicle_id)
-
         await self.refresh_status_and_write_state()
