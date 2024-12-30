@@ -381,6 +381,8 @@ class Connection:
         num_retries=0,
     ):
         """Send an API request with enhanced retry and timeout handling."""
+        import random
+        
         # Enhanced exponential backoff with jitter
         base_delay = min(2 ** num_retries, 60)  # Cap at 60 seconds
         jitter = random.uniform(0, base_delay * 0.1)  # Add up to 10% jitter
@@ -393,13 +395,20 @@ class Connection:
             self.logger.debug(f"Waiting {delay:.2f} seconds before retry")
             await asyncio.sleep(delay)
             
-        # Enhanced timeout handling
+        # Enhanced timeout handling with progressive increase
         timeout = aiohttp.ClientTimeout(
             total=BASE_TIMEOUT * (num_retries + 1),  # Increase timeout with retries
             connect=10,
             sock_connect=10,
             sock_read=30
         )
+        
+        # Connection health check
+        if not self._session or self._session.closed:
+            self.logger.warning("Session closed, creating new session")
+            self._session = aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(keepalive_timeout=KEEP_ALIVE_TIMEOUT)
+            )
         
         timestamp = self.__get_timestamp_str_ms()
 

@@ -9,10 +9,17 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
-async def with_timeout(task, timeout_seconds=30):
+async def with_timeout(task, timeout_seconds=60):
     """Run an async task with a timeout."""
-    async with timeout(timeout_seconds):
-        return await task
+    try:
+        async with timeout(timeout_seconds):
+            return await task
+    except asyncio.TimeoutError:
+        _LOGGER.error("Timeout occurred while waiting for Mazda API response")
+        raise
+    except Exception as ex:
+        _LOGGER.error("Error occurred during Mazda API request: %s", ex)
+        raise
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_REGION, Platform
