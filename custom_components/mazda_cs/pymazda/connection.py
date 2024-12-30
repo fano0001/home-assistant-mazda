@@ -95,8 +95,9 @@ APP_VERSION = "8.5.2"
 USHER_SDK_VERSION = "11.3.0700.001"
 
 MAX_RETRIES = 4
-BASE_TIMEOUT = 60  # seconds
-KEEP_ALIVE_TIMEOUT = 300  # seconds
+BASE_TIMEOUT = 30  # seconds - reduced from 60 to prevent hitting server limits
+KEEP_ALIVE_TIMEOUT = 120  # seconds - reduced from 300
+KEEP_ALIVE_PING_INTERVAL = 15  # seconds - send keep-alive pings
 RATE_LIMIT_WINDOW = 60  # seconds
 MAX_REQUESTS_PER_WINDOW = 100
 
@@ -403,12 +404,36 @@ class Connection:
             sock_read=30
         )
         
-        # Connection health check
+        # Connection health check and pooling
         if not self._session or self._session.closed:
-            self.logger.warning("Session closed, creating new session")
+            self.logger.warning("Session closed, creating new session with connection pooling")
             self._session = aiohttp.ClientSession(
-                connector=aiohttp.TCPConnector(keepalive_timeout=KEEP_ALIVE_TIMEOUT)
+                connector=aiohttp.TCPConnector(
+                    keepalive_timeout=KEEP_ALIVE_TIMEOUT,
+                    limit=10,  # Max connections
+                    limit_per_host=5,  # Max connections per host
+                    enable_cleanup_closed=True  # Clean up closed connections
+                )
             )
+            
+        # Server health check
+        try:
+            # Ping server with a lightweight request
+            ping_response = await self._session.head(
+                self.base_url,
+                timeout=aiohttp.ClientTimeout(total=5),
+                ssl=ssl_context
+            )
+            if ping_response.status != 200:
+                self.logger.warning(f"Server health check failed with status {ping_response.status}")
+                raise MazdaException("Server unavailable")
+        except Exception as ping_error:
+            self.logger.warning(f"Server health check failed: {str(ping_error)}")
+            if num_retries < MAX_RETRIES:
+                return await self.__send_api_request(
+                    method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries + 1
+                )
+            raise MazdaException("Server unavailable after multiple retries") from ping_error
         
         timestamp = self.__get_timestamp_str_ms()
 

@@ -146,6 +146,17 @@ async def async_setup_entry(
     _LOGGER.debug("Coordinator data structure: %s", type(coordinator.data))
     _LOGGER.debug("Coordinator data content: %s", coordinator.data)
     _LOGGER.debug("Number of vehicles: %d", len(coordinator.data))
+    
+    # Verify coordinator data structure
+    if not isinstance(coordinator.data, list):
+        _LOGGER.error("Coordinator data is not a list: %s", type(coordinator.data))
+        return
+    if len(coordinator.data) == 0:
+        _LOGGER.error("No vehicle data found in coordinator")
+        return
+    if not isinstance(coordinator.data[0], dict):
+        _LOGGER.error("Vehicle data is not a dictionary: %s", type(coordinator.data[0]))
+        return
 
     entities = []
     for index, data in enumerate(coordinator.data):
