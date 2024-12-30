@@ -380,14 +380,27 @@ class Connection:
         needs_auth=False,
         num_retries=0,
     ):
-        """Send an API request with retry logic and exponential backoff."""
-        # Calculate exponential backoff delay
-        delay = min(2 ** num_retries, 60)  # Cap at 60 seconds
+        """Send an API request with enhanced retry and timeout handling."""
+        # Enhanced exponential backoff with jitter
+        base_delay = min(2 ** num_retries, 60)  # Cap at 60 seconds
+        jitter = random.uniform(0, base_delay * 0.1)  # Add up to 10% jitter
+        delay = base_delay + jitter
+        
         if num_retries > MAX_RETRIES:
             raise MazdaException(f"Max retries ({MAX_RETRIES}) exceeded")
+            
         if delay > 0:
-            self.logger.debug(f"Waiting {delay} seconds before retry")
+            self.logger.debug(f"Waiting {delay:.2f} seconds before retry")
             await asyncio.sleep(delay)
+            
+        # Enhanced timeout handling
+        timeout = aiohttp.ClientTimeout(
+            total=BASE_TIMEOUT * (num_retries + 1),  # Increase timeout with retries
+            connect=10,
+            sock_connect=10,
+            sock_read=30
+        )
+        
         timestamp = self.__get_timestamp_str_ms()
 
         original_query_str = ""
@@ -435,16 +448,31 @@ class Connection:
                 original_body_str, timestamp
             )
 
-        timeout = aiohttp.ClientTimeout(total=BASE_TIMEOUT)
-        
-        response = await self._session.request(
-            method,
-            self.base_url + uri,
-            headers=headers,
-            data=encrypted_body_Str,
-            ssl=ssl_context,
-            timeout=timeout
-        )
+        # Enhanced session handling with keep-alive
+        try:
+            response = await self._session.request(
+                method,
+                self.base_url + uri,
+                headers=headers,
+                data=encrypted_body_Str,
+                ssl=ssl_context,
+                timeout=timeout
+            )
+            
+            # Validate response status
+            if response.status >= 500:
+                raise MazdaException(f"Server error: {response.status}")
+            if response.status == 429:
+                retry_after = int(response.headers.get('Retry-After', delay))
+                raise MazdaException(f"Rate limited - retry after {retry_after} seconds")
+                
+        except (aiohttp.ClientError, asyncio.TimeoutError) as ex:
+            self.logger.warning(f"Connection error: {str(ex)}")
+            if num_retries < MAX_RETRIES:
+                return await self.__send_api_request(
+                    method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries + 1
+                )
+            raise MazdaException(f"Connection failed after {MAX_RETRIES} retries") from ex
 
         response_json = await response.json()
 
