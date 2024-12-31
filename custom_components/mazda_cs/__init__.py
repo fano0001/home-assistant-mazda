@@ -6,10 +6,11 @@ from asyncio import timeout
 from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING
+import time
 
 import voluptuous as vol
 
-async def with_timeout(task, timeout_seconds=90):  # Increased timeout for 19 vehicles
+async def with_timeout(task, timeout_seconds=120):  # Increased timeout to 120 seconds
     """Run an async task with a timeout."""
     try:
         async with timeout(timeout_seconds):
@@ -67,21 +68,30 @@ PLATFORMS = [
 ]
 
 # Health check constants
-HEALTH_CHECK_INTERVAL = timedelta(minutes=15)  # Further reduced frequency for 19 vehicles
-HEALTH_CHECK_TIMEOUT = 90  # Increased timeout for larger vehicle count
+HEALTH_CHECK_INTERVAL = timedelta(minutes=15)
+HEALTH_CHECK_TIMEOUT = 120  # Increased timeout to 120 seconds
+
+# Update batch settings
+BATCH_SIZE = 5  # Process 5 vehicles at a time
+BATCH_DELAY = 15  # 15 seconds between batches
+
+# Individual vehicle update settings
+VEHICLE_RETRIES = 2  # Number of retries for individual vehicle updates
+VEHICLE_RETRY_DELAY = 10  # Delay between retries for individual vehicles
 
 async def perform_health_check(client: MazdaAPI) -> bool:
     """Perform a health check of the Mazda API connection."""
     retries = 3
-    retry_delay = 15  # Increased delay between retries for 19 vehicles
+    retry_delay = 15
     
     for attempt in range(retries):
         try:
-            # Test API connectivity by getting vehicle list
+            start_time = time.time()
             async with timeout(HEALTH_CHECK_TIMEOUT):
                 vehicles = await client.get_vehicles()
+                duration = time.time() - start_time
+                _LOGGER.debug("Health check completed in %.2f seconds", duration)
                 
-                # Verify we received valid vehicle data
                 if not isinstance(vehicles, list):
                     _LOGGER.warning("Invalid vehicle data received during health check")
                     if attempt < retries - 1:
@@ -89,7 +99,6 @@ async def perform_health_check(client: MazdaAPI) -> bool:
                         continue
                     return False
                     
-                # Verify the list contains valid vehicle objects
                 if len(vehicles) > 0 and not all(isinstance(v, dict) for v in vehicles):
                     _LOGGER.warning("Invalid vehicle data format received during health check")
                     if attempt < retries - 1:
@@ -149,9 +158,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         email, password, region, websession=websession, use_cached_vehicle_list=True
     )
 
-    # Add retry logic for initial credential validation
     retries = 3
-    retry_delay = 15  # Increased delay for 19 vehicles
+    retry_delay = 15
     
     for attempt in range(retries):
         try:
@@ -185,23 +193,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.warning("Failed to get vehicle list")
                 return hass.data[DOMAIN][entry.entry_id][DATA_VEHICLES] or []
 
-            # Process vehicles one at a time with delays between requests
-            for vehicle in vehicles:
-                vehicle["status"] = await with_timeout(
-                    mazda_client.get_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
-                )
-                await asyncio.sleep(3)  # Increased delay between requests for 19 vehicles
-                
-                if vehicle["isElectric"] and vehicle["status"] is not None:
-                    vehicle["evStatus"] = await with_timeout(
-                        mazda_client.get_ev_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
-                    )
-                    await asyncio.sleep(3)
-                    
-                    vehicle["hvacSetting"] = await with_timeout(
-                        mazda_client.get_hvac_setting(vehicle["id"]), HEALTH_CHECK_TIMEOUT
-                    )
-                    await asyncio.sleep(3)
+            # Process vehicles in batches
+            for i in range(0, len(vehicles), BATCH_SIZE):
+                batch = vehicles[i:i + BATCH_SIZE]
+                for vehicle in batch:
+                    try:
+                        start_time = time.time()
+                        vehicle["status"] = await with_timeout(
+                            mazda_client.get_vehicle_status(vehicle["id"]), HEALTH_CHECK_TIMEOUT
+                        )
+                        duration = time.time() - start_time
+                        _LOGGER.debug("Vehicle status for %s completed in %.2f seconds", vehicle["id"], duration)
+                        
+                        await asyncio.sleep(5)  # Increased delay between requests
+                    except Exception as ex:
+                        _LOGGER.warning("Failed to update vehicle %s: %s", vehicle["id"], ex)
+                        continue
+
+                # Delay between batches
+                if i + BATCH_SIZE < len(vehicles):
+                    await asyncio.sleep(BATCH_DELAY)
 
             hass.data[DOMAIN][entry.entry_id][DATA_VEHICLES] = vehicles
             return vehicles
