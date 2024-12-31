@@ -1,6 +1,7 @@
 """Platform for Mazda lock integration."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from homeassistant.components.lock import LockEntity
@@ -38,18 +39,29 @@ class MazdaLock(MazdaEntity, LockEntity):
     def __init__(self, client, coordinator, index) -> None:
         """Initialize Mazda lock."""
         super().__init__(client, coordinator, index)
-        self._attr_unique_id = self.vin
+        
+        # Verify required attributes from MazdaEntity
+        if not hasattr(self, 'vin'):
+            raise AttributeError("MazdaEntity must provide 'vin' attribute")
+        if not hasattr(self, 'vehicle_id'):
+            raise AttributeError("MazdaEntity must provide 'vehicle_id' attribute")
+            
+        self._attr_unique_id = f"mazda_lock_{self.vin}"
         self._attr_is_locking = False
         self._attr_is_unlocking = False
+        self._attr_assumed_state = True
+        self._logger = logging.getLogger(__name__)
 
     @property
     def is_locked(self) -> bool | None:
         """Return true if lock is locked."""
         try:
-            state = self.client.get_assumed_lock_state(self.vehicle_id)
-            # Keep track of state but return None for separate buttons
+            return self.coordinator.data[self.index]["is_locked"]
+        except KeyError:
+            self._logger.debug("Lock state not available in coordinator data")
             return None
-        except:
+        except Exception as ex:
+            self._logger.error("Error getting lock state: %s", ex)
             return None
 
     async def async_lock(self, **kwargs: Any) -> None:
@@ -58,6 +70,11 @@ class MazdaLock(MazdaEntity, LockEntity):
         self.async_write_ha_state()
         try:
             await self.client.lock_doors(self.vehicle_id)
+            # Request immediate refresh to update state
+            await self.coordinator.async_request_refresh()
+        except Exception as ex:
+            self._logger.error("Failed to lock Mazda: %s", ex)
+            raise
         finally:
             self._attr_is_locking = False
             self.async_write_ha_state()
@@ -68,6 +85,11 @@ class MazdaLock(MazdaEntity, LockEntity):
         self.async_write_ha_state()
         try:
             await self.client.unlock_doors(self.vehicle_id)
+            # Request immediate refresh to update state
+            await self.coordinator.async_request_refresh()
+        except Exception as ex:
+            self._logger.error("Failed to unlock Mazda: %s", ex)
+            raise
         finally:
             self._attr_is_unlocking = False
             self.async_write_ha_state()
