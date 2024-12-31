@@ -164,10 +164,22 @@ async def async_setup_entry(
         _LOGGER.debug("Vehicle data: %s", data)
         for description in BUTTON_ENTITIES:
             _LOGGER.debug("Processing button: %s", description.key)
-            is_supported = description.is_supported(data)
-            _LOGGER.debug("Button %s supported: %s", description.key, is_supported)
-            if is_supported:
-                entities.append(MazdaButtonEntity(client, coordinator, index, description))
+            if description.key == "refresh_vehicle_status":
+                _LOGGER.debug("Found refresh button description")
+                _LOGGER.debug("Vehicle data structure: %s", type(data))
+                _LOGGER.debug("Vehicle data keys: %s", data.keys())
+                is_supported = description.is_supported(data)
+                _LOGGER.debug("Refresh button supported: %s", is_supported)
+                if is_supported:
+                    _LOGGER.debug("Creating refresh button for vehicle index %d", index)
+                    entities.append(MazdaButtonEntity(client, coordinator, index, description))
+                else:
+                    _LOGGER.debug("Refresh button not supported for vehicle index %d", index)
+            else:
+                is_supported = description.is_supported(data)
+                _LOGGER.debug("Button %s supported: %s", description.key, is_supported)
+                if is_supported:
+                    entities.append(MazdaButtonEntity(client, coordinator, index, description))
     
     _LOGGER.debug("Total button entities to add: %d", len(entities))
     async_add_entities(entities)

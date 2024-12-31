@@ -149,18 +149,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         email, password, region, websession=websession, use_cached_vehicle_list=True
     )
 
-    try:
-        await mazda_client.validate_credentials()
-    except MazdaAuthenticationException as ex:
-        raise ConfigEntryAuthFailed from ex
-    except (
-        MazdaException,
-        MazdaAccountLockedException,
-        MazdaTokenExpiredException,
-        MazdaAPIEncryptionException,
-    ) as ex:
-        _LOGGER.error("Error occurred during Mazda login request: %s", ex)
-        raise ConfigEntryNotReady from ex
+    # Add retry logic for initial credential validation
+    retries = 3
+    retry_delay = 5  # seconds
+    
+    for attempt in range(retries):
+        try:
+            await mazda_client.validate_credentials()
+            break
+        except MazdaAuthenticationException as ex:
+            raise ConfigEntryAuthFailed from ex
+        except (
+            MazdaException,
+            MazdaAccountLockedException,
+            MazdaTokenExpiredException,
+            MazdaAPIEncryptionException,
+        ) as ex:
+            if attempt == retries - 1:
+                _LOGGER.error("Error occurred during Mazda login request after %d attempts: %s", retries, ex)
+                raise ConfigEntryNotReady from ex
+            _LOGGER.warning("Mazda login request failed (attempt %d/%d), retrying in %d seconds: %s", 
+                          attempt + 1, retries, retry_delay, ex)
+            await asyncio.sleep(retry_delay)
 
     # Vehicle health monitoring is handled through the sensor platform
     # See sensor.py for implementation details

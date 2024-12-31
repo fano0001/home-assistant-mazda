@@ -35,38 +35,6 @@ ssl_context.set_ciphers(
     "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK"
 )
 
-SSL_SIGNATURE_ALGORITHMS = [
-    "ecdsa_secp256r1_sha256",
-    "ecdsa_secp384r1_sha384",
-    "ecdsa_secp521r1_sha512",
-    "ed25519",
-    "ed448",
-# Disable following algorithms as they doesn't seem to be supported by the API currently
-# and are sent by libssl by default. This workaround may not be needed (or work) in future.
-#    "ecdsa_brainpoolP256r1_sha256",
-#    "ecdsa_brainpoolP384r1_sha384",
-#    "ecdsa_brainpoolP512r1_sha512",
-    "rsa_pss_pss_sha256",
-    "rsa_pss_pss_sha384",
-    "rsa_pss_pss_sha512",
-    "rsa_pss_rsae_sha256",
-    "rsa_pss_rsae_sha384",
-    "rsa_pss_rsae_sha512",
-    "rsa_pkcs1_sha256",
-    "rsa_pkcs1_sha384",
-    "rsa_pkcs1_sha512",
-    "ECDSA+SHA224",
-    "rsa_pkcs1_sha224",
-    "DSA+SHA224",
-    "DSA+SHA256",
-    "DSA+SHA384",
-    "DSA+SHA512",
-]
-# Windows-specific SSL context configuration
-ssl_context.set_alpn_protocols(['http/1.1'])
-ssl_context.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
-ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-
 REGION_CONFIG = {
     "MNAO": {
         "app_code": "202007270941270111799",
@@ -95,11 +63,12 @@ APP_VERSION = "8.5.2"
 USHER_SDK_VERSION = "11.3.0700.001"
 
 MAX_RETRIES = 4
-BASE_TIMEOUT = 30  # seconds - reduced from 60 to prevent hitting server limits
-KEEP_ALIVE_TIMEOUT = 120  # seconds - reduced from 300
-KEEP_ALIVE_PING_INTERVAL = 15  # seconds - send keep-alive pings
+BASE_TIMEOUT = 60  # Increased from 30 to allow more time for API responses
+KEEP_ALIVE_TIMEOUT = 300  # Increased from 120 for more stable connections
+KEEP_ALIVE_PING_INTERVAL = 30  # Increased from 15 to reduce connection overhead
 RATE_LIMIT_WINDOW = 60  # seconds
 MAX_REQUESTS_PER_WINDOW = 100
+MAX_RETRIES = 5  # Increased from 4 for better error recovery
 
 class Connection:
     """Main class for handling MyMazda API connection."""
@@ -129,23 +98,7 @@ class Connection:
         self.sensor_data_builder = SensorDataBuilder()
 
         if websession is None:
-            self._session = aiohttp.ClientSession(
-                connector=aiohttp.TCPConnector(
-                    keepalive_timeout=KEEP_ALIVE_TIMEOUT,
-                    limit=10,  # Max connections
-                    limit_per_host=5,  # Max connections per host
-                    enable_cleanup_closed=True,  # Clean up closed connections
-                    force_close=False,  # Keep connections alive
-                    ssl=ssl_context
-                ),
-                timeout=aiohttp.ClientTimeout(
-                    total=BASE_TIMEOUT,
-                    connect=10,
-                    sock_connect=10,
-                    sock_read=30
-                ),
-                raise_for_status=True
-            )
+            self._session = aiohttp.ClientSession()
         else:
             self._session = websession
             
