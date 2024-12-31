@@ -158,25 +158,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         email, password, region, websession=websession, use_cached_vehicle_list=True
     )
 
+    # Explicit login with detailed logging
     retries = 3
     retry_delay = 15
     
     for attempt in range(retries):
         try:
+            _LOGGER.debug("Attempting login (attempt %d/%d)", attempt + 1, retries)
             await mazda_client.validate_credentials()
+            _LOGGER.info("Successfully logged in as %s", email)
             break
         except MazdaAuthenticationException as ex:
+            _LOGGER.error("Authentication failed: %s", ex)
             raise ConfigEntryAuthFailed from ex
-        except (
-            MazdaException,
-            MazdaAccountLockedException,
-            MazdaTokenExpiredException,
-            MazdaAPIEncryptionException,
-        ) as ex:
+        except MazdaAccountLockedException as ex:
+            _LOGGER.error("Account locked: %s", ex)
+            raise ConfigEntryNotReady("Account locked") from ex
+        except MazdaTokenExpiredException as ex:
+            _LOGGER.error("Token expired: %s", ex)
+            raise ConfigEntryNotReady("Token expired") from ex
+        except MazdaAPIEncryptionException as ex:
+            _LOGGER.error("Encryption error: %s", ex)
+            raise ConfigEntryNotReady("Encryption error") from ex
+        except MazdaException as ex:
             if attempt == retries - 1:
-                _LOGGER.error("Error occurred during Mazda login request after %d attempts: %s", retries, ex)
+                _LOGGER.error("Failed to login after %d attempts: %s", retries, ex)
                 raise ConfigEntryNotReady from ex
-            _LOGGER.warning("Mazda login request failed (attempt %d/%d), retrying in %d seconds: %s", 
+            _LOGGER.warning("Login failed (attempt %d/%d), retrying in %d seconds: %s", 
+                          attempt + 1, retries, retry_delay, ex)
+            await asyncio.sleep(retry_delay)
+        except Exception as ex:
+            if attempt == retries - 1:
+                _LOGGER.error("Unexpected error during login after %d attempts: %s", retries, ex)
+                raise ConfigEntryNotReady from ex
+            _LOGGER.warning("Unexpected login error (attempt %d/%d), retrying in %d seconds: %s", 
                           attempt + 1, retries, retry_delay, ex)
             await asyncio.sleep(retry_delay)
 

@@ -253,7 +253,7 @@ class Connection:
         if requests_in_window >= MAX_REQUESTS_PER_WINDOW:
             wait_time = RATE_LIMIT_WINDOW - (now - self._request_timestamps[0])
             self.logger.warning(
-                f"Rate limit reached ({requests_in_window}/{MAX_REQUESTS_PER_WINDOW} requests in last {RATE_LIMIT_WINDOW}s, {rate_limit_percentage:.1f}%). "
+                f"Rate limit reached ({requests_in_window}/{MAX_REQUESTS_PER_WINDOW} requests in last {RATE_LIMIT_WINDOW}s, {rate_limit_percentage:.1f}%). " 
                 f"Waiting {wait_time:.1f} seconds before retry."
             )
             await asyncio.sleep(wait_time)
@@ -356,77 +356,18 @@ class Connection:
         needs_auth=False,
         num_retries=0,
     ):
-        """Send an API request with enhanced retry and timeout handling."""
-        import random
-        
-        # Enhanced exponential backoff with jitter
-        base_delay = min(2 ** num_retries, 60)  # Cap at 60 seconds
-        jitter = random.uniform(0, base_delay * 0.1)  # Add up to 10% jitter
-        delay = base_delay + jitter
-        
-        if num_retries > MAX_RETRIES:
-            raise MazdaException(f"Max retries ({MAX_RETRIES}) exceeded")
-            
-        if delay > 0:
-            self.logger.debug(f"Waiting {delay:.2f} seconds before retry")
-            await asyncio.sleep(delay)
-            
-        # Enhanced timeout handling with progressive increase
-        timeout = aiohttp.ClientTimeout(
-            total=BASE_TIMEOUT * (num_retries + 1),  # Increase timeout with retries
-            connect=10,
-            sock_connect=10,
-            sock_read=30
+        """Send an API request with enhanced logging and error handling."""
+        # Log request details
+        self.logger.debug(
+            "Sending %s request to %s\nQuery: %s\nBody: %s",
+            method,
+            uri,
+            query_dict,
+            body_dict,
         )
-        
-        # Connection health check and pooling
-        if not self._session or self._session.closed:
-            self.logger.warning("Session closed, creating new session with connection pooling")
-            self._session = aiohttp.ClientSession(
-                connector=aiohttp.TCPConnector(
-                    keepalive_timeout=KEEP_ALIVE_TIMEOUT,
-                    limit=10,  # Max connections
-                    limit_per_host=5,  # Max connections per host
-                    enable_cleanup_closed=True  # Clean up closed connections
-                )
-            )
-            
-        # Server health check
-        try:
-            # Ping server with a lightweight request
-            ping_response = await self._session.head(
-                self.base_url,
-                timeout=aiohttp.ClientTimeout(total=5),
-                ssl=ssl_context
-            )
-            if ping_response.status != 200:
-                self.logger.warning(f"Server health check failed with status {ping_response.status}")
-                raise MazdaException("Server unavailable")
-        except Exception as ping_error:
-            self.logger.warning(f"Server health check failed: {str(ping_error)}")
-            if num_retries < MAX_RETRIES:
-                return await self.__send_api_request(
-                    method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries + 1
-                )
-            raise MazdaException("Server unavailable after multiple retries") from ping_error
-        
+
+        # Prepare headers
         timestamp = self.__get_timestamp_str_ms()
-
-        original_query_str = ""
-        encrypted_query_dict = {}
-
-        if query_dict:
-            original_query_str = urlencode(query_dict)
-            encrypted_query_dict["params"] = self.__encrypt_payload_using_key(
-                original_query_str
-            )
-
-        original_body_str = ""
-        encrypted_body_Str = ""
-        if body_dict:
-            original_body_str = json.dumps(body_dict)
-            encrypted_body_Str = self.__encrypt_payload_using_key(original_body_str)
-
         headers = {
             "device-id": self.base_api_device_id,
             "app-code": self.app_code,
@@ -446,76 +387,48 @@ class Connection:
             "Accept-Language": "en-US,en;q=0.9"
         }
 
-        if "checkVersion" in uri:
-            headers["sign"] = self.__get_sign_from_timestamp(timestamp)
-        elif method == "GET":
-            headers["sign"] = self.__get_sign_from_payload_and_timestamp(
-                original_query_str, timestamp
-            )
-        elif method == "POST":
-            headers["sign"] = self.__get_sign_from_payload_and_timestamp(
-                original_body_str, timestamp
-            )
+        # Prepare request data
+        original_query_str = urlencode(query_dict) if query_dict else ""
+        original_body_str = json.dumps(body_dict) if body_dict else ""
+        encrypted_body_str = self.__encrypt_payload_using_key(original_body_str) if needs_keys else None
 
-        # Enhanced session handling with keep-alive
         try:
+            # Make the request
             response = await self._session.request(
                 method,
                 self.base_url + uri,
                 headers=headers,
-                data=encrypted_body_Str,
-                ssl=ssl_context,
-                timeout=timeout
+                data=encrypted_body_str,
+                ssl=self.ssl_context,
+                timeout=self.timeout,
             )
-            
-            # Validate response status
-            if response.status >= 500:
-                raise MazdaException(f"Server error: {response.status}")
-            if response.status == 429:
-                retry_after = int(response.headers.get('Retry-After', delay))
-                raise MazdaException(f"Rate limited - retry after {retry_after} seconds")
-                
-        except (aiohttp.ClientError, asyncio.TimeoutError) as ex:
-            self.logger.warning(f"Connection error: {str(ex)}")
-            if num_retries < MAX_RETRIES:
-                return await self.__send_api_request(
-                    method, uri, query_dict, body_dict, needs_keys, needs_auth, num_retries + 1
-                )
-            raise MazdaException(f"Connection failed after {MAX_RETRIES} retries") from ex
 
-        response_json = await response.json()
+            # Log response details
+            self.logger.debug(
+                "Received response from %s\nStatus: %d\nHeaders: %s",
+                uri,
+                response.status,
+                response.headers,
+            )
 
-        if response_json.get("state") == "S":
-            if "checkVersion" in uri:
-                return self.__decrypt_payload_using_app_code(response_json["payload"])
-            else:
-                decrypted_payload = self.__decrypt_payload_using_key(
-                    response_json["payload"]
-                )
-                self.logger.debug("Response payload: %s", decrypted_payload)
-                return decrypted_payload
-        elif response_json.get("errorCode") == 600001:
-            raise MazdaAPIEncryptionException("Server rejected encrypted request")
-        elif response_json.get("errorCode") == 600002:
-            raise MazdaTokenExpiredException("Token expired")
-        elif (
-            response_json.get("errorCode") == 920000
-            and response_json.get("extraCode") == "400S01"
-        ):
-            raise MazdaRequestInProgressException(
-                "Request already in progress, please wait and try again"
-            )
-        elif (
-            response_json.get("errorCode") == 920000
-            and response_json.get("extraCode") == "400S11"
-        ):
-            raise MazdaException(
-                "The engine can only be remotely started 2 consecutive times. Please drive the vehicle to reset the counter."
-            )
-        elif "error" in response_json:
-            raise MazdaException("Request failed: " + response_json["error"])
-        else:
-            raise MazdaException("Request failed for an unknown reason")
+            # Handle response
+            if response.status != 200:
+                error_msg = f"Received HTTP {response.status} from Mazda API"
+                self.logger.error(error_msg)
+                raise MazdaException(error_msg)
+
+            response_text = await response.text()
+            self.logger.debug("Raw response body (truncated): %s", response_text[:500])
+
+            decrypted_payload = self.__decrypt_response(response_text) if needs_keys else response_text
+            return decrypted_payload
+
+        except aiohttp.ClientError as ex:
+            self.logger.error("Network error during API request: %s", ex)
+            raise MazdaException(f"Network error: {ex}") from ex
+        except Exception as ex:
+            self.logger.error("Unexpected error during API request: %s", ex)
+            raise MazdaException(f"Unexpected error: {ex}") from ex
 
     async def __ensure_keys_present(self):
         if self.enc_key is None or self.sign_key is None:
