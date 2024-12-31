@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.lock import LockEntity
+from homeassistant.components.lock import LockEntity, LockEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -50,7 +50,11 @@ class MazdaLock(MazdaEntity, LockEntity):
         self._attr_is_locking = False
         self._attr_is_unlocking = False
         self._attr_assumed_state = True
+        self._attr_supported_features = LockEntityFeature.OPEN | LockEntityFeature.UNLOCK
         self._logger = logging.getLogger(__name__)
+        
+        # Force update of entity attributes
+        self.async_write_ha_state()
 
     @property
     def is_locked(self) -> bool | None:
