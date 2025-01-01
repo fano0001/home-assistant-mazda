@@ -62,13 +62,10 @@ APP_OS = "Android"
 APP_VERSION = "8.5.2"
 USHER_SDK_VERSION = "11.3.0700.001"
 
-MAX_RETRIES = 4
-BASE_TIMEOUT = 60  # Increased from 30 to allow more time for API responses
-KEEP_ALIVE_TIMEOUT = 300  # Increased from 120 for more stable connections
-KEEP_ALIVE_PING_INTERVAL = 30  # Increased from 15 to reduce connection overhead
-RATE_LIMIT_WINDOW = 300  # seconds (5 minutes)
-MAX_REQUESTS_PER_WINDOW = 30  # Reduced from 100 to be more conservative
-MAX_RETRIES = 5  # Increased from 4 for better error recovery
+MAX_RETRIES = 3
+BASE_TIMEOUT = 120
+KEEP_ALIVE_TIMEOUT = 300
+KEEP_ALIVE_PING_INTERVAL = 30
 
 class EnhancedConnection:
     """Main class for handling MyMazda API connection."""
@@ -134,12 +131,12 @@ class EnhancedConnection:
             
             self._session = aiohttp.ClientSession(
                 connector=connector,
-                timeout=aiohttp.ClientTimeout(
-                    total=60,  # Total request timeout
-                    connect=10,  # Connection timeout
-                    sock_connect=10,  # Socket connection timeout
-                    sock_read=30  # Socket read timeout
-                )
+            timeout=aiohttp.ClientTimeout(
+                total=120,  # Increased total timeout
+                connect=20,  # Increased connection timeout
+                sock_connect=20,  # Increased socket connection timeout
+                sock_read=60  # Increased socket read timeout
+            )
             )
         else:
             self._session = websession
@@ -663,6 +660,7 @@ class EnhancedConnection:
         """Trip the circuit breaker to temporarily block requests."""
         self._circuit_breaker['tripped'] = True
         self._circuit_breaker['failures'] = 0
+        self._circuit_breaker['timeout'] = min(self._circuit_breaker['timeout'] * 2, 3600)  # Exponential backoff up to 1 hour
         self.logger.error(f"Circuit breaker tripped - requests blocked for {self._circuit_breaker['timeout']} seconds")
         
     async def check_connection_health(self):

@@ -58,6 +58,18 @@ class MazdaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             try:
                 await mazda_client.validate_credentials()
+                vehicles = await mazda_client.get_vehicles()
+                
+                if not vehicles:
+                    return self.async_abort(reason="no_vehicles")
+                    
+                if not self._reauth_entry:
+                    # Store vehicles in flow data
+                    user_input["vehicles"] = vehicles
+                    return self.async_create_entry(
+                        title=user_input[CONF_EMAIL], data=user_input
+                    )
+                    
             except MazdaAuthenticationException:
                 errors["base"] = "invalid_auth"
             except MazdaAccountLockedException:
@@ -69,11 +81,6 @@ class MazdaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception(
                     "Unknown error occurred during Mazda login request: %s", ex
                 )
-            else:
-                if not self._reauth_entry:
-                    return self.async_create_entry(
-                        title=user_input[CONF_EMAIL], data=user_input
-                    )
                 self.hass.config_entries.async_update_entry(
                     self._reauth_entry, data=user_input, unique_id=unique_id
                 )
