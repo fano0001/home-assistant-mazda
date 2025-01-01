@@ -20,8 +20,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util.unit_conversion import TemperatureConverter
 
-from . import MazdaAPI as MazdaAPIClient, MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DOMAIN
+from .. import MazdaAPI as MazdaAPIClient, MazdaEntity
+from ..const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DOMAIN
 
 PRESET_DEFROSTER_OFF = "Defroster Off"
 PRESET_DEFROSTER_FRONT = "Front Defroster"

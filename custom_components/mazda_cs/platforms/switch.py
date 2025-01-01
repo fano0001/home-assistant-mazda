@@ -8,8 +8,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from . import MazdaAPI as MazdaAPIClient, MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from .. import MazdaAPI as MazdaAPIClient, MazdaEntity
+from ..const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 

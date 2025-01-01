@@ -5,6 +5,7 @@ from typing import Any
 
 import aiohttp
 import voluptuous as vol
+from voluptuous import Email
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_REGION
@@ -18,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_EMAIL): str,
+        vol.Required(CONF_EMAIL): Email(),
         vol.Required(CONF_PASSWORD): str,
         vol.Required(CONF_REGION): vol.In(MAZDA_REGIONS),
     }
@@ -86,7 +87,7 @@ class MazdaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_EMAIL, default=self._email): str,
+                    vol.Required(CONF_EMAIL, default=self._email): Email(),
                     vol.Required(CONF_PASSWORD): str,
                     vol.Required(CONF_REGION, default=self._region): vol.In(
                         MAZDA_REGIONS

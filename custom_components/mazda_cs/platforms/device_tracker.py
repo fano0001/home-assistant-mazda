@@ -4,8 +4,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from .. import MazdaEntity
+from ..const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
 
 
 async def async_setup_entry(

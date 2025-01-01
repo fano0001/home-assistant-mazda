@@ -1,12 +1,12 @@
 import hashlib  # noqa: D100
 
-from .connection import Connection
+from .connection import EnhancedConnection
 from .exceptions import MazdaException
 
 
 class Controller:  # noqa: D101
     def __init__(self, email, password, region, websession=None):  # noqa: D107
-        self.connection = Connection(email, password, region, websession)
+        self.connection = EnhancedConnection(email, password, region, websession)
 
     async def login(self):  # noqa: D102
         await self.connection.login()
