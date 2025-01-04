@@ -62,10 +62,10 @@ APP_OS = "Android"
 APP_VERSION = "8.5.2"
 USHER_SDK_VERSION = "11.3.0700.001"
 
-MAX_RETRIES = 3
-BASE_TIMEOUT = 120
-KEEP_ALIVE_TIMEOUT = 300
-KEEP_ALIVE_PING_INTERVAL = 30
+MAX_RETRIES = 5  # Increased from 3 to allow more retry attempts
+BASE_TIMEOUT = 300  # Increased from 120 to allow longer request times
+KEEP_ALIVE_TIMEOUT = 600  # Increased from 300 for more stable connections
+KEEP_ALIVE_PING_INTERVAL = 60  # Increased from 30 to reduce connection overhead
 
 class EnhancedConnection:
     """Main class for handling MyMazda API connection."""
@@ -132,10 +132,10 @@ class EnhancedConnection:
             self._session = aiohttp.ClientSession(
                 connector=connector,
             timeout=aiohttp.ClientTimeout(
-                total=120,  # Increased total timeout
-                connect=20,  # Increased connection timeout
-                sock_connect=20,  # Increased socket connection timeout
-                sock_read=60  # Increased socket read timeout
+                total=300,  # Increased total timeout
+                connect=30,  # Increased connection timeout
+                sock_connect=30,  # Increased socket connection timeout
+                sock_read=120  # Increased socket read timeout
             )
             )
         else:
@@ -504,19 +504,28 @@ class EnhancedConnection:
             if isinstance(ex, aiohttp.ClientConnectorError) or isinstance(ex, aiohttp.ServerDisconnectedError):
                 self.logger.info("Recreating session due to connection error")
                 await self._session.close()
+                # Add exponential backoff before recreating session
+                backoff_time = min(2 ** num_retries, 300)  # Cap at 5 minutes
+                self.logger.info(f"Waiting {backoff_time} seconds before recreating session")
+                await asyncio.sleep(backoff_time)
+                
                 self._session = aiohttp.ClientSession(
                     connector=aiohttp.TCPConnector(
                         limit=10,
                         limit_per_host=5,
-                        keepalive_timeout=300,
+                        keepalive_timeout=600,  # Increased keepalive timeout
                         enable_cleanup_closed=True,
-                        tcp_keepalive=aiohttp.TCPKeepAlive(idle=60, interval=30, count=5)
+                        tcp_keepalive=aiohttp.TCPKeepAlive(
+                            idle=120,  # Increased idle time
+                            interval=60,  # Increased ping interval
+                            count=10  # Increased ping count
+                        )
                     ),
                     timeout=aiohttp.ClientTimeout(
-                        total=60,
-                        connect=10,
-                        sock_connect=10,
-                        sock_read=30
+                        total=300,  # Increased total timeout
+                        connect=30,  # Increased connection timeout
+                        sock_connect=30,  # Increased socket connection timeout
+                        sock_read=120  # Increased socket read timeout
                     )
                 )
                 
@@ -660,7 +669,11 @@ class EnhancedConnection:
         """Trip the circuit breaker to temporarily block requests."""
         self._circuit_breaker['tripped'] = True
         self._circuit_breaker['failures'] = 0
-        self._circuit_breaker['timeout'] = min(self._circuit_breaker['timeout'] * 2, 3600)  # Exponential backoff up to 1 hour
+        # Use exponential backoff with random jitter to prevent thundering herd
+        import random
+        base_timeout = min(self._circuit_breaker['timeout'] * 2, 3600)  # Exponential backoff up to 1 hour
+        jitter = random.uniform(0.8, 1.2)  # Add ±20% jitter
+        self._circuit_breaker['timeout'] = int(base_timeout * jitter)
         self.logger.error(f"Circuit breaker tripped - requests blocked for {self._circuit_breaker['timeout']} seconds")
         
     async def check_connection_health(self):
