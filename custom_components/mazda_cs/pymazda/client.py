@@ -85,9 +85,7 @@ class Client:  # noqa: D101
                     "exteriorColorName"
                 ),
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
-                "hasFuel" : other_veh_info.get("CVServiceInformation", {}).get(
-                    "fuelType"
-                ) != 5
+                "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05"
             }
 
             vehicles.append(vehicle)
