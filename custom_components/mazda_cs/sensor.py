@@ -43,14 +43,14 @@ class MazdaSensorEntityDescription(
 
 def _fuel_remaining_percentage_supported(data):
     """Determine if fuel remaining percentage is supported."""
-    return (not data["isElectric"]) and (
+    return (data["hasFuel"]) and (
         data["status"]["fuelRemainingPercent"] is not None
     )
 
 
 def _fuel_distance_remaining_supported(data):
     """Determine if fuel distance remaining is supported."""
-    return (not data["isElectric"]) and (
+    return (data["hasFuel"]) and (
         data["status"]["fuelDistanceRemainingKm"] is not None
     )
 
