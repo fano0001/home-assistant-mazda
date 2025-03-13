@@ -31,36 +31,18 @@ from .ssl_context_configurator.ssl_context_configurator import SSLContextConfigu
 
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 ssl_context.load_default_certs()
-ssl_context.set_ciphers(
-    "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK"
-)
+ssl_context.set_ciphers("TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA:AES256-SHA")
 
 SSL_SIGNATURE_ALGORITHMS = [
     "ecdsa_secp256r1_sha256",
-    "ecdsa_secp384r1_sha384",
-    "ecdsa_secp521r1_sha512",
-    "ed25519",
-    "ed448",
-# Disable following algorithms as they doesn't seem to be supported by the API currently
-# and are sent by libssl by default. This workaround may not be needed (or work) in future.
-#    "ecdsa_brainpoolP256r1_sha256",
-#    "ecdsa_brainpoolP384r1_sha384",
-#    "ecdsa_brainpoolP512r1_sha512",
-    "rsa_pss_pss_sha256",
-    "rsa_pss_pss_sha384",
-    "rsa_pss_pss_sha512",
     "rsa_pss_rsae_sha256",
-    "rsa_pss_rsae_sha384",
-    "rsa_pss_rsae_sha512",
     "rsa_pkcs1_sha256",
+    "ecdsa_secp384r1_sha384",
+    "rsa_pss_rsae_sha384",
     "rsa_pkcs1_sha384",
+    "rsa_pss_rsae_sha512",
     "rsa_pkcs1_sha512",
-    "ECDSA+SHA224",
-    "rsa_pkcs1_sha224",
-    "DSA+SHA224",
-    "DSA+SHA256",
-    "DSA+SHA384",
-    "DSA+SHA512",
+    "rsa_pkcs1_sha1",
 ]
 with SSLContextConfigurator(ssl_context, libssl_path="libssl.so.3") as ssl_context_configurator:
     ssl_context_configurator.configure_signature_algorithms(":".join(SSL_SIGNATURE_ALGORITHMS))
@@ -337,13 +319,15 @@ class Connection:
             "device-id": self.base_api_device_id,
             "app-code": self.app_code,
             "app-os": APP_OS,
-            "user-agent": USER_AGENT_BASE_API,
+            # "user-agent": USER_AGENT_BASE_API,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
             "app-version": APP_VERSION,
             "app-unique-id": APP_PACKAGE_ID,
             "access-token": (self.access_token if needs_auth else ""),
             "X-acf-sensor-data": self.sensor_data_builder.generate_sensor_data(),
             "req-id": "req_" + timestamp,
             "timestamp": timestamp,
+            "Accept": "application/json"
         }
 
         if "checkVersion" in uri:
