@@ -68,8 +68,8 @@ REGION_CONFIG = {
 IV = "0102030405060708"
 SIGNATURE_MD5 = "C383D8C4D279B78130AD52DC71D95CAA"
 APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "MyMazda-Android/8.5.2"
-USER_AGENT_USHER_API = "MyMazda/8.5.2 (Google Pixel 3a; Android 11)"
+USER_AGENT_BASE_API = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1. 15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+USER_AGENT_USHER_API = USER_AGENT_BASE_API
 APP_OS = "Android"
 APP_VERSION = "8.5.2"
 USHER_SDK_VERSION = "11.3.0700.001"
@@ -318,10 +318,9 @@ class Connection:
         headers = {
             "device-id": self.base_api_device_id,
             "app-code": self.app_code,
-            "app-os": APP_OS,
-            # "user-agent": USER_AGENT_BASE_API,
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-            "app-version": APP_VERSION,
+            # "app-os": APP_OS,
+            "user-agent": USER_AGENT_BASE_API,
+            #"app-version": APP_VERSION,
             "app-unique-id": APP_PACKAGE_ID,
             "access-token": (self.access_token if needs_auth else ""),
             "X-acf-sensor-data": self.sensor_data_builder.generate_sensor_data(),
