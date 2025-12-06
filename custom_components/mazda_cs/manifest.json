@@ -1,10 +1,17 @@
 {
   "domain": "mazda_cs",
-  "name": "Mazda Connected Services ng",
-  "codeowners": [],
-  "config_flow": true,
-  "documentation": "https://github.com/fano0001/home-assistant-mazda/",
+  "name": "Mazda Connected Services v2",
+  "version": "0.9.0",
+  "documentation": "https://example.invalid/mazda_cs",
+  "issue_tracker": "https://example.invalid/mazda_cs/issues",
+  "codeowners": [
+    "@you"
+  ],
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/fano0001/home-assistant-mazda/issues",
-  "version": "1.8.5"
+  "config_flow": true,
+  "requirements": [],
+  "dependencies": [],
+  "loggers": [
+    "custom_components.mazda_cs"
+  ]
 }
