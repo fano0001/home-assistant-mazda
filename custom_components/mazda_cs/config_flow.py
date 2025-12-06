@@ -1,106 +1,67 @@
-"""Config flow for Mazda Connected Services integration."""
-from collections.abc import Mapping
-import logging
+from __future__ import annotations
+
 from typing import Any
 
-import aiohttp
 import voluptuous as vol
-
 from homeassistant import config_entries
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_REGION
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import aiohttp_client
+from homeassistant.core import callback
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 
-from . import MazdaAccountLockedException, MazdaAPI, MazdaAuthenticationException
-from .const import DOMAIN, MAZDA_REGIONS
+from .const import DOMAIN
 
-_LOGGER = logging.getLogger(__name__)
+# Anzeigenamen -> interne Regionscodes
+REGION_LABELS: dict[str, str] = {
+    "Europa": "MME",
+    "Nordamerika": "MNAO",
+    "Japan": "JAPAN",
+    "Australien/Neuseeland": "MDA",
+}
 
-DATA_SCHEMA = vol.Schema(
+USER_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_EMAIL): str,
-        vol.Required(CONF_PASSWORD): str,
-        vol.Required(CONF_REGION): vol.In(MAZDA_REGIONS),
+        vol.Required("email"): str,
+        vol.Required("password"): str,
+        vol.Required("region", default="Europa"): vol.In(list(REGION_LABELS.keys())),
     }
 )
 
 
-class MazdaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Mazda Connected Services."""
+class MazdaConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Config flow für Mazda Connected Services."""
 
     VERSION = 1
 
-    def __init__(self):
-        """Start the mazda config flow."""
-        self._reauth_entry = None
-        self._email = None
-        self._region = None
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if user_input is None:
+            return self.async_show_form(step_id="user", data_schema=USER_SCHEMA)
 
-    async def async_step_user(self, user_input=None):
-        """Handle the initial step."""
-        errors = {}
+        # Mappe Anzeigenamen auf Code
+        label = user_input["region"]
+        region_code = REGION_LABELS.get(label, label)
 
-        if user_input is not None:
-            self._email = user_input[CONF_EMAIL]
-            self._region = user_input[CONF_REGION]
-            unique_id = user_input[CONF_EMAIL].lower()
-            await self.async_set_unique_id(unique_id)
-            if not self._reauth_entry:
-                self._abort_if_unique_id_configured()
-            websession = aiohttp_client.async_get_clientsession(self.hass)
-            mazda_client = MazdaAPI(
-                user_input[CONF_EMAIL],
-                user_input[CONF_PASSWORD],
-                user_input[CONF_REGION],
-                websession,
-            )
+        data = {
+            "email": user_input["email"],
+            "password": user_input["password"],
+            "region": region_code,
+        }
 
-            try:
-                await mazda_client.validate_credentials()
-            except MazdaAuthenticationException:
-                errors["base"] = "invalid_auth"
-            except MazdaAccountLockedException:
-                errors["base"] = "account_locked"
-            except aiohttp.ClientError:
-                errors["base"] = "cannot_connect"
-            except Exception as ex:  # pylint: disable=broad-except
-                errors["base"] = "unknown"
-                _LOGGER.exception(
-                    "Unknown error occurred during Mazda login request: %s", ex
-                )
-            else:
-                if not self._reauth_entry:
-                    return self.async_create_entry(
-                        title=user_input[CONF_EMAIL], data=user_input
-                    )
-                self.hass.config_entries.async_update_entry(
-                    self._reauth_entry, data=user_input, unique_id=unique_id
-                )
-                # Reload the config entry otherwise devices will remain unavailable
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
-                )
-                return self.async_abort(reason="reauth_successful")
+        await self.async_set_unique_id(f"{data['email']}::{region_code}")
+        self._abort_if_unique_id_configured()
 
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_EMAIL, default=self._email): str,
-                    vol.Required(CONF_PASSWORD): str,
-                    vol.Required(CONF_REGION, default=self._region): vol.In(
-                        MAZDA_REGIONS
-                    ),
-                }
-            ),
-            errors=errors,
-        )
+        return self.async_create_entry(title="Mazda Connected Services", data=data)
 
-    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
-        """Perform reauth if the user credentials have changed."""
-        self._reauth_entry = self.hass.config_entries.async_get_entry(
-            self.context["entry_id"]
-        )
-        self._email = entry_data[CONF_EMAIL]
-        self._region = entry_data[CONF_REGION]
-        return await self.async_step_user()
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
+        return MazdaOptionsFlow(config_entry)
+
+
+class MazdaOptionsFlow(config_entries.OptionsFlow):
+    """Optionen-Flow (aktuell ohne Optionen, nur Platzhalter)."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        # Keine Optionen – direkt abschließen.
+        return self.async_create_entry(title="", data={})

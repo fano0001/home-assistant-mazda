@@ -1,0 +1,76 @@
+import pytest
+from aiohttp import web
+
+print(">>> USING custom tests/conftest.py <<<")
+
+AUTHORIZE_PATH = "/432b587f-88ad-40aa-9e5d-e6bcf9429e8d/b2c_1a_signin/oauth2/v2.0/authorize"
+TOKEN_PATH = "/432b587f-88ad-40aa-9e5d-e6bcf9429e8d/b2c_1a_signin/oauth2/v2.0/token"
+SELF_ASSERTED_PATH = "/432b587f-88ad-40aa-9e5d-e6bcf9429e8d/B2C_1A_signin/SelfAsserted"
+CONFIRM_PATH = "/432b587f-88ad-40aa-9e5d-e6bcf9429e8d/api/CombinedSigninAndSignup/confirmed"
+
+API_BASE = "/connectedservices/v2"
+
+def _build_app() -> web.Application:
+    app = web.Application()
+    app["late_routes"] = {}  # (METHOD, PATH) -> handler
+
+    # Original-Refs sichern
+    orig_add_get = app.router.add_get
+    orig_add_post = app.router.add_post
+    orig_add_route = app.router.add_route
+
+    # ---- Router-Shim (lässt späte add_* zu, auch wenn Router frozen) ----
+    def _late_add(method: str, path: str, handler, *args, **kwargs):
+        app["late_routes"][(method.upper(), path)] = handler
+        class _Dummy:
+            def add_route(self, *_a, **_k): return self
+        return _Dummy()
+
+    app.router.add_get = lambda path, handler, *a, **k: _late_add("GET", path, handler, *a, **k)
+    app.router.add_post = lambda path, handler, *a, **k: _late_add("POST", path, handler, *a, **k)
+
+    # ---- OAuth-Mocks (fix eingehängt über Original-Methoden) ----
+    async def authorize(request: web.Request) -> web.Response:
+        q = request.rel_url.query
+        if q.get("prompt") == "none":
+            if "tx" in q:
+                # Silent + tx => Redirect mit Code (Client folgt nicht automatisch)
+                raise web.HTTPFound(location="/cb?code=test_code")
+            # ohne tx: HTML mit tx-Anker
+            return web.Response(text='<a href="?tx=StateProperties=abc"></a>', content_type="text/html")
+        # Erstaufruf: HTML mit tx-Anker
+        return web.Response(text='<html><a href="?tx=StateProperties=abc"></a></html>', content_type="text/html")
+
+    async def self_asserted(request: web.Request) -> web.Response:
+        return web.Response(text="{}", content_type="application/json")
+
+    async def confirm(request: web.Request) -> web.Response:
+        return web.Response(text="{}", content_type="application/json")
+
+    async def token(request: web.Request) -> web.Response:
+        return web.json_response({"access_token": "AT_ok", "refresh_token": "RT_ok", "expires_in": 3600, "token_type": "Bearer"})
+
+    orig_add_get(AUTHORIZE_PATH, authorize)
+    orig_add_post(SELF_ASSERTED_PATH, self_asserted)
+    orig_add_post(CONFIRM_PATH, confirm)
+    orig_add_post(TOKEN_PATH, token)
+
+    # ---- Wildcard-Dispatcher (bedient late_routes & Defaults) ----
+    async def dynamic_dispatch(request: web.Request) -> web.Response:
+        key = (request.method.upper(), request.rel_url.path)
+        if key in app["late_routes"]:
+            return await app["late_routes"][key](request)
+        if key == ("GET", f"{API_BASE}/vehicles"):
+            return web.json_response([{"vin": "JMZTEST", "id": "1"}])
+        return web.Response(status=404, text="not found")
+
+    orig_add_route("*", "/{tail:.*}", dynamic_dispatch)
+    return app
+
+@pytest.fixture
+async def test_server(aiohttp_server):
+    return await aiohttp_server(_build_app())
+
+@pytest.fixture
+async def server(aiohttp_server):
+    return await aiohttp_server(_build_app())
