@@ -1,17 +1,19 @@
+# Home Assistant Custom Component: Mazda Connected Services v2 (EU/MME)
 
-# Introduction
-This is a fork of the Mazda Connected Services integration originally written by bdr99 that has been packaged into a HACS compatible custom integration. The original code was part of the Home Assistant core integrations prior to a DMCA takedown notice issue by Mazda Motor Corporation.  It should restore all functionality previously available in the core integration.
+This package contains a full **custom component** and a **test suite** for Mazda Connected Services v2 (OAuth2 + PKCE).
+The client implements:
+- OAuth 2.0 Authorization Code + PKCE (B2C SelfAsserted + Confirm)
+- Token exchange, refresh + retry on 401
+- Vehicles list + vehicle status
+- Start/Stop charging (mocked in tests)
 
-# Installation
+## Quickstart (local tests)
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install pytest pytest-asyncio aiohttp pytest-aiohttp pytest-cov homeassistant
 
-## With HACS
-
-1. Add this repository as a custom repository in HACS.
-2. Download the integration.
-3. Restart Home Assistant
-
-## Manual
-Copy the `mazda_cs` directory, from `custom_components` in this repository,
-and place it inside your Home Assistant Core installation's `custom_components` directory. Restart Home Assistant prior to moving on to the `Setup` section.
-
-`Note`: If installing manually, in order to be alerted about new releases, you will need to subscribe to releases from this repository.
+# Run tests
+PYTHONPATH=. pytest -vv -s
+```
