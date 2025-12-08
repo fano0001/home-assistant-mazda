@@ -7,7 +7,6 @@ Nutzung:
   export MAZDA_REGION="MME"
   python scripts/run_oauth_debug.py
 """
-
 import asyncio
 import logging
 import os
@@ -15,8 +14,8 @@ import os
 import aiohttp
 
 from custom_components.mazda_cs.pymazda.api_v2 import (
-    MazdaApiError,
     MazdaApiV2,
+    MazdaApiError,
     MazdaAuthError,
 )
 
