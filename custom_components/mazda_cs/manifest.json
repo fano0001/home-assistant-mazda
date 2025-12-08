@@ -1,1 +1,14 @@
+{
+  "domain": "mazda_cs",
+  "name": "Mazda Connected Services (CS)",
+  "version": "0.2.0",
+  "documentation": "https://github.com/tkarle/home-assistant-mazda",
+  "issue_tracker": "https://github.com/tkarle/home-assistant-mazda/issues",
+  "codeowners": ["@tkarle"],
+  "config_flow": true,
+  "requirements": [],
+  "dependencies": [],
+  "iot_class": "cloud_polling",
+  "integration_type": "service",
+  "loggers": ["custom_components.mazda_cs"]
 }
