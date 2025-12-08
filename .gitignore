@@ -5,3 +5,7 @@ __pycache__/
 
 .venv/
 *.bak
+
+# editor backups
+*.bak*
+*~
