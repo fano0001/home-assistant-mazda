@@ -1,6 +1,12 @@
 import aiohttp
 import asyncio
 import pytest
+
+
+@pytest.fixture
+def expected_lingering_timers():
+    # Aiohttp TCPConnector Cleanup-Timer tolerieren
+    return True
 pytestmark = pytest.mark.enable_socket
 import pytest_asyncio
 from aiohttp import web
