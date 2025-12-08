@@ -1,5 +1,4 @@
 import pytest
-import pytest_asyncio
 
 from custom_components.mazda_cs.sensor import _num, _pct
 

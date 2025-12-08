@@ -337,9 +337,3 @@ class MazdaApiV2:
                 await sess.close()
         finally:
             self._session = None
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb):
-        await self.aclose()

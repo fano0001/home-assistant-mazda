@@ -1,11 +1,11 @@
 import aiohttp
 import pytest
-pytestmark = pytest.mark.enable_socket
 import pytest_asyncio
 from aiohttp import web
 
 from custom_components.mazda_cs.pymazda.api_v2 import MazdaApiV2
 
+pytestmark = pytest.mark.enable_socket
 API_BASE = "/connectedservices/v2"
 TENANT = "432b587f-88ad-40aa-9e5d-e6bcf9429e8d"
 AUTHORIZE_PATH = f"/{TENANT}/b2c_1a_signin/oauth2/v2.0/authorize"

@@ -1,19 +1,12 @@
 import aiohttp
+import asyncio
 import pytest
+pytestmark = pytest.mark.enable_socket
 import pytest_asyncio
 from aiohttp import web
 from homeassistant.core import HomeAssistant
 
 from custom_components.mazda_cs.coordinator import MazdaDataCoordinator
-
-pytestmark = pytest.mark.enable_socket
-
-
-@pytest.fixture
-def expected_lingering_timers():
-    # Aiohttp TCPConnector Cleanup-Timer tolerieren
-    return True
-
 
 API_BASE = "/connectedservices/v2"
 TENANT = "432b587f-88ad-40aa-9e5d-e6bcf9429e8d"
@@ -61,7 +54,7 @@ async def server(aiohttp_server):
 @pytest.mark.asyncio
 async def test_coordinator_update(server, tmp_path):
     hass = HomeAssistant(config_dir=str(tmp_path))
-    async with aiohttp.ClientSession() as _session:  # noqa: F841
+    async with aiohttp.ClientSession() as session:
         coord = MazdaDataCoordinator(hass, email="u@example.com", password="pw", region="MME")
         base = str(server.make_url("")).rstrip("/")
         coord.api._oauth_host = base
@@ -77,18 +70,18 @@ async def test_coordinator_update(server, tmp_path):
         assert "JMZTEST" in data["status"]
 
     await hass.async_block_till_done()
-    # close underlying api session to avoid lingering TCPConnector timers
+        # close underlying api session to avoid lingering TCPConnector timers
     try:
-        api_obj = getattr(coord, "api", None) or getattr(coord, "_api", None)
-        if api_obj and hasattr(api_obj, "aclose"):
+        api_obj = getattr(coord, 'api', None) or getattr(coord, '_api', None)
+        if api_obj and hasattr(api_obj, 'aclose'):
             await api_obj.aclose()
     except Exception:
         pass
     await hass.async_stop()
     # cleanup API session if coordinator created its own client
     try:
-        api_obj = getattr(coord, "api", None) or getattr(coord, "_api", None)
-        if api_obj is not None and hasattr(api_obj, "aclose"):
+        api_obj = getattr(coord, 'api', None) or getattr(coord, '_api', None)
+        if api_obj is not None and hasattr(api_obj, 'aclose'):
             await api_obj.aclose()
     except Exception:
         pass

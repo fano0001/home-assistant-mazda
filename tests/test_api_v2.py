@@ -1,11 +1,10 @@
 import pytest
-pytestmark = pytest.mark.enable_socket
-
-import pytest
 import pytest_asyncio
 from aiohttp import web
 
 from custom_components.mazda_cs.pymazda.api_v2 import MazdaApiV2
+
+pytestmark = pytest.mark.enable_socket
 
 # ---- test-local constants ----
 TENANT = "432b587f-88ad-40aa-9e5d-e6bcf9429e8d"
@@ -14,6 +13,7 @@ TOKEN_PATH = f"/{TENANT}/b2c_1a_signin/oauth2/v2.0/token"
 SELF_ASSERTED_PATH = f"/{TENANT}/B2C_1A_signin/SelfAsserted"
 CONFIRM_PATH = f"/{TENANT}/api/CombinedSigninAndSignup/confirmed"
 API_BASE = "/connectedservices/v2"
+
 
 @pytest_asyncio.fixture
 async def server(aiohttp_server):
@@ -62,6 +62,7 @@ async def server(aiohttp_server):
     app.add_routes(routes)
     return await aiohttp_server(app)
 
+
 @pytest.mark.asyncio
 async def test_login_and_fetch(server):
     base = str(server.make_url("")).rstrip("/")
@@ -78,6 +79,7 @@ async def test_login_and_fetch(server):
         assert vehicles and vehicles[0]["vin"] == "JMZTEST"
     finally:
         await api.aclose()
+
 
 @pytest.mark.asyncio
 async def test_refresh_and_401_retry(server):

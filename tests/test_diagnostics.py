@@ -1,5 +1,4 @@
 import pytest
-import pytest_asyncio
 from homeassistant.core import HomeAssistant
 
 from custom_components.mazda_cs.const import DATA_COORDINATOR, DOMAIN
