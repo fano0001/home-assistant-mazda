@@ -1,4 +1,7 @@
 import pytest
+pytestmark = pytest.mark.enable_socket
+
+import pytest
 import pytest_asyncio
 from aiohttp import web
 
