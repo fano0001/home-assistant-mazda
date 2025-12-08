@@ -1,5 +1,8 @@
 import aiohttp
+import asyncio
 import pytest
+pytestmark = pytest.mark.enable_socket
+import pytest_asyncio
 from aiohttp import web
 from homeassistant.core import HomeAssistant
 
@@ -13,7 +16,7 @@ SELF_ASSERTED_PATH = f"/{TENANT}/B2C_1A_signin/SelfAsserted"
 CONFIRM_PATH = f"/{TENANT}/api/CombinedSigninAndSignup/confirmed"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def server(aiohttp_server):
     app = web.Application()
 
@@ -51,8 +54,7 @@ async def server(aiohttp_server):
 @pytest.mark.asyncio
 async def test_coordinator_update(server, tmp_path):
     hass = HomeAssistant(config_dir=str(tmp_path))
-    session = aiohttp.ClientSession()
-    try:
+    async with aiohttp.ClientSession() as session:
         coord = MazdaDataCoordinator(hass, email="u@example.com", password="pw", region="MME")
         base = str(server.make_url("")).rstrip("/")
         coord.api._oauth_host = base
@@ -66,5 +68,20 @@ async def test_coordinator_update(server, tmp_path):
         data = await coord._async_update_data()
         assert data["vehicles"][0].vin == "JMZTEST"
         assert "JMZTEST" in data["status"]
-    finally:
-        await session.close()
+
+    await hass.async_block_till_done()
+        # close underlying api session to avoid lingering TCPConnector timers
+    try:
+        api_obj = getattr(coord, 'api', None) or getattr(coord, '_api', None)
+        if api_obj and hasattr(api_obj, 'aclose'):
+            await api_obj.aclose()
+    except Exception:
+        pass
+    await hass.async_stop()
+    # cleanup API session if coordinator created its own client
+    try:
+        api_obj = getattr(coord, 'api', None) or getattr(coord, '_api', None)
+        if api_obj is not None and hasattr(api_obj, 'aclose'):
+            await api_obj.aclose()
+    except Exception:
+        pass

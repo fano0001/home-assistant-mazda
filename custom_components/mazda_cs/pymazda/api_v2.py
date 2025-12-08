@@ -328,3 +328,18 @@ class MazdaApiV2:
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
         await self._close_session()
+
+    async def aclose(self) -> None:
+        """Close owned aiohttp session/connector to avoid lingering timers/threads."""
+        try:
+            sess = getattr(self, "_session", None)
+            if getattr(self, "_own_session", False) and sess and not sess.closed:
+                await sess.close()
+        finally:
+            self._session = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.aclose()

@@ -1,5 +1,7 @@
 import aiohttp
 import pytest
+pytestmark = pytest.mark.enable_socket
+import pytest_asyncio
 from aiohttp import web
 
 from custom_components.mazda_cs.pymazda.api_v2 import MazdaApiV2
@@ -12,7 +14,7 @@ SELF_ASSERTED_PATH = f"/{TENANT}/B2C_1A_signin/SelfAsserted"
 CONFIRM_PATH = f"/{TENANT}/api/CombinedSigninAndSignup/confirmed"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def server(aiohttp_server):
     app = web.Application()
 
@@ -48,8 +50,7 @@ async def server(aiohttp_server):
 
 @pytest.mark.asyncio
 async def test_start_stop_charging(server):
-    session = aiohttp.ClientSession()
-    try:
+    async with aiohttp.ClientSession() as session:
         api = MazdaApiV2(
             email="u@example.com",
             password="pw",
@@ -66,5 +67,3 @@ async def test_start_stop_charging(server):
         await api.async_login()
         await api.async_start_charging("JMZTEST")
         await api.async_stop_charging("JMZTEST")
-    finally:
-        await session.close()
