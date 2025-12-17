@@ -118,7 +118,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             latitude = service_call.data["latitude"]
             longitude = service_call.data["longitude"]
             poi_name = service_call.data["poi_name"]
-            await api_method(vehicle_id, latitude, longitude, poi_name)
+            await with_timeout(api_method(vehicle_id, latitude, longitude, poi_name))
         except Exception as ex:
             raise HomeAssistantError(ex) from ex
 
