@@ -50,17 +50,17 @@ with SSLContextConfigurator(ssl_context, libssl_path="libssl.so.3") as ssl_conte
 REGION_CONFIG = {
     "MNAO": {
         "app_code": "202007270941270111799",
-        "base_url": "https://0cxo7m58.mazda.com/prod/",
+        "base_url": "https://mps.mazda.com/prod/",
         "usher_url": "https://ptznwbh8.mazda.com/appapi/v1/",
     },
     "MME": {
         "app_code": "202008100250281064816",
-        "base_url": "https://e9stj7g7.mazda.com/prod/",
+        "base_url": "https://mps.eu.mazda.com/prod/",
         "usher_url": "https://rz97suam.mazda.com/appapi/v1/",
     },
     "MJO": {
         "app_code": "202009170613074283422",
-        "base_url": "https://wcs9p6wj.mazda.com/prod/",
+        "base_url": "https://mps.jp.mazda.com/prod/",
         "usher_url": "https://c5ulfwxr.mazda.com/appapi/v1/",
     },
 }
@@ -68,10 +68,10 @@ REGION_CONFIG = {
 IV = "0102030405060708"
 SIGNATURE_MD5 = "C383D8C4D279B78130AD52DC71D95CAA"
 APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1. 15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
-USER_AGENT_USHER_API = 'MyMazda/9.0.2'
+USER_AGENT_BASE_API = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Mobile/15E148 Safari/604.1"
+USER_AGENT_USHER_API = 'MyMazda/10.0.0'
 APP_OS = "IOS"
-APP_VERSION = "9.0.2"
+APP_VERSION = "10.0.0"
 USHER_SDK_VERSION = "11.3.0930"
 
 MAX_RETRIES = 4
