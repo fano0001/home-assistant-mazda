@@ -2,22 +2,20 @@
   "config": {
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_account%]",
-      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
-    },
-    "error": {
-      "account_locked": "Account locked. Please try again later.",
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-      "unknown": "[%key:common::config_flow::error::unknown%]"
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+      "oauth_error": "Error during OAuth authentication. Please try again.",
+      "wrong_account": "Wrong account. Please authenticate with the same account."
     },
     "step": {
       "user": {
         "data": {
-          "email": "[%key:common::config_flow::data::email%]",
-          "password": "[%key:common::config_flow::data::password%]",
           "region": "Region"
         },
-        "description": "Please enter the email address and password you use to log into the MyMazda mobile app."
+        "description": "Select your region, then you will be redirected to sign in with your Mazda account."
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate with Mazda",
+        "description": "Your Mazda session has expired. Please re-authenticate."
       }
     }
   },

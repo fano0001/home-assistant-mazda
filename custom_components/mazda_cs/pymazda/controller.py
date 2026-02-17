@@ -5,11 +5,8 @@ from .exceptions import MazdaException
 
 
 class Controller:  # noqa: D101
-    def __init__(self, email, password, region, websession=None):  # noqa: D107
-        self.connection = Connection(email, password, region, websession)
-
-    async def login(self):  # noqa: D102
-        await self.connection.login()
+    def __init__(self, email, region, access_token_provider, websession=None):  # noqa: D107
+        self.connection = Connection(email, region, access_token_provider, websession)
 
     async def get_tac(self):  # noqa: D102
         return await self.connection.api_request(

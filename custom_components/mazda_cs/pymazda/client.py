@@ -7,21 +7,15 @@ from .exceptions import MazdaConfigException
 
 class Client:  # noqa: D101
     def __init__(  # noqa: D107
-        self, email, password, region, websession=None, use_cached_vehicle_list=False
+        self, email, region, access_token_provider, websession=None, use_cached_vehicle_list=False
     ):
         if email is None or len(email) == 0:
             raise MazdaConfigException("Invalid or missing email address")
-        if password is None or len(password) == 0:
-            raise MazdaConfigException("Invalid or missing password")
 
-        self.controller = Controller(email, password, region, websession)
-
-        self._cached_state = {}
+        self.controller = Controller(email, region, access_token_provider, websession)
         self._use_cached_vehicle_list = use_cached_vehicle_list
         self._cached_vehicle_list = None
-
-    async def validate_credentials(self):  # noqa: D102
-        await self.controller.login()
+        self._cached_state = {}
 
     async def get_vehicles(self):  # noqa: D102
         if self._use_cached_vehicle_list and self._cached_vehicle_list is not None:
