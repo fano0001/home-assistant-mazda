@@ -16,6 +16,7 @@ from .crypto_utils import (
 )
 from .exceptions import (
     MazdaAPIEncryptionException,
+    MazdaAuthenticationException,
     MazdaConfigException,
     MazdaException,
     MazdaRequestInProgressException,
@@ -42,33 +43,53 @@ SSL_SIGNATURE_ALGORITHMS = [
 with SSLContextConfigurator(ssl_context, libssl_path="libssl.so.3") as ssl_context_configurator:
     ssl_context_configurator.configure_signature_algorithms(":".join(SSL_SIGNATURE_ALGORITHMS))
 
+# --- iOS app constants (captured from com.mazdausa.mazdaiphone traffic) ---
+# IOS_MNAO_APP_CODE = "635529297359258474866"
+# IOS_APP_PACKAGE_ID = "com.mazdausa.mazdaiphone"
+# IOS_USER_AGENT_BASE_API = "MyMazda-ios/9.0.8"
+# IOS_APP_OS = "IOS"
+# IOS_APP_VERSION = "9.0.8"
+# IOS_SIGN_PACKAGE_ID = unknown  (sign_code may differ from Android's "202406061255295340265")
+# IOS_SIGNATURE_MD5 = unknown    (native lib constant in iOS binary not yet extracted)
+# IOS_SHA256_CERT_SIG = unknown  (iOS signing cert SHA256, not derivable from Android APK)
+
+# --- Android app constants (confirmed from com.interrait.mymazda 9.0.8 APK) ---
+IV = "0102030405060708"
+# SIGNATURE_MD5: confirmed from libnativeSKlib.so strings (MD5 of APK signing cert)
+SIGNATURE_MD5 = "C383D8C4D279B78130AD52DC71D95CAA"
+# SHA256_CERT_SIG: SHA256 of same APK signing cert — used in new MC API (j.f11208e) sign derivation
+SHA256_CERT_SIG = "C022C9EE778CF903838F8B9C4B9FF0036A5C516CEFAAD6DC710B717CF97DCFCA"
+# SIGN_PACKAGE_ID: Android package name used in key derivation (NOT SDMConfigDataUtil.getSignCode())
+# SDMConfigDataUtil.getSignCode() = "202406061255295340265" is used elsewhere, not here
+SIGN_PACKAGE_ID = "com.interrait.mymazda"
+
+# REGION_CONFIG app_codes sourced from assets/config/*_core_config.json MC_APP_CODE fields.
+# MNAO old API app_code (APP_CODE, j.f11207d, 0cxo7m58.mazda.com): "202007270941270111799"
+# cert_sig: new MC API (j.f11208e / hgs2ivna.mazda.com) uses SHA256 path; old API uses MD5 path
 REGION_CONFIG = {
     "MNAO": {
-        "app_code": "635529297359258474866",
+        "app_code": "498345786246797888995",   # MC_APP_CODE from MNAO_core_config.json
         "base_url": "https://hgs2ivna.mazda.com/",
         "region_header": "us",
+        "cert_sig": SHA256_CERT_SIG,           # new MC API → SHA256 path
     },
     "MME": {
-        "app_code": "202008100250281064816",
-        "base_url": "https://e9stj7g7.mazda.com/prod/",
+        "app_code": "365747628595648782737",    # MC_APP_CODE from MME_core_config.json
+        "base_url": "https://hgs2iveu.mazda.com/",
         "region_header": "eu",
+        "cert_sig": SHA256_CERT_SIG,             # Guess, maybe be different
     },
     "MJO": {
-        "app_code": "202009170613074283422",
-        "base_url": "https://wcs9p6wj.mazda.com/prod/",
+        "app_code": "438849393836584965983",    # MC_APP_CODE from MJO_core_config.json
+        "base_url": "https://hgs2ivap.mazda.com/",
         "region_header": "jp",
+        "cert_sig": SHA256_CERT_SIG,             # Guess, maybe be different
     },
 }
-
-IV = "0102030405060708"
-SIGNATURE_MD5 = "C383D8C4D279B78130AD52DC71D95CAA"
-# Used in request headers (app-unique-id)
-APP_PACKAGE_ID = "com.mazdausa.mazdaiphone"
-# Used in sign/key derivation — may differ from APP_PACKAGE_ID
-# Try "com.interrait.mymazda" if checkVersion fails with 600001
-SIGN_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "MyMazda-ios/9.0.8"
-APP_OS = "IOS"
+# APP_PACKAGE_ID: Android package name, used in app-unique-id header
+APP_PACKAGE_ID = "com.interrait.mymazda"
+USER_AGENT_BASE_API = "MyMazda/9.0.8 (Linux; Android 14)"
+APP_OS = "ANDROID"
 APP_VERSION = "9.0.8"
 
 MAX_RETRIES = 4
@@ -86,11 +107,12 @@ class Connection:
             self.app_code = region_config["app_code"]
             self.base_url = region_config["base_url"]
             self.region_header = region_config["region_header"]
+            self.cert_sig = region_config["cert_sig"]
         else:
             raise MazdaConfigException("Invalid region")
 
         self.base_api_device_id = hashlib.sha1(email.encode()).hexdigest()
-        self.device_session_id = str(uuid.uuid4())
+        self.device_session_id = None  # Set to attach sessionId after successful attach
 
         self.enc_key = None
         self.sign_key = None
@@ -111,8 +133,8 @@ class Connection:
 
     def __derive_key_material(self, app_code):
         val1 = hashlib.md5((app_code + SIGN_PACKAGE_ID).encode()).hexdigest().upper()
-        val2 = hashlib.md5((val1 + SIGNATURE_MD5).encode()).hexdigest().lower()
-        self.logger.debug("Key derivation: app_code=%s, pkg=%s, val1=%s, val2=%s, dec_key=%s", app_code, SIGN_PACKAGE_ID, val1, val2, val2[4:20])
+        val2 = hashlib.md5((val1 + self.cert_sig).encode()).hexdigest().lower()
+        self.logger.debug("Key derivation: app_code=%s, pkg=%s, cert_sig=%s, val1=%s, val2=%s, dec_key=%s", app_code, SIGN_PACKAGE_ID, self.cert_sig[:8] + "...", val1, val2, val2[4:20])
         return val2
 
     def __get_decryption_key_from_app_code(self, app_code=None):
@@ -305,13 +327,15 @@ class Connection:
             "region": self.region_header,
             "locale": "en-US",
             "language": "en",
-            "X-device-session-id": self.device_session_id,
             "Accept": "*/*",
-            "Content-Type": "text/plain",
         }
 
         if needs_auth and self.access_token:
             headers["Authorization"] = f"Bearer {self.access_token}"
+            headers["access-token"] = self.access_token
+
+        if self.device_session_id:
+            headers["X-device-session-id"] = self.device_session_id
 
         if "checkVersion" in uri:
             headers["sign"] = self.__get_sign_from_timestamp(timestamp, self.app_code)
@@ -349,6 +373,10 @@ class Connection:
             raise MazdaAPIEncryptionException("Server rejected encrypted request")
         elif response_json.get("errorCode") == 600002:
             raise MazdaTokenExpiredException("Token expired")
+        elif response_json.get("errorCode") == 600100:
+            raise MazdaAuthenticationException(
+                "Account logged out: " + response_json.get("error", "multiple devices detected")
+            )
         elif (
             response_json.get("errorCode") == 920000
             and response_json.get("extraCode") == "400S01"

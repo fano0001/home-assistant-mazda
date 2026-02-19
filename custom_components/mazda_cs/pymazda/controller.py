@@ -8,6 +8,37 @@ class Controller:  # noqa: D101
     def __init__(self, email, region, access_token_provider, websession=None):  # noqa: D107
         self.connection = Connection(email, region, access_token_provider, websession)
 
+    async def attach(self, locale="en-US", country="US"):  # noqa: D102
+        """Register device session with Mazda backend. Must be called after login."""
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "serviceType": 0,   # 0=CV (Connected Vehicle services); -1=MyMazda (app features)
+            "deviceInfo": {
+                "deviceToken": self.connection.base_api_device_id,
+                "deviceType": 1,
+            },
+            "locale": locale,
+            "country": country,
+        }
+        return await self.connection.api_request(
+            "POST",
+            "remoteServices/attach/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
+        )
+
+    async def detach(self, session_id):  # noqa: D102
+        """Deregister device session from Mazda backend."""
+        post_body = {"sessionId": session_id}
+        return await self.connection.api_request(
+            "POST",
+            "remoteServices/detach/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
+        )
+
     async def get_tac(self):  # noqa: D102
         return await self.connection.api_request(
             "GET", "content/getTac/v4", needs_keys=True, needs_auth=False
@@ -35,7 +66,7 @@ class Controller:  # noqa: D101
     async def get_vehicle_status(self, internal_vin):  # noqa: D102
         post_body = {
             "internaluserid": "__INTERNAL_ID__",
-            "internalvin": internal_vin,
+            "internalvin": str(internal_vin),
             "limit": 1,
             "offset": 0,
             "vecinfotype": "0",
@@ -56,7 +87,7 @@ class Controller:  # noqa: D101
     async def get_ev_vehicle_status(self, internal_vin):  # noqa: D102
         post_body = {
             "internaluserid": "__INTERNAL_ID__",
-            "internalvin": internal_vin,
+            "internalvin": str(internal_vin),
             "limit": 1,
             "offset": 0,
             "vecinfotype": "0",
@@ -77,7 +108,7 @@ class Controller:  # noqa: D101
     async def get_health_report(self, internal_vin):  # noqa: D102
         post_body = {
             "internaluserid": "__INTERNAL_ID__",
-            "internalvin": internal_vin,
+            "internalvin": str(internal_vin),
             "limit": 1,
             "offset": 0,
         }
@@ -96,7 +127,7 @@ class Controller:  # noqa: D101
         return response
 
     async def door_unlock(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -112,7 +143,7 @@ class Controller:  # noqa: D101
         return response
 
     async def door_lock(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -128,7 +159,7 @@ class Controller:  # noqa: D101
         return response
 
     async def light_on(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -144,7 +175,7 @@ class Controller:  # noqa: D101
         return response
 
     async def light_off(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -160,7 +191,7 @@ class Controller:  # noqa: D101
         return response
 
     async def engine_start(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -176,7 +207,7 @@ class Controller:  # noqa: D101
         return response
 
     async def engine_stop(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -241,7 +272,7 @@ class Controller:  # noqa: D101
 
         post_body = {
             "internaluserid": "__INTERNAL_ID__",
-            "internalvin": internal_vin,
+            "internalvin": str(internal_vin),
             "placemarkinfos": [
                 {
                     "Altitude": 0,
@@ -269,7 +300,7 @@ class Controller:  # noqa: D101
             raise MazdaException("Failed to send POI")
 
     async def charge_start(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -285,7 +316,7 @@ class Controller:  # noqa: D101
         return response
 
     async def charge_stop(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -301,7 +332,7 @@ class Controller:  # noqa: D101
         return response
 
     async def get_hvac_setting(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -326,7 +357,7 @@ class Controller:  # noqa: D101
     ):
         post_body = {
             "internaluserid": "__INTERNAL_ID__",
-            "internalvin": internal_vin,
+            "internalvin": str(internal_vin),
             "hvacsettings": {
                 "FrontDefroster": 1 if front_defroster else 0,
                 "RearDefogger": 1 if rear_defroster else 0,
@@ -349,7 +380,7 @@ class Controller:  # noqa: D101
         return response
 
     async def hvac_on(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -365,7 +396,7 @@ class Controller:  # noqa: D101
         return response
 
     async def hvac_off(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",
@@ -381,7 +412,7 @@ class Controller:  # noqa: D101
         return response
 
     async def refresh_vehicle_status(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": internal_vin}
+        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 
         response = await self.connection.api_request(
             "POST",

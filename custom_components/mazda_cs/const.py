@@ -19,7 +19,8 @@ OAUTH2_SCOPES = [
     "profile",
     "offline_access",
 ]
-MOBILE_REDIRECT_URI = "msauth.com.mazdausa.mazdaiphone://auth"
+#MOBILE_REDIRECT_URI = "msauth.com.mazdausa.mazdaiphone://auth" #iOS Value
+MOBILE_REDIRECT_URI = "msauth://com.interrait.mymazda/%2FnKMu1%2BlCjy5%2Be7OF9vfp4eFBks%3D"
 
 # Regional OAuth2 hosts
 OAUTH2_HOSTS = {
@@ -29,7 +30,10 @@ OAUTH2_HOSTS = {
 }
 
 # MSAL client identifiers (sent with authorize requests)
-MSAL_CLIENT_SKU = "MSAL.iOS"
-MSAL_CLIENT_VER = "1.6.3"
+# Values confirmed from com.interrait.mymazda 9.0.8 APK (msal/BuildConfig.java, AuthenticationConstants.java)
+#MSAL_CLIENT_SKU = "MSAL.iOS"   # old iOS value
+#MSAL_CLIENT_VER = "1.6.3"      # old iOS MSAL version
+MSAL_CLIENT_SKU = "MSAL.Android"
+MSAL_CLIENT_VER = "5.4.0"
 MSAL_APP_NAME = "MyMazda"
 MSAL_APP_VER = "9.0.8"

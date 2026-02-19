@@ -16,6 +16,24 @@ class Client:  # noqa: D101
         self._use_cached_vehicle_list = use_cached_vehicle_list
         self._cached_vehicle_list = None
         self._cached_state = {}
+        self._session_id = None
+
+    async def attach(self, locale="en-US", country="US"):  # noqa: D102
+        """Register device session. Call once after authentication before other API calls."""
+        response = await self.controller.attach(locale, country)
+        if response and response.get("data"):
+            session_id = response["data"].get("userinfo", {}).get("sessionId")
+            if session_id:
+                self._session_id = session_id
+                self.controller.connection.device_session_id = session_id
+        return response
+
+    async def detach(self):  # noqa: D102
+        """Deregister device session. Call on integration unload."""
+        if self._session_id:
+            await self.controller.detach(self._session_id)
+            self._session_id = None
+            self.controller.connection.device_session_id = None
 
     async def get_vehicles(self):  # noqa: D102
         if self._use_cached_vehicle_list and self._cached_vehicle_list is not None:

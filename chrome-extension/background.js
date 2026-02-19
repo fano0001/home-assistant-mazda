@@ -1,12 +1,23 @@
 /**
  * Mazda OAuth Helper - Background Service Worker
  *
- * This extension intercepts the msauth.com.mazdausa.mazdaiphone://auth redirect from Mazda's
- * Auth0 mobile OAuth flow and extracts the authorization code.
+ * This extension intercepts Mazda mobile OAuth redirects and extracts the
+ * authorization code. Two redirect URI schemes are handled:
+ *   - msauth.com.mazdausa.mazdaiphone://auth  (iOS / MazdaUSA app)
+ *   - msauth://com.interrait.mymazda           (Android / MyMazda app)
  *
  * If the state parameter is a JWT containing a flow_id, it automatically
  * redirects to Home Assistant's OAuth endpoint.
  */
+
+const MAZDA_REDIRECT_PREFIXES = [
+  "msauth.com.mazdausa.mazdaiphone://auth",
+  "msauth://com.interrait.mymazda",
+];
+
+function isMazdaRedirect(url) {
+  return MAZDA_REDIRECT_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
 
 // Check if state is a JWT with flow_id (for Home Assistant)
 function isHomeAssistantFlow(state) {
@@ -24,12 +35,11 @@ function isHomeAssistantFlow(state) {
   }
 }
 
-// Listen for navigation events that would redirect to msauth.com.mazdausa.mazdaiphone://auth
+// Listen for navigation events that would redirect to a Mazda OAuth URI
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   const url = details.url;
 
-  // Check if this is the msauth.com.mazdausa.mazdaiphone://auth redirect
-  if (url.startsWith("msauth.com.mazdausa.mazdaiphone://auth")) {
+  if (isMazdaRedirect(url)) {
     // Parse the URL to extract the authorization code
     const urlObj = new URL(url);
     const code = urlObj.searchParams.get("code");
@@ -68,10 +78,9 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   }
 });
 
-// Also listen for errors when Chrome can't handle msauth.com.mazdausa.mazdaiphone://auth
+// Also listen for errors when Chrome can't handle a Mazda OAuth URI
 chrome.webNavigation.onErrorOccurred.addListener(async (details) => {
-  // Check if the error was for a msauth.com.mazdausa.mazdaiphone://auth URL
-  if (details.url && details.url.startsWith("msauth.com.mazdausa.mazdaiphone://auth")) {
+  if (details.url && isMazdaRedirect(details.url)) {
     const urlObj = new URL(details.url);
     const code = urlObj.searchParams.get("code");
     const state = urlObj.searchParams.get("state");
