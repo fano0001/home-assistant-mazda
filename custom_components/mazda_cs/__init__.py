@@ -36,8 +36,11 @@ from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DO
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
+    MazdaAccountLockedException,
+    MazdaAPIEncryptionException,
     MazdaAuthenticationException,
     MazdaException,
+    MazdaTokenExpiredException,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -187,6 +190,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         }
     )
 
+    # Register device session with Mazda backend (required before any remoteServices calls)
+    try:
+        attach_result = await mazda_client.attach()
+        _LOGGER.debug("Device session attached to Mazda backend: %s", attach_result)
+    except Exception as ex:
+        _LOGGER.warning("attach failed (continuing anyway to test getVecBaseInfos): %s", ex)
+
     async def async_update_data():
         """Fetch data from Mazda API."""
         try:
@@ -272,6 +282,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_remove(DOMAIN, "send_poi")
 
     if unload_ok:
+        client = hass.data[DOMAIN][entry.entry_id].get(DATA_CLIENT)
+        if client:
+            try:
+                await client.detach()
+            except Exception:
+                pass
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
