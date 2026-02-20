@@ -110,9 +110,11 @@ MAX_RETRIES = 4
 class Connection:
     """Main class for handling MyMazda API connection."""
 
-    def __init__(self, email, region, access_token_provider, websession=None):  # noqa: D107
+    def __init__(self, email, region, access_token_provider, session_refresh_provider=None, websession=None):  # noqa: D107
         self.email = email
         self.access_token_provider = access_token_provider
+        self.session_refresh_provider = session_refresh_provider
+        self._refreshing_session = False
 
         if region in REGION_CONFIG:
             region_config = REGION_CONFIG[region]
@@ -275,6 +277,15 @@ class Connection:
                 "Server reports access token was expired. Retrieving new access token."
             )
             self.access_token = await self.access_token_provider()
+            if self.session_refresh_provider and not self._refreshing_session:
+                self._refreshing_session = True
+                try:
+                    self.logger.info("Re-establishing device session after token refresh.")
+                    await self.session_refresh_provider()
+                except Exception as ex:
+                    self.logger.warning("Session re-establishment failed (non-fatal): %s", ex)
+                finally:
+                    self._refreshing_session = False
             return await self.__api_request_retry(
                 method,
                 uri,

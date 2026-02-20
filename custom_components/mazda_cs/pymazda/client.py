@@ -12,7 +12,7 @@ class Client:  # noqa: D101
         if email is None or len(email) == 0:
             raise MazdaConfigException("Invalid or missing email address")
 
-        self.controller = Controller(email, region, access_token_provider, websession)
+        self.controller = Controller(email, region, access_token_provider, session_refresh_provider=self.attach, websession=websession)
         self._region = region
         self._use_cached_vehicle_list = use_cached_vehicle_list
         self._cached_vehicle_list = None

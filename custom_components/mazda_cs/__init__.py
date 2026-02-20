@@ -223,6 +223,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return vehicles
         except MazdaAuthenticationException as ex:
             raise ConfigEntryAuthFailed("Not authenticated with Mazda API") from ex
+        except ConfigEntryAuthFailed:
+            raise  # Let HA's coordinator trigger reauthentication
         except Exception as ex:
             _LOGGER.exception(
                 "Unknown error occurred during Mazda update request: %s", ex
