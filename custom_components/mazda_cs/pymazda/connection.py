@@ -73,6 +73,12 @@ REGION_CONFIG = {
         "region_header": "us",
         "cert_sig": SHA256_CERT_SIG,           # new MC API → SHA256 path
     },
+    "MCI": {
+        "app_code": "498345786246797888995",   # MC_APP_CODE from MCI_core_config.json (same as MNAO)
+        "base_url": "https://hgs2ivna.mazda.com/",  # Canada shares MNAO infrastructure
+        "region_header": "ca",
+        "cert_sig": SHA256_CERT_SIG,
+    },
     "MME": {
         "app_code": "365747628595648782737",    # MC_APP_CODE from MME_core_config.json
         "base_url": "https://hgs2iveu.mazda.com/",
@@ -84,6 +90,12 @@ REGION_CONFIG = {
         "base_url": "https://hgs2ivap.mazda.com/",
         "region_header": "jp",
         "cert_sig": SHA256_CERT_SIG,             # Guess, maybe be different
+    },
+    "MA": {
+        "app_code": "438849393836584965983",    # MC_APP_CODE from MA_core_config.json (same as MJO)
+        "base_url": "https://hgs2ivap.mazda.com/",  # Australia shares MJO API infrastructure
+        "region_header": "au",
+        "cert_sig": SHA256_CERT_SIG,
     },
 }
 # APP_PACKAGE_ID: Android package name, used in app-unique-id header

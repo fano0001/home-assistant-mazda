@@ -13,13 +13,24 @@ class Client:  # noqa: D101
             raise MazdaConfigException("Invalid or missing email address")
 
         self.controller = Controller(email, region, access_token_provider, websession)
+        self._region = region
         self._use_cached_vehicle_list = use_cached_vehicle_list
         self._cached_vehicle_list = None
         self._cached_state = {}
         self._session_id = None
 
-    async def attach(self, locale="en-US", country="US"):  # noqa: D102
+    # Per-region locale and country code for the attach call
+    _REGION_ATTACH_PARAMS = {
+        "MNAO": ("en-US", "US"),
+        "MCI":  ("en-CA", "CA"),
+        "MME":  ("en-GB", "GB"),
+        "MJO":  ("ja-JP", "JP"),
+        "MA":   ("en-AU", "AU"),
+    }
+
+    async def attach(self):  # noqa: D102
         """Register device session. Call once after authentication before other API calls."""
+        locale, country = self._REGION_ATTACH_PARAMS.get(self._region, ("en-US", "US"))
         response = await self.controller.attach(locale, country)
         if response and response.get("data"):
             session_id = response["data"].get("userinfo", {}).get("sessionId")

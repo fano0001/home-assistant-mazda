@@ -24,11 +24,9 @@ from .const import (
     MSAL_APP_VER,
     MSAL_CLIENT_SKU,
     MSAL_CLIENT_VER,
-    OAUTH2_CLIENT_ID,
+    OAUTH2_AUTH,
     OAUTH2_HOSTS,
     OAUTH2_POLICY,
-    OAUTH2_SCOPES,
-    OAUTH2_TENANT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,7 +35,8 @@ _LOGGER = logging.getLogger(__name__)
 def _build_oauth2_url(region: str, endpoint: str) -> str:
     """Build Azure AD B2C OAuth2 URL for a given region and endpoint."""
     host = OAUTH2_HOSTS[region]
-    return f"https://{host}/{OAUTH2_TENANT}/{OAUTH2_POLICY}/oauth2/v2.0/{endpoint}"
+    tenant_id = OAUTH2_AUTH[region]["tenant_id"]
+    return f"https://{host}/{tenant_id}/{OAUTH2_POLICY}/oauth2/v2.0/{endpoint}"
 
 
 class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
@@ -49,7 +48,7 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
         super().__init__(
             hass,
             domain=DOMAIN,
-            client_id=OAUTH2_CLIENT_ID,
+            client_id=OAUTH2_AUTH[region]["client_id"],
             client_secret="",  # PKCE flow, no client secret needed
             authorize_url=_build_oauth2_url(region, "authorize"),
             token_url=_build_oauth2_url(region, "token"),
@@ -69,7 +68,7 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
     def extra_authorize_data(self) -> dict:
         """Extra data for the authorize request."""
         data = {
-            "scope": " ".join(OAUTH2_SCOPES),
+            "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
             "x-app-name": MSAL_APP_NAME,
             "x-app-ver": MSAL_APP_VER,
             "x-client-SKU": MSAL_CLIENT_SKU,       # "MSAL.Android" (was "MSAL.iOS")
@@ -95,7 +94,7 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             "client_id": self.client_id,
             "grant_type": "refresh_token",
             "refresh_token": token["refresh_token"],
-            "scope": " ".join(OAUTH2_SCOPES),
+            "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
         }
         # Option A: include id_token_hint so B2C can silently re-establish the
         # server-side session without requiring user interaction.  B2C supports
@@ -128,4 +127,5 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             )
 
         new_token["last_saved_at"] = time.time()
+        new_token["expires_at"] = time.time() + new_token["expires_in"]
         return new_token
