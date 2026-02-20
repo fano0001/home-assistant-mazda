@@ -25,20 +25,8 @@ Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automat
 1. Install the Chrome extension:
 
    - Download the [latest chrome-extension.zip](https://github.com/crash0verride11/home-assistant-mazda/releases/latest/download/chrome-extension.zip) from releases (or use `./chrome-extension/` from source)
-   - Extract the zip file
-   - Open Chrome and navigate to `chrome://extensions/`
+   - Extract the zip file (or use source)
+   - Open Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select the extracted folder
-
-2. Run the browser authentication script:
-
-   ```bash
-   cd examples
-   python browser_auth.py
-   ```
-
-3. The script will:
-   - Open your browser to Mazda's login page
-   - After you log in, the extension captures the authorization code
-   - Exchange the code for API tokens
-   - Save tokens to `mazda_tokens.json`
+   - Try to authenticate
