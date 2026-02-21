@@ -18,15 +18,18 @@ and place it inside your Home Assistant Core installation's `custom_components` 
 
 # Authentication
 
-Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automated logins. Authentication requires a browser-based OAuth flow using a Chrome extension to capture the mobile app's custom redirect URL.
+> [!IMPORTANT]
+> All steps below must be performed in a Chromium based browser (tested in Edge and Vivaldi).
+> This chrome extension is required to successfully authenticate with Mazda. Do not skip this step!
+
+Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automated logins. Authentication requires a browser-based OAuth flow using a Chrome extension to capture the android mobile app's redirect URL.
 
 ## Setup
-
-1. Install the Chrome extension:
-
    - Download the [latest chrome-extension.zip](https://github.com/crash0verride11/home-assistant-mazda/releases/latest/download/chrome-extension.zip) from releases (or use `./chrome-extension/` from source)
    - Extract the zip file (or use source)
-   - Open Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
+   - Open Google Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select the extracted folder
    - Try to authenticate
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=crash0verride11&repository=home-assistant-mazda&category=integration)
