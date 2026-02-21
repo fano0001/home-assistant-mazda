@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from typing import TYPE_CHECKING, Any
@@ -9,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 import aiohttp
 
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.config_entry_oauth2_flow import (
     LocalOAuth2ImplementationWithPkce,
 )
@@ -89,43 +89,66 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
 
     async def async_refresh_token(self, token: dict) -> dict:
         """Refresh tokens, handling B2C which returns text/html on session expiry."""
-        session = async_get_clientsession(self.hass)
+        issued_at = token.get("last_saved_at", 0)
+        token_age_min = (time.time() - issued_at) / 60 if issued_at else None
+        _LOGGER.debug(
+            "Token refresh attempt — region=%s token_age=%.1f min has_refresh_token=%s",
+            self._region,
+            token_age_min if token_age_min is not None else -1,
+            bool(token.get("refresh_token")),
+        )
+
+        # Use a fresh ClientSession (not the shared HA session) to avoid stale
+        # persistent connections to B2C which cause repeated HTML responses.
         refresh_data: dict = {
             "client_id": self.client_id,
             "grant_type": "refresh_token",
             "refresh_token": token["refresh_token"],
             "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
         }
-        # Option A: include id_token_hint so B2C can silently re-establish the
-        # server-side session without requiring user interaction.  B2C supports
-        # this for custom policies that have the id_token_hint technical profile.
-        if id_token := token.get("id_token"):
-            refresh_data["id_token_hint"] = id_token
 
-        resp = await session.post(
-            self.token_url,
-            data=refresh_data,
-            timeout=aiohttp.ClientTimeout(total=30),
-        )
+        async with aiohttp.ClientSession() as session:
+            resp = await session.post(
+                self.token_url,
+                data=refresh_data,
+                timeout=aiohttp.ClientTimeout(total=30),
+            )
+            content_type = resp.headers.get("Content-Type", "")
+            _LOGGER.debug(
+                "Token refresh response — status=%s Content-Type=%s",
+                resp.status,
+                content_type,
+            )
+            body = await resp.read()
 
-        # Azure AD B2C returns text/html (login page redirect) instead of a JSON
-        # error when the underlying session has expired — signal reauthentication.
-        if "text/html" in resp.headers.get("Content-Type", ""):
+        # Azure AD B2C transiently returns text/html instead of JSON (e.g. during
+        # service hiccups). This is NOT a permanent auth failure — raise a regular
+        # exception so the coordinator retries on the next update cycle.
+        # ConfigEntryAuthFailed is reserved for confirmed permanent failures (JSON error).
+        if "text/html" in content_type:
             _LOGGER.warning(
-                "B2C returned HTML on token refresh (session expired). "
-                "id_token_hint was %s. Triggering reauthentication.",
-                "present" if token.get("id_token") else "absent",
+                "B2C returned HTML on token refresh (token_age=%.1f min). "
+                "Treating as transient — will retry on next update cycle.",
+                token_age_min if token_age_min is not None else -1,
             )
-            raise ConfigEntryAuthFailed(
-                "Mazda session expired, please reauthenticate"
-            )
+            raise Exception("B2C token refresh returned HTML — transient, will retry")
 
-        new_token = await resp.json(content_type=None)
+        new_token = json.loads(body)
         if "error" in new_token:
+            _LOGGER.warning(
+                "Token refresh JSON error — error=%s description=%s",
+                new_token.get("error"),
+                new_token.get("error_description", ""),
+            )
             raise ConfigEntryAuthFailed(
                 f"Token refresh failed: {new_token.get('error_description', new_token['error'])}"
             )
 
         new_token["last_saved_at"] = time.time()
         new_token["expires_at"] = time.time() + new_token["expires_in"]
+        _LOGGER.debug(
+            "Token refresh SUCCESS — new expires_in=%s new_has_refresh_token=%s",
+            new_token.get("expires_in"),
+            bool(new_token.get("refresh_token")),
+        )
         return new_token

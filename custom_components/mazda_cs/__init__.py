@@ -40,6 +40,7 @@ from .pymazda.exceptions import (
     MazdaAPIEncryptionException,
     MazdaAuthenticationException,
     MazdaException,
+    MazdaSessionExpiredException,
     MazdaTokenExpiredException,
 )
 

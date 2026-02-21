@@ -20,6 +20,7 @@ from .exceptions import (
     MazdaConfigException,
     MazdaException,
     MazdaRequestInProgressException,
+    MazdaSessionExpiredException,
     MazdaTokenExpiredException,
 )
 from .sensordata.sensor_data_builder import SensorDataBuilder
@@ -274,18 +275,29 @@ class Connection:
             )
         except MazdaTokenExpiredException:
             self.logger.info(
-                "Server reports access token was expired. Retrieving new access token."
+                "Server reports access token was expired (600002). "
+                "Resetting cached token — will re-fetch on retry."
             )
-            self.access_token = await self.access_token_provider()
-            if self.session_refresh_provider and not self._refreshing_session:
-                self._refreshing_session = True
+            self.access_token = None
+            return await self.__api_request_retry(
+                method,
+                uri,
+                query_dict,
+                body_dict,
+                needs_keys,
+                needs_auth,
+                num_retries + 1,
+            )
+        except MazdaSessionExpiredException as ex:
+            self.logger.warning(
+                "Server reports session conflict (600100). Clearing session ID and re-attaching. Details: %s", ex
+            )
+            self.device_session_id = None
+            if self.session_refresh_provider:
                 try:
-                    self.logger.info("Re-establishing device session after token refresh.")
                     await self.session_refresh_provider()
-                except Exception as ex:
-                    self.logger.warning("Session re-establishment failed (non-fatal): %s", ex)
-                finally:
-                    self._refreshing_session = False
+                except Exception as attach_ex:
+                    self.logger.warning("Re-attach after 600100 failed: %s", attach_ex)
             return await self.__api_request_retry(
                 method,
                 uri,
@@ -397,8 +409,8 @@ class Connection:
         elif response_json.get("errorCode") == 600002:
             raise MazdaTokenExpiredException("Token expired")
         elif response_json.get("errorCode") == 600100:
-            raise MazdaAuthenticationException(
-                "Account logged out: " + response_json.get("error", "multiple devices detected")
+            raise MazdaSessionExpiredException(
+                "Session conflict (600100): " + response_json.get("error", "multiple devices detected")
             )
         elif (
             response_json.get("errorCode") == 920000

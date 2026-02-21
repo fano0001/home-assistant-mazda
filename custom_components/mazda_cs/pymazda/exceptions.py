@@ -68,3 +68,15 @@ class MazdaRequestInProgressException(Exception):
         """Initialize exception."""
         super().__init__(status)
         self.status = status
+
+
+class MazdaSessionExpiredException(Exception):
+    """Raised when server reports a session conflict (600100 — multi-device login).
+
+    The correct response is to clear the stale session ID and re-attach.
+    """
+
+    def __init__(self, status):
+        """Initialize exception."""
+        super().__init__(status)
+        self.status = status
