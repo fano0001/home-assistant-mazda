@@ -2,22 +2,20 @@
     "config": {
         "abort": {
             "already_configured": "Account is already configured",
-            "reauth_successful": "Re-authentication was successful"
-        },
-        "error": {
-            "account_locked": "Account locked. Please try again later.",
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
+            "reauth_successful": "Re-authentication was successful",
+            "oauth_error": "Error during OAuth authentication. Please try again.",
+            "wrong_account": "Wrong account. Please authenticate with the same account."
         },
         "step": {
             "user": {
                 "data": {
-                    "email": "Email",
-                    "password": "Password",
                     "region": "Region"
                 },
-                "description": "Please enter the email address and password you use to log into the MyMazda mobile app."
+                "description": "Select your region, then you will be redirected to sign in with your Mazda account."
+            },
+            "reauth_confirm": {
+                "title": "Re-authenticate with Mazda",
+                "description": "Your Mazda session has expired. Please re-authenticate."
             }
         }
     },

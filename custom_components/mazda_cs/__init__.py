@@ -1,4 +1,5 @@
 """The Mazda Connected Services integration."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,10 +7,11 @@ from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING
 
+import jwt
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_REGION, Platform
+from homeassistant.const import CONF_REGION, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
@@ -18,6 +20,7 @@ from homeassistant.exceptions import (
 )
 from homeassistant.helpers import (
     aiohttp_client,
+    config_entry_oauth2_flow,
     config_validation as cv,
     device_registry as dr,
 )
@@ -28,13 +31,16 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
+from .api import MazdaAuth
 from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN
+from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
     MazdaAccountLockedException,
     MazdaAPIEncryptionException,
     MazdaAuthenticationException,
     MazdaException,
+    MazdaSessionExpiredException,
     MazdaTokenExpiredException,
 )
 
@@ -59,27 +65,65 @@ async def with_timeout(task, timeout_seconds=30):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Mazda Connected Services from a config entry."""
-    email = entry.data[CONF_EMAIL]
-    password = entry.data[CONF_PASSWORD]
-    region = entry.data[CONF_REGION]
+    region = entry.data.get(CONF_REGION, "MNAO")
 
-    websession = aiohttp_client.async_get_clientsession(hass)
-    mazda_client = MazdaAPI(
-        email, password, region, websession=websession, use_cached_vehicle_list=True
+    # Register our OAuth implementation
+    config_entry_oauth2_flow.async_register_implementation(
+        hass,
+        DOMAIN,
+        MazdaOAuth2Implementation(hass, region),
     )
 
+    # Check if this is an old entry that needs reauth (v1 with email/password)
+    # Chore:remove v1 upgrade logic in 2027 or later.
+    if not entry.data.get("token"):
+        msg = "Authentication method has changed. Please reauthenticate."
+        raise ConfigEntryAuthFailed(msg)
+
+    implementation = (
+        await config_entry_oauth2_flow.async_get_config_entry_implementation(
+            hass, entry
+        )
+    )
+    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
+
     try:
-        await mazda_client.validate_credentials()
-    except MazdaAuthenticationException as ex:
-        raise ConfigEntryAuthFailed from ex
-    except (
-        MazdaException,
-        MazdaAccountLockedException,
-        MazdaTokenExpiredException,
-        MazdaAPIEncryptionException,
-    ) as ex:
-        _LOGGER.error("Error occurred during Mazda login request: %s", ex)
-        raise ConfigEntryNotReady from ex
+        await session.async_ensure_token_valid()
+    except Exception as err:
+        raise ConfigEntryAuthFailed from err
+
+    # Extract email from the access token JWT for pymazda Connection
+    email = ""
+    try:
+        token_data = jwt.decode(
+            session.token["access_token"], options={"verify_signature": False}
+        )
+        email = token_data.get("sub", "")
+        _LOGGER.debug(
+            "Access token claims: sub=%s, scp=%s, tfp=%s, exp=%s, azp=%s",
+            token_data.get("sub"),
+            token_data.get("scp"),
+            token_data.get("tfp"),
+            token_data.get("exp"),
+            token_data.get("azp"),
+        )
+    except (jwt.DecodeError, KeyError):
+        _LOGGER.warning("Could not decode email from access token")
+
+    if not email:
+        _LOGGER.error("No 'sub' claim in access token — cannot identify user")
+
+    _LOGGER.debug("Using sub=%s as device identity for region=%s", email, region)
+
+    auth = MazdaAuth(session)
+    websession = aiohttp_client.async_get_clientsession(hass)
+    mazda_client = MazdaAPI(
+        email,
+        region,
+        access_token_provider=auth.async_get_access_token,
+        websession=websession,
+        use_cached_vehicle_list=True,
+    )
 
     async def async_handle_service_call(service_call: ServiceCall) -> None:
         """Handle a service call."""
@@ -148,6 +192,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         }
     )
 
+    # Register device session with Mazda backend (required before any remoteServices calls)
+    try:
+        attach_result = await mazda_client.attach()
+        _LOGGER.debug("Device session attached to Mazda backend: %s", attach_result)
+    except Exception as ex:
+        _LOGGER.warning("attach failed (continuing anyway to test getVecBaseInfos): %s", ex)
+
     async def async_update_data():
         """Fetch data from Mazda API."""
         try:
@@ -174,6 +225,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return vehicles
         except MazdaAuthenticationException as ex:
             raise ConfigEntryAuthFailed("Not authenticated with Mazda API") from ex
+        except ConfigEntryAuthFailed:
+            raise  # Let HA's coordinator trigger reauthentication
         except Exception as ex:
             _LOGGER.exception(
                 "Unknown error occurred during Mazda update request: %s", ex
@@ -213,6 +266,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old config entries to new format."""
+    if entry.version == 1:
+        # Clear old email/password data; this will trigger reauth
+        # since async_setup_entry checks for "token" key
+        hass.config_entries.async_update_entry(
+            entry, data={}, minor_version=1, version=2
+        )
+    return True
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
@@ -222,6 +286,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_remove(DOMAIN, "send_poi")
 
     if unload_ok:
+        client = hass.data[DOMAIN][entry.entry_id].get(DATA_CLIENT)
+        if client:
+            try:
+                await client.detach()
+            except Exception:
+                pass
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

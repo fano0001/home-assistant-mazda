@@ -2,22 +2,20 @@
     "config": {
         "abort": {
             "already_configured": "Der Account wurde bereits registriert",
-            "reauth_successful": "Die erneute Authentifizierung war erfolgreich"
-        },
-        "error": {
-            "account_locked": "Account gesperrt. Bitte versuch es später erneut.",
-            "cannot_connect": "Verbindungsfehler",
-            "invalid_auth": "Ungültige Authentifizierung",
-            "unknown": "Unerwarteter Fehler"
+            "reauth_successful": "Die erneute Authentifizierung war erfolgreich",
+            "oauth_error": "Fehler bei der OAuth-Authentifizierung. Bitte versuche es erneut.",
+            "wrong_account": "Falscher Account. Bitte mit demselben Account authentifizieren."
         },
         "step": {
             "user": {
                 "data": {
-                    "email": "Email",
-                    "password": "Passwort",
                     "region": "Region"
                 },
-                "description": "Eingabe der Email Adresse und des Passwort, welches für die MyMazda Mobile App verwendet wird."
+                "description": "Wähle deine Region, dann wirst du zur Anmeldung mit deinem Mazda-Konto weitergeleitet."
+            },
+            "reauth_confirm": {
+                "title": "Erneut bei Mazda authentifizieren",
+                "description": "Deine Mazda-Sitzung ist abgelaufen. Bitte authentifiziere dich erneut."
             }
         }
     },

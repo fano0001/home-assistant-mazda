@@ -5,6 +5,7 @@ import json
 import logging
 import ssl
 import time
+import uuid
 from urllib.parse import urlencode
 
 import aiohttp
@@ -12,18 +13,14 @@ import aiohttp
 from .crypto_utils import (
     decrypt_aes128cbc_buffer_to_str,
     encrypt_aes128cbc_buffer_to_base64_str,
-    encrypt_rsaecbpkcs1_padding,
-    generate_usher_device_id_from_seed,
-    generate_uuid_from_seed,
 )
 from .exceptions import (
-    MazdaAccountLockedException,
     MazdaAPIEncryptionException,
     MazdaAuthenticationException,
     MazdaConfigException,
     MazdaException,
-    MazdaLoginFailedException,
     MazdaRequestInProgressException,
+    MazdaSessionExpiredException,
     MazdaTokenExpiredException,
 )
 from .sensordata.sensor_data_builder import SensorDataBuilder
@@ -47,32 +44,56 @@ SSL_SIGNATURE_ALGORITHMS = [
 with SSLContextConfigurator(ssl_context, libssl_path="libssl.so.3") as ssl_context_configurator:
     ssl_context_configurator.configure_signature_algorithms(":".join(SSL_SIGNATURE_ALGORITHMS))
 
+# --- Android app constants (confirmed from com.interrait.mymazda 9.0.8 APK) ---
+IV = "0102030405060708"
+# SIGNATURE_MD5: confirmed from libnativeSKlib.so strings (MD5 of APK signing cert)
+SIGNATURE_MD5 = "C383D8C4D279B78130AD52DC71D95CAA"
+# SHA256_CERT_SIG: SHA256 of same APK signing cert — used in new MC API (j.f11208e) sign derivation
+SHA256_CERT_SIG = "C022C9EE778CF903838F8B9C4B9FF0036A5C516CEFAAD6DC710B717CF97DCFCA"
+# SIGN_PACKAGE_ID: Android package name used in key derivation (NOT SDMConfigDataUtil.getSignCode())
+# SDMConfigDataUtil.getSignCode() = "202406061255295340265" is used elsewhere, not here
+SIGN_PACKAGE_ID = "com.interrait.mymazda"
+
+# REGION_CONFIG app_codes sourced from assets/config/*_core_config.json MC_APP_CODE fields.
+# MNAO old API app_code (APP_CODE, j.f11207d, 0cxo7m58.mazda.com): "202007270941270111799"
+# cert_sig: new MC API (j.f11208e / hgs2ivna.mazda.com) uses SHA256 path; old API uses MD5 path
 REGION_CONFIG = {
     "MNAO": {
-        "app_code": "202007270941270111799",
-        "base_url": "https://0cxo7m58.mazda.com/prod/",
-        "usher_url": "https://ptznwbh8.mazda.com/appapi/v1/",
+        "app_code": "498345786246797888995",   # MC_APP_CODE from MNAO_core_config.json
+        "base_url": "https://hgs2ivna.mazda.com/",
+        "region_header": "us",
+        "cert_sig": SHA256_CERT_SIG,           # new MC API → SHA256 path
+    },
+    "MCI": {
+        "app_code": "498345786246797888995",   # MC_APP_CODE from MCI_core_config.json (same as MNAO)
+        "base_url": "https://hgs2ivna.mazda.com/",  # Canada shares MNAO infrastructure
+        "region_header": "ca",
+        "cert_sig": SHA256_CERT_SIG,
     },
     "MME": {
-        "app_code": "202008100250281064816",
-        "base_url": "https://e9stj7g7.mazda.com/prod/",
-        "usher_url": "https://rz97suam.mazda.com/appapi/v1/",
+        "app_code": "365747628595648782737",    # MC_APP_CODE from MME_core_config.json
+        "base_url": "https://hgs2iveu.mazda.com/",
+        "region_header": "eu",
+        "cert_sig": SHA256_CERT_SIG,             # Guess, maybe be different
     },
     "MJO": {
-        "app_code": "202009170613074283422",
-        "base_url": "https://wcs9p6wj.mazda.com/prod/",
-        "usher_url": "https://c5ulfwxr.mazda.com/appapi/v1/",
+        "app_code": "438849393836584965983",    # MC_APP_CODE from MJO_core_config.json
+        "base_url": "https://hgs2ivap.mazda.com/",
+        "region_header": "jp",
+        "cert_sig": SHA256_CERT_SIG,             # Guess, maybe be different
+    },
+    "MA": {
+        "app_code": "438849393836584965983",    # MC_APP_CODE from MA_core_config.json (same as MJO)
+        "base_url": "https://hgs2ivap.mazda.com/",  # Australia shares MJO API infrastructure
+        "region_header": "au",
+        "cert_sig": SHA256_CERT_SIG,
     },
 }
-
-IV = "0102030405060708"
-SIGNATURE_MD5 = "C383D8C4D279B78130AD52DC71D95CAA"
+# APP_PACKAGE_ID: Android package name, used in app-unique-id header
 APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1. 15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
-USER_AGENT_USHER_API = 'MyMazda/9.0.2'
-APP_OS = "IOS"
-APP_VERSION = "9.0.2"
-USHER_SDK_VERSION = "11.3.0930"
+USER_AGENT_BASE_API = "MyMazda/9.0.8 (Linux; Android 14)"
+APP_OS = "ANDROID"
+APP_VERSION = "9.0.8"
 
 MAX_RETRIES = 4
 
@@ -80,26 +101,28 @@ MAX_RETRIES = 4
 class Connection:
     """Main class for handling MyMazda API connection."""
 
-    def __init__(self, email, password, region, websession=None):  # noqa: D107
+    def __init__(self, email, region, access_token_provider, session_refresh_provider=None, websession=None):  # noqa: D107
         self.email = email
-        self.password = password
+        self.access_token_provider = access_token_provider
+        self.session_refresh_provider = session_refresh_provider
+        self._refreshing_session = False
 
         if region in REGION_CONFIG:
             region_config = REGION_CONFIG[region]
             self.app_code = region_config["app_code"]
             self.base_url = region_config["base_url"]
-            self.usher_url = region_config["usher_url"]
+            self.region_header = region_config["region_header"]
+            self.cert_sig = region_config["cert_sig"]
         else:
             raise MazdaConfigException("Invalid region")
 
-        self.base_api_device_id = generate_uuid_from_seed(email)
-        self.usher_api_device_id = generate_usher_device_id_from_seed(email)
+        self.base_api_device_id = hashlib.sha1(email.encode()).hexdigest()
+        self.device_session_id = None  # Set to attach sessionId after successful attach
 
         self.enc_key = None
         self.sign_key = None
 
         self.access_token = None
-        self.access_token_expiration_ts = None
 
         self.sensor_data_builder = SensorDataBuilder()
 
@@ -113,30 +136,27 @@ class Connection:
     def __get_timestamp_str_ms(self):
         return str(int(round(time.time() * 1000)))
 
-    def __get_timestamp_str(self):
-        return str(int(round(time.time())))
+    def __derive_key_material(self, app_code):
+        val1 = hashlib.md5((app_code + SIGN_PACKAGE_ID).encode()).hexdigest().upper()
+        val2 = hashlib.md5((val1 + self.cert_sig).encode()).hexdigest().lower()
+        self.logger.debug("Key derivation: app_code=%s, pkg=%s, cert_sig=%s, val1=%s, val2=%s, dec_key=%s", app_code, SIGN_PACKAGE_ID, self.cert_sig[:8] + "...", val1, val2, val2[4:20])
+        return val2
 
-    def __get_decryption_key_from_app_code(self):
-        val1 = (
-            hashlib.md5((self.app_code + APP_PACKAGE_ID).encode()).hexdigest().upper()
-        )
-        val2 = hashlib.md5((val1 + SIGNATURE_MD5).encode()).hexdigest().lower()
+    def __get_decryption_key_from_app_code(self, app_code=None):
+        val2 = self.__derive_key_material(app_code or self.app_code)
         return val2[4:20]
 
-    def __get_temporary_sign_key_from_app_code(self):
-        val1 = (
-            hashlib.md5((self.app_code + APP_PACKAGE_ID).encode()).hexdigest().upper()
-        )
-        val2 = hashlib.md5((val1 + SIGNATURE_MD5).encode()).hexdigest().lower()
+    def __get_temporary_sign_key_from_app_code(self, app_code=None):
+        val2 = self.__derive_key_material(app_code or self.app_code)
         return val2[20:32] + val2[0:10] + val2[4:6]
 
-    def __get_sign_from_timestamp(self, timestamp):
+    def __get_sign_from_timestamp(self, timestamp, app_code=None):
         if timestamp is None or timestamp == "":
             return ""
 
         timestamp_extended = (timestamp + timestamp[6:] + timestamp[3:]).upper()
 
-        temporary_sign_key = self.__get_temporary_sign_key_from_app_code()
+        temporary_sign_key = self.__get_temporary_sign_key_from_app_code(app_code)
 
         return self.__get_payload_sign(timestamp_extended, temporary_sign_key).upper()
 
@@ -171,9 +191,9 @@ class Connection:
             payload.encode("utf-8"), self.enc_key, IV
         )
 
-    def __decrypt_payload_using_app_code(self, payload):
+    def __decrypt_payload_using_app_code(self, payload, app_code=None):
         buf = base64.b64decode(payload)
-        key = self.__get_decryption_key_from_app_code()
+        key = self.__get_decryption_key_from_app_code(app_code)
         decrypted = decrypt_aes128cbc_buffer_to_str(buf, key, IV)
         return json.loads(decrypted)
 
@@ -184,13 +204,6 @@ class Connection:
         buf = base64.b64decode(payload)
         decrypted = decrypt_aes128cbc_buffer_to_str(buf, self.enc_key, IV)
         return json.loads(decrypted)
-
-    def __encrypt_payload_with_public_key(self, password, public_key):
-        timestamp = self.__get_timestamp_str()
-        encryptedBuffer = encrypt_rsaecbpkcs1_padding(
-            password + ":" + timestamp, public_key
-        )
-        return base64.b64encode(encryptedBuffer).decode("utf-8")
 
     async def api_request(  # noqa: D102
         self,
@@ -235,6 +248,8 @@ class Connection:
                 method, uri, query_dict, body_dict, needs_keys, needs_auth
             )
         except MazdaAPIEncryptionException:
+            if "checkVersion" in uri:
+                raise MazdaException("checkVersion rejected by server (wrong SIGNATURE_MD5 or app_code). Cannot retrieve encryption keys.")
             self.logger.info(
                 "Server reports request was not encrypted properly. Retrieving new encryption keys."
             )
@@ -250,9 +265,10 @@ class Connection:
             )
         except MazdaTokenExpiredException:
             self.logger.info(
-                "Server reports access token was expired. Retrieving new access token."
+                "Server reports access token was expired (600002). "
+                "Resetting cached token — will re-fetch on retry."
             )
-            await self.login()
+            self.access_token = None
             return await self.__api_request_retry(
                 method,
                 uri,
@@ -262,9 +278,16 @@ class Connection:
                 needs_auth,
                 num_retries + 1,
             )
-        except MazdaLoginFailedException:
-            self.logger.warning("Login failed for an unknown reason. Trying again.")
-            await self.login()
+        except MazdaSessionExpiredException as ex:
+            self.logger.warning(
+                "Server reports session conflict (600100). Clearing session ID and re-attaching. Details: %s", ex
+            )
+            self.device_session_id = None
+            if self.session_refresh_provider:
+                try:
+                    await self.session_refresh_provider()
+                except Exception as attach_ex:
+                    self.logger.warning("Re-attach after 600100 failed: %s", attach_ex)
             return await self.__api_request_retry(
                 method,
                 uri,
@@ -299,6 +322,7 @@ class Connection:
         needs_auth=False,
     ):
         timestamp = self.__get_timestamp_str_ms()
+        self.logger.debug("Request details - URI: %s, method: %s, timestamp: %s", uri, method, timestamp)
 
         original_query_str = ""
         encrypted_query_dict = {}
@@ -310,10 +334,10 @@ class Connection:
             )
 
         original_body_str = ""
-        encrypted_body_Str = ""
+        encrypted_body_str = ""
         if body_dict:
             original_body_str = json.dumps(body_dict)
-            encrypted_body_Str = self.__encrypt_payload_using_key(original_body_str)
+            encrypted_body_str = self.__encrypt_payload_using_key(original_body_str)
 
         headers = {
             "device-id": self.base_api_device_id,
@@ -322,15 +346,25 @@ class Connection:
             "user-agent": USER_AGENT_BASE_API,
             "app-version": APP_VERSION,
             "app-unique-id": APP_PACKAGE_ID,
-            "access-token": (self.access_token if needs_auth else ""),
             "X-acf-sensor-data": self.sensor_data_builder.generate_sensor_data(),
-            "req-id": "req_" + timestamp,
+            "req-id": str(uuid.uuid4()).upper(),
             "timestamp": timestamp,
-            "Accept": "application/json"
+            "region": self.region_header,
+            "locale": "en-US",
+            "language": "en",
+            "Accept": "*/*",
         }
 
+        if needs_auth and self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
+            headers["access-token"] = self.access_token
+
+        if self.device_session_id:
+            headers["X-device-session-id"] = self.device_session_id
+
         if "checkVersion" in uri:
-            headers["sign"] = self.__get_sign_from_timestamp(timestamp)
+            headers["sign"] = self.__get_sign_from_timestamp(timestamp, self.app_code)
+            self.logger.debug("checkVersion sign: %s (timestamp: %s, device-id: %s, app_code: %s)", headers["sign"], timestamp, self.base_api_device_id, self.app_code)
         elif method == "GET":
             headers["sign"] = self.__get_sign_from_payload_and_timestamp(
                 original_query_str, timestamp
@@ -344,15 +378,16 @@ class Connection:
             method,
             self.base_url + uri,
             headers=headers,
-            data=encrypted_body_Str,
+            data=encrypted_body_str,
             ssl=ssl_context,
         )
 
         response_json = await response.json()
+        self.logger.debug("Response status: %s, body: %s", response.status, response_json)
 
         if response_json.get("state") == "S":
             if "checkVersion" in uri:
-                return self.__decrypt_payload_using_app_code(response_json["payload"])
+                return self.__decrypt_payload_using_app_code(response_json["payload"], self.app_code)
             else:
                 decrypted_payload = self.__decrypt_payload_using_key(
                     response_json["payload"]
@@ -363,6 +398,10 @@ class Connection:
             raise MazdaAPIEncryptionException("Server rejected encrypted request")
         elif response_json.get("errorCode") == 600002:
             raise MazdaTokenExpiredException("Token expired")
+        elif response_json.get("errorCode") == 600100:
+            raise MazdaSessionExpiredException(
+                "Session conflict (600100): " + response_json.get("error", "multiple devices detected")
+            )
         elif (
             response_json.get("errorCode") == 920000
             and response_json.get("extraCode") == "400S01"
@@ -387,95 +426,50 @@ class Connection:
             await self.__retrieve_keys()
 
     async def __ensure_token_is_valid(self):
-        if self.access_token is None or self.access_token_expiration_ts is None:
-            self.logger.info("No access token present. Logging in.")
-        elif self.access_token_expiration_ts <= time.time():
-            self.logger.info("Access token is expired. Fetching a new one.")
-            self.access_token = None
-            self.access_token_expiration_ts = None
-
-        if (
-            self.access_token is None
-            or self.access_token_expiration_ts is None
-            or self.access_token_expiration_ts <= time.time()
-        ):
-            await self.login()
+        if self.access_token is None:
+            self.logger.info("No access token present. Fetching from provider.")
+            self.access_token = await self.access_token_provider()
 
     async def __retrieve_keys(self):
-        self.logger.info("Retrieving encryption keys")
-        response = await self.api_request(
-            "POST", "service/checkVersion", needs_keys=False, needs_auth=False
+        self.logger.info("Retrieving encryption keys from %s", self.base_url)
+        response = await self.__api_request_to_url(
+            "POST", self.base_url + "service/checkVersion"
         )
         self.logger.info("Successfully retrieved encryption keys")
 
         self.enc_key = response["encKey"]
         self.sign_key = response["signKey"]
 
-    async def login(self):  # noqa: D102
-        self.logger.info("Logging in as " + self.email)  # noqa: G003
-        self.logger.info("Retrieving public key to encrypt password")
-        encryption_key_response = await self._session.request(
-            "GET",
-            self.usher_url + "system/encryptionKey",
-            params={
-                "appId": "MazdaApp",
-                "locale": "en-US",
-                "deviceId": self.usher_api_device_id,
-                "sdkVersion": USHER_SDK_VERSION,
-            },
-            headers={"User-Agent": USER_AGENT_USHER_API},
-            ssl=ssl_context,
-        )
-
-        encryption_key_response_json = await encryption_key_response.json()
-
-        public_key = encryption_key_response_json["data"]["publicKey"]
-        encrypted_password = self.__encrypt_payload_with_public_key(
-            self.password, public_key
-        )
-        version_prefix = encryption_key_response_json["data"]["versionPrefix"]
-
-        self.logger.info("Sending login request")
-        login_response = await self._session.request(
-            "POST",
-            self.usher_url + "user/login",
-            headers={"User-Agent": USER_AGENT_USHER_API},
-            json={
-                "appId": "MazdaApp",
-                "deviceId": self.usher_api_device_id,
-                "locale": "en-US",
-                "password": version_prefix + encrypted_password,
-                "sdkVersion": USHER_SDK_VERSION,
-                "userId": self.email,
-                "userIdType": "email",
-            },
-            ssl=ssl_context,
-        )
-
-        login_response_json = await login_response.json()
-
-        if login_response_json.get("status") == "INVALID_CREDENTIAL":
-            self.logger.error("Login failed due to invalid email or password")
-            raise MazdaAuthenticationException("Invalid email or password")
-        if login_response_json.get("status") == "USER_LOCKED":
-            self.logger.error("Login failed to account being locked")
-            raise MazdaAccountLockedException("Account is locked")
-        if login_response_json.get("status") != "OK":
-            self.logger.error(
-                "Login failed"  # noqa: G003
-                + (
-                    (": " + login_response_json.get("status", ""))
-                    if ("status" in login_response_json)
-                    else ""
-                )
-            )
-            raise MazdaLoginFailedException("Login failed")
-
-        self.logger.info("Successfully logged in as " + self.email)  # noqa: G003
-        self.access_token = login_response_json["data"]["accessToken"]
-        self.access_token_expiration_ts = login_response_json["data"][
-            "accessTokenExpirationTs"
-        ]
+    async def __api_request_to_url(self, method, full_url, body_dict={}):
+        """Send a request to an explicit URL (used for checkVersion on old API)."""
+        timestamp = self.__get_timestamp_str_ms()
+        headers = {
+            "device-id": self.base_api_device_id,
+            "app-code": self.app_code,
+            "app-os": APP_OS,
+            "user-agent": USER_AGENT_BASE_API,
+            "app-version": APP_VERSION,
+            "app-unique-id": APP_PACKAGE_ID,
+            "X-acf-sensor-data": self.sensor_data_builder.generate_sensor_data(),
+            "req-id": str(uuid.uuid4()).upper(),
+            "timestamp": timestamp,
+            "region": self.region_header,
+            "locale": "en-US",
+            "language": "en",
+            "Accept": "*/*",
+            "Content-Type": "text/plain",
+            "sign": self.__get_sign_from_timestamp(timestamp, self.app_code),
+        }
+        self.logger.debug("checkVersion to %s, app_code=%s, sign=%s", full_url, self.app_code, headers["sign"])
+        response = await self._session.request(method, full_url, headers=headers, data="", ssl=ssl_context)
+        response_json = await response.json()
+        self.logger.debug("checkVersion response: %s", response_json)
+        if response_json.get("state") == "S":
+            return self.__decrypt_payload_using_app_code(response_json["payload"], self.app_code)
+        elif response_json.get("errorCode") == 600001:
+            raise MazdaException("checkVersion rejected (wrong SIGNATURE_MD5). response: " + str(response_json))
+        else:
+            raise MazdaException("checkVersion failed: " + str(response_json))
 
     async def close(self):  # noqa: D102
         await self._session.close()
