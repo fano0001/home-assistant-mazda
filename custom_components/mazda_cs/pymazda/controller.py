@@ -3,6 +3,8 @@ import hashlib  # noqa: D100
 from .connection import Connection
 from .exceptions import MazdaException
 
+_SUCCESS_CODES = {"200S00", "MSG200001"}
+
 
 class Controller:  # noqa: D101
     def __init__(self, email, region, access_token_provider, session_refresh_provider=None, websession=None):  # noqa: D107
@@ -79,7 +81,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to get vehicle status")
 
         return response
@@ -100,7 +102,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to get EV vehicle status")
 
         return response
@@ -121,7 +123,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to get health report")
 
         return response
@@ -137,7 +139,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to unlock door")
 
         return response
@@ -153,7 +155,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to lock door")
 
         return response
@@ -169,7 +171,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to turn light on")
 
         return response
@@ -185,7 +187,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to turn light off")
 
         return response
@@ -201,7 +203,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to start engine")
 
         return response
@@ -217,7 +219,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to stop engine")
 
         return response
@@ -236,7 +238,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to get vehicle nickname")
 
         return response["carlineDesc"]
@@ -261,7 +263,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to update vehicle nickname")
 
     async def send_poi(self, internal_vin, latitude, longitude, name):  # noqa: D102
@@ -296,7 +298,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to send POI")
 
     async def charge_start(self, internal_vin):  # noqa: D102
@@ -310,7 +312,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to start charging")
 
         return response
@@ -326,7 +328,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to stop charging")
 
         return response
@@ -342,7 +344,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to get HVAC setting")
 
         return response
@@ -374,7 +376,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to set HVAC setting")
 
         return response
@@ -390,7 +392,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to turn HVAC on")
 
         return response
@@ -406,7 +408,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to turn HVAC off")
 
         return response
@@ -422,7 +424,7 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-        if response["resultCode"] != "200S00":
+        if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to refresh vehicle status")
 
         return response
