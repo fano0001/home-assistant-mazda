@@ -19,7 +19,7 @@ class Client:  # noqa: D101
         self._cached_state = {}
         self._session_id = None
 
-    # Per-region locale and country code for the attach call
+    # Per-region locale and country code for the attach call, unsure if these are necessary
     _REGION_ATTACH_PARAMS = {
         "MNAO": ("en-US", "US"),
         "MCI":  ("en-CA", "CA"),
