@@ -109,5 +109,5 @@ class MazdaOAuth2FlowHandler(
             )
         self._abort_if_unique_id_configured()
 
-        # Use the user_id as the title (could be enhanced with email from claims)
+        # Use the user_id as the title (see if email can be found earlier and used here)
         return self.async_create_entry(title=f"Mazda ({user_id[:8]})", data=data)

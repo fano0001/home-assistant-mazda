@@ -75,6 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Check if this is an old entry that needs reauth (v1 with email/password)
+    # Chore:remove v1 upgrade logic in 2027 or later.
     if not entry.data.get("token"):
         msg = "Authentication method has changed. Please reauthenticate."
         raise ConfigEntryAuthFailed(msg)

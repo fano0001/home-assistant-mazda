@@ -44,16 +44,6 @@ SSL_SIGNATURE_ALGORITHMS = [
 with SSLContextConfigurator(ssl_context, libssl_path="libssl.so.3") as ssl_context_configurator:
     ssl_context_configurator.configure_signature_algorithms(":".join(SSL_SIGNATURE_ALGORITHMS))
 
-# --- iOS app constants (captured from com.mazdausa.mazdaiphone traffic) ---
-# IOS_MNAO_APP_CODE = "635529297359258474866"
-# IOS_APP_PACKAGE_ID = "com.mazdausa.mazdaiphone"
-# IOS_USER_AGENT_BASE_API = "MyMazda-ios/9.0.8"
-# IOS_APP_OS = "IOS"
-# IOS_APP_VERSION = "9.0.8"
-# IOS_SIGN_PACKAGE_ID = unknown  (sign_code may differ from Android's "202406061255295340265")
-# IOS_SIGNATURE_MD5 = unknown    (native lib constant in iOS binary not yet extracted)
-# IOS_SHA256_CERT_SIG = unknown  (iOS signing cert SHA256, not derivable from Android APK)
-
 # --- Android app constants (confirmed from com.interrait.mymazda 9.0.8 APK) ---
 IV = "0102030405060708"
 # SIGNATURE_MD5: confirmed from libnativeSKlib.so strings (MD5 of APK signing cert)

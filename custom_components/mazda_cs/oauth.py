@@ -72,11 +72,11 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             "ui_locales": self.hass.config.language,
             "x-app-name": MSAL_APP_NAME,
             "x-app-ver": MSAL_APP_VER,
-            "x-client-SKU": MSAL_CLIENT_SKU,       # "MSAL.Android" (was "MSAL.iOS")
-            "x-client-Ver": MSAL_CLIENT_VER,        # "5.4.0" (was "1.6.3")
-            "x-client-OS": "34",                    # Android 14 SDK_INT (was "26.2.1" iOS)
-            "x-client-DM": "Pixel 9",               # Android device model (was "iPhone")
-            "x-client-CPU": "arm64-v8a",            # Android ABI (was "64")
+            "x-client-SKU": MSAL_CLIENT_SKU,
+            "x-client-Ver": MSAL_CLIENT_VER,
+            "x-client-OS": "34",                    # Android SDK_INT 
+            "x-client-DM": "Pixel 9",               # Android device model
+            "x-client-CPU": "arm64-v8a",            # Android ABI
             "haschrome": "1",
             "return-client-request-id": "true",
             "client_info": "1",

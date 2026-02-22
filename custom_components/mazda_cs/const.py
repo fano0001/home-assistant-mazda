@@ -65,22 +65,19 @@ OAUTH2_AUTH = {
     },
 }
 
-#MOBILE_REDIRECT_URI = "msauth.com.mazdausa.mazdaiphone://auth" #iOS Value
 MOBILE_REDIRECT_URI = "msauth://com.interrait.mymazda/%2FnKMu1%2BlCjy5%2Be7OF9vfp4eFBks%3D"
 
 # Regional OAuth2 hosts (authority_host_name from *_mzal_config.json)
 OAUTH2_HOSTS = {
     "MNAO": "na.id.mazda.com",
-    "MCI":  "na.id.mazda.com",  # Canada shares MNAO auth infrastructure
+    "MCI":  "na.id.mazda.com",  # Canada shares MNAO auth infrastructure, confirmed in mzal config
     "MME":  "eu.id.mazda.com",
-    "MJO":  "ap.id.mazda.com",  # confirmed from mjo_mzal_config.json (was incorrectly jp)
+    "MJO":  "ap.id.mazda.com",
     "MA":   "au.id.mazda.com",
 }
 
 # MSAL client identifiers (sent with authorize requests)
 # Values confirmed from com.interrait.mymazda 9.0.8 APK (msal/BuildConfig.java, AuthenticationConstants.java)
-#MSAL_CLIENT_SKU = "MSAL.iOS"   # old iOS value
-#MSAL_CLIENT_VER = "1.6.3"      # old iOS MSAL version
 MSAL_CLIENT_SKU = "MSAL.Android"
 MSAL_CLIENT_VER = "5.4.0"
 MSAL_APP_NAME = "MyMazda"
