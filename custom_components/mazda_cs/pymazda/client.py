@@ -194,6 +194,24 @@ class Client:  # noqa: D101
                     "RRTPrsDispPsi"
                 ),
             },
+            "tirePressureWarnings": {
+                "frontLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FLTyrePressWarn") == 1,
+                "frontRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FRTyrePressWarn") == 1,
+                "rearLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RLTyrePressWarn") == 1,
+                "rearRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RRTyrePressWarn") == 1,
+            },
+            "oilWarnings": {
+                "brakeOilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelSensWarnBRq") == 1,
+                "oilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelWarning") == 1,
+                "oilDeteriorateWarning": remote_info.get("OilMntInformation", {}).get("OilDeteriorateWarning") == 1,
+            },
+            "driveInformation": {
+                "drive1DriveTimeSeconds": remote_info.get("DriveInformation", {}).get("Drv1DrvTm"),
+                "drive1DistanceKm": remote_info.get("DriveInformation", {}).get("Drv1Distnc"),
+            },
+            "maintenanceInfo": {
+                "nextMaintenanceDistanceKm": remote_info.get("RegularMntInformation", {}).get("RemRegDistKm"),
+            },
         }
 
         door_lock_status = vehicle_status["doorLocks"]

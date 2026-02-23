@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfPressure, UnitOfTime
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfPressure, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
@@ -258,6 +258,37 @@ SENSOR_ENTITIES = [
         state_class=SensorStateClass.MEASUREMENT,
         is_supported=_ev_remaining_bev_range_supported,
         value=_ev_remaining_range_bev_value,
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_drive_time",
+        translation_key="drive1_drive_time",
+        icon="mdi:timer",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=lambda data: data["status"]["driveInformation"]["drive1DriveTimeSeconds"] is not None,
+        value=lambda data: data["status"]["driveInformation"]["drive1DriveTimeSeconds"],
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_distance",
+        translation_key="drive1_distance",
+        icon="mdi:map-marker-distance",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=lambda data: data["status"]["driveInformation"]["drive1DistanceKm"] is not None,
+        value=lambda data: data["status"]["driveInformation"]["drive1DistanceKm"],
+    ),
+    MazdaSensorEntityDescription(
+        key="next_maintenance_distance",
+        translation_key="next_maintenance_distance",
+        icon="mdi:car-wrench",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"] is not None,
+        value=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"],
     ),
 ]
 
