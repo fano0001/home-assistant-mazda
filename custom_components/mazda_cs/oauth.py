@@ -70,6 +70,7 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
         data = {
             "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
             "ui_locales": self.hass.config.language,
+            **({"email_domain_restrict": "mci"} if self._region == "MCI" else {}),
             "x-app-name": MSAL_APP_NAME,
             "x-app-ver": MSAL_APP_VER,
             "x-client-SKU": MSAL_CLIENT_SKU,
