@@ -41,6 +41,30 @@
             },
             "trunk": {
                 "name": "Trunk"
+            },
+            "fuel_lid": {
+                "name": "Fuel lid"
+            },
+            "front_left_tire_pressure_warning": {
+                "name": "Front left tire pressure warning"
+            },
+            "front_right_tire_pressure_warning": {
+                "name": "Front right tire pressure warning"
+            },
+            "rear_left_tire_pressure_warning": {
+                "name": "Rear left tire pressure warning"
+            },
+            "rear_right_tire_pressure_warning": {
+                "name": "Rear right tire pressure warning"
+            },
+            "brake_oil_level_warning": {
+                "name": "Brake oil level warning"
+            },
+            "oil_level_warning": {
+                "name": "Oil level warning"
+            },
+            "oil_deteriorate_warning": {
+                "name": "Oil deterioration warning"
             }
         },
         "button": {
@@ -108,6 +132,15 @@
             },
             "rear_right_tire_pressure": {
                 "name": "Rear right tire pressure"
+            },
+            "drive1_drive_time": {
+                "name": "Drive 1 drive time"
+            },
+            "drive1_distance": {
+                "name": "Drive 1 distance"
+            },
+            "next_maintenance_distance": {
+                "name": "Next maintenance distance"
             }
         },
         "switch": {

@@ -41,6 +41,9 @@
             },
             "trunk": {
                 "name": "Kofferraum"
+            },
+            "fuel_lid": {
+                "name": "Tankdeckel"
             }
         },
         "button": {

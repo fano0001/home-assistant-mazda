@@ -11,6 +11,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -87,11 +88,77 @@ BINARY_SENSOR_ENTITIES = [
         value_fn=lambda data: data["status"]["doors"]["hoodOpen"],
     ),
     MazdaBinarySensorEntityDescription(
+        key="fuel_lid",
+        translation_key="fuel_lid",
+        icon="mdi:gas-station",
+        device_class=BinarySensorDeviceClass.DOOR,
+        is_supported=lambda data: data["hasFuel"],
+        value_fn=lambda data: data["status"]["doors"]["fuelLidOpen"],
+    ),
+    MazdaBinarySensorEntityDescription(
         key="ev_plugged_in",
         translation_key="ev_plugged_in",
         device_class=BinarySensorDeviceClass.PLUG,
         is_supported=_plugged_in_supported,
         value_fn=lambda data: data["evStatus"]["chargeInfo"]["pluggedIn"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="front_left_tire_pressure_warning",
+        translation_key="front_left_tire_pressure_warning",
+        icon="mdi:car-tire-alert",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data["status"]["tirePressureWarnings"]["frontLeftTirePressureWarning"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="front_right_tire_pressure_warning",
+        translation_key="front_right_tire_pressure_warning",
+        icon="mdi:car-tire-alert",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data["status"]["tirePressureWarnings"]["frontRightTirePressureWarning"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="rear_left_tire_pressure_warning",
+        translation_key="rear_left_tire_pressure_warning",
+        icon="mdi:car-tire-alert",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data["status"]["tirePressureWarnings"]["rearLeftTirePressureWarning"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="rear_right_tire_pressure_warning",
+        translation_key="rear_right_tire_pressure_warning",
+        icon="mdi:car-tire-alert",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data["status"]["tirePressureWarnings"]["rearRightTirePressureWarning"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="brake_oil_level_warning",
+        translation_key="brake_oil_level_warning",
+        icon="mdi:oil-level",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data["status"]["oilWarnings"]["brakeOilLevelWarning"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="oil_level_warning",
+        translation_key="oil_level_warning",
+        icon="mdi:oil",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["hasFuel"],
+        value_fn=lambda data: data["status"]["oilWarnings"]["oilLevelWarning"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="oil_deteriorate_warning",
+        translation_key="oil_deteriorate_warning",
+        icon="mdi:oil",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["hasFuel"],
+        value_fn=lambda data: data["status"]["oilWarnings"]["oilDeteriorateWarning"],
     ),
 ]
 
