@@ -36,11 +36,10 @@ from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DO
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
-    MazdaAccountLockedException,
     MazdaAPIEncryptionException,
-    MazdaAuthenticationException,
     MazdaException,
     MazdaSessionExpiredException,
+    MazdaTermsNotAcceptedException,
     MazdaTokenExpiredException,
 )
 
@@ -223,8 +222,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN][entry.entry_id][DATA_VEHICLES] = vehicles
 
             return vehicles
-        except MazdaAuthenticationException as ex:
-            raise ConfigEntryAuthFailed("Not authenticated with Mazda API") from ex
+        except MazdaTermsNotAcceptedException as ex:
+            raise UpdateFailed(
+                "Please accept the terms of service in the MyMazda app and try again"
+            ) from ex
+        except TimeoutError as ex:
+            raise UpdateFailed(
+                "Mazda API request timed out. The server may be temporarily unavailable."
+            ) from ex
         except ConfigEntryAuthFailed:
             raise  # Let HA's coordinator trigger reauthentication
         except Exception as ex:

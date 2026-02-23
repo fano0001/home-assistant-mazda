@@ -13,16 +13,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import (
-    MazdaAccountLockedException,
     MazdaAPI as MazdaAPIClient,
     MazdaAPIEncryptionException,
-    MazdaAuthenticationException,
     MazdaEntity,
     MazdaException,
     MazdaTokenExpiredException,
 )
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
-from .pymazda.exceptions import MazdaLoginFailedException
 
 
 async def handle_button_press(
@@ -38,11 +35,8 @@ async def handle_button_press(
         await api_method(vehicle_id)
     except (
         MazdaException,
-        MazdaAuthenticationException,
-        MazdaAccountLockedException,
         MazdaTokenExpiredException,
         MazdaAPIEncryptionException,
-        MazdaLoginFailedException,
     ) as ex:
         raise HomeAssistantError(ex) from ex
 

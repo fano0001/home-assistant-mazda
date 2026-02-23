@@ -7,23 +7,6 @@ class MazdaConfigException(Exception):  # noqa: D100
         self.status = status
 
 
-class MazdaAuthenticationException(Exception):
-    """Raised when email address or password are invalid during authentication."""
-
-    def __init__(self, status):
-        """Initialize exception."""
-        super().__init__(status)
-        self.status = status
-
-
-class MazdaAccountLockedException(Exception):
-    """Raised when account is locked from too many login attempts."""
-
-    def __init__(self, status):
-        """Initialize exception."""
-        super().__init__(status)
-        self.status = status
-
 
 class MazdaTokenExpiredException(Exception):
     """Raised when server reports that the access token has expired."""
@@ -52,14 +35,6 @@ class MazdaException(Exception):
         self.status = status
 
 
-class MazdaLoginFailedException(Exception):
-    """Raised when login fails for an unknown reason."""
-
-    def __init__(self, status):
-        """Initialize exception."""
-        super().__init__(status)
-        self.status = status
-
 
 class MazdaRequestInProgressException(Exception):
     """Raised when a request fails because another request is already in progress."""
@@ -75,6 +50,15 @@ class MazdaSessionExpiredException(Exception):
 
     The correct response is to clear the stale session ID and re-attach.
     """
+
+    def __init__(self, status):
+        """Initialize exception."""
+        super().__init__(status)
+        self.status = status
+
+
+class MazdaTermsNotAcceptedException(Exception):
+    """Raised when the Mazda terms of service have not been accepted in the app."""
 
     def __init__(self, status):
         """Initialize exception."""
