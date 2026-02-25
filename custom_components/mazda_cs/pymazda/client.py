@@ -109,7 +109,7 @@ class Client:  # noqa: D101
                 ),
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
                 "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05",
-                "isManual": other_veh_info.get("OtherInformation", {}).get("transmissionType") == "M",
+                "hasRemoteStart": current_vec_base_info.get("remoteEngineStartFlg") != 2,
             }
 
             vehicles.append(vehicle)

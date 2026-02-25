@@ -71,13 +71,13 @@ BUTTON_ENTITIES = [
         key="start_engine",
         translation_key="start_engine",
         icon="mdi:engine",
-        is_supported=lambda data: not data["isElectric"] and not data["isManual"],
+        is_supported=lambda data: not data["isElectric"] and data["hasRemoteStart"],
     ),
     MazdaButtonEntityDescription(
         key="stop_engine",
         translation_key="stop_engine",
         icon="mdi:engine-off",
-        is_supported=lambda data: not data["isElectric"] and not data["isManual"],
+        is_supported=lambda data: not data["isElectric"] and data["hasRemoteStart"],
     ),
     MazdaButtonEntityDescription(
         key="turn_on_hazard_lights",
