@@ -78,6 +78,7 @@ BINARY_SENSOR_ENTITIES = [
         translation_key="trunk",
         icon="mdi:car-back",
         device_class=BinarySensorDeviceClass.DOOR,
+        is_supported=lambda data: data["hasRearDoor"],
         value_fn=lambda data: data["status"]["doors"]["trunkOpen"],
     ),
     MazdaBinarySensorEntityDescription(

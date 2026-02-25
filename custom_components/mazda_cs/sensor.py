@@ -16,6 +16,7 @@ from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOf
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
+from homeassistant.util import dt as dt_util
 
 from . import MazdaEntity
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
@@ -220,6 +221,15 @@ SENSOR_ENTITIES = [
         state_class=SensorStateClass.MEASUREMENT,
         is_supported=_rear_right_tire_pressure_supported,
         value=_rear_right_tire_pressure_value,
+    ),
+    MazdaSensorEntityDescription(
+        key="tire_pressure_timestamp",
+        translation_key="tire_pressure_timestamp",
+        icon="mdi:tire",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["status"]["tirePressure"]["tirePressureTimestamp"] is not None,
+        value=lambda data: data["status"]["tirePressure"]["tirePressureTimestamp"].replace(tzinfo=dt_util.DEFAULT_TIME_ZONE),
     ),
     MazdaSensorEntityDescription(
         key="ev_charge_level",

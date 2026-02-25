@@ -5,6 +5,20 @@ from .controller import Controller
 from .exceptions import MazdaConfigException
 
 
+def _build_tpms_timestamp(tpms: dict):
+    """Build a naive local datetime from TPMS display date/time fields, or None if unavailable."""
+    try:
+        return datetime.datetime(
+            tpms["TPrsDispYear"],
+            tpms["TPrsDispMonth"],
+            tpms["TPrsDispDate"],
+            tpms["TPrsDispHour"],
+            tpms["TPrsDispMinute"],
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 class Client:  # noqa: D101
     def __init__(  # noqa: D107
         self, email, region, access_token_provider, websession=None, use_cached_vehicle_list=False
@@ -107,10 +121,12 @@ class Client:  # noqa: D101
                 "exteriorColorName": other_veh_info.get("OtherInformation", {}).get(
                     "exteriorColorName"
                 ),
+                "isDiesel": current_vec_base_info.get("scrFlg") != 2,
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
                 "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05",
                 "hasRemoteStart": current_vec_base_info.get("remoteEngineStartFlg") != 2,
                 "hasBonnet": current_vec_base_info.get("bonnetOpenFlg") != 2,
+                "hasRearDoor": current_vec_base_info.get("rearDoorOpenFlg") != 2,
             }
 
             vehicles.append(vehicle)
@@ -196,6 +212,9 @@ class Client:  # noqa: D101
                 ),
                 "rearRightTirePressurePsi": remote_info.get("TPMSInformation", {}).get(
                     "RRTPrsDispPsi"
+                ),
+                "tirePressureTimestamp": _build_tpms_timestamp(
+                    remote_info.get("TPMSInformation", {})
                 ),
             },
             "tirePressureWarnings": {

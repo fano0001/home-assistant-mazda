@@ -154,6 +154,9 @@
             "rear_right_tire_pressure": {
                 "name": "Reifendruck hinten rechts"
             },
+            "tire_pressure_timestamp": {
+                "name": "Reifendruck zuletzt aktualisiert"
+            },
             "drive1_drive_time": {
                 "name": "Fahrt 1 Fahrzeit"
             },

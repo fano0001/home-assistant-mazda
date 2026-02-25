@@ -142,6 +142,9 @@
       "rear_right_tire_pressure": {
         "name": "Rear right tire pressure"
       },
+      "tire_pressure_timestamp": {
+        "name": "Tire pressure last updated"
+      },
       "ev_charge_level": {
         "name": "Charge level"
       },
