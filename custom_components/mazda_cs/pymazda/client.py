@@ -108,7 +108,8 @@ class Client:  # noqa: D101
                     "exteriorColorName"
                 ),
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
-                "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05"
+                "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05",
+                "isManual": other_veh_info.get("OtherInformation", {}).get("transmissionType") == "M",
             }
 
             vehicles.append(vehicle)
@@ -160,6 +161,8 @@ class Client:  # noqa: D101
                 "trunkOpen": alert_info.get("Door", {}).get("DrStatTrnkLg") == 1,
                 "hoodOpen": alert_info.get("Door", {}).get("DrStatHood") == 1,
                 "fuelLidOpen": alert_info.get("Door", {}).get("FuelLidOpenStatus") == 1,
+                "sunroofOpen": alert_info.get("Door", {}).get("SrSlideSignal") == 1,
+                "sunroofTilted": alert_info.get("Door", {}).get("SrTiltSignal") == 1,
             },
             "doorLocks": {
                 "driverDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwDrv")
@@ -208,6 +211,12 @@ class Client:  # noqa: D101
             "driveInformation": {
                 "drive1DriveTimeSeconds": remote_info.get("DriveInformation", {}).get("Drv1DrvTm"),
                 "drive1DistanceKm": remote_info.get("DriveInformation", {}).get("Drv1Distnc"),
+                "drive1FuelEfficiencyKmL": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelE"),
+                "drive1FuelConsumptionL100km": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelG"),
+            },
+            "oilInfo": {
+                "oilHealthPercentage": remote_info.get("OilMntInformation", {}).get("DROilDeteriorateLevel"),
+                "nextOilChangeDistanceKm": remote_info.get("OilMntInformation", {}).get("RemOilDistK"),
             },
             "maintenanceInfo": {
                 "nextMaintenanceDistanceKm": remote_info.get("RegularMntInformation", {}).get("RemRegDistKm"),

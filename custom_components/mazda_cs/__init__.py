@@ -7,6 +7,7 @@ from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING
 
+import aiohttp
 import jwt
 import voluptuous as vol
 
@@ -206,6 +207,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # The Mazda API can throw an error when multiple simultaneous requests are
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
+                vehicle["region"] = region
                 vehicle["status"] = await with_timeout(
                     mazda_client.get_vehicle_status(vehicle["id"])
                 )
@@ -230,6 +232,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise UpdateFailed(
                 "Mazda API request timed out. The server may be temporarily unavailable."
             ) from ex
+        except aiohttp.ClientConnectionError as ex:
+            _LOGGER.warning("Mazda API client connection error (will retry): %s", ex)
+            raise UpdateFailed(f"Cannot connect to Mazda API: {ex}") from ex
         except ConfigEntryAuthFailed:
             raise  # Let HA's coordinator trigger reauthentication
         except Exception as ex:

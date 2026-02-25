@@ -44,6 +44,48 @@
             },
             "fuel_lid": {
                 "name": "Tankdeckel"
+            },
+            "hazard_lights": {
+                "name": "Warnblinklicht"
+            },
+            "sunroof": {
+                "name": "Schiebedach"
+            },
+            "sunroof_tilt": {
+                "name": "Schiebedach (Kippstellung)"
+            },
+            "driver_window": {
+                "name": "Fahrerfenster"
+            },
+            "passenger_window": {
+                "name": "Beifahrerfenster"
+            },
+            "rear_left_window": {
+                "name": "Fenster hinten links"
+            },
+            "rear_right_window": {
+                "name": "Fenster hinten rechts"
+            },
+            "front_left_tire_pressure_warning": {
+                "name": "Reifendruckwarnung vorne links"
+            },
+            "front_right_tire_pressure_warning": {
+                "name": "Reifendruckwarnung vorne rechts"
+            },
+            "rear_left_tire_pressure_warning": {
+                "name": "Reifendruckwarnung hinten links"
+            },
+            "rear_right_tire_pressure_warning": {
+                "name": "Reifendruckwarnung hinten rechts"
+            },
+            "brake_oil_level_warning": {
+                "name": "Bremsflüssigkeits-Warnung"
+            },
+            "oil_level_warning": {
+                "name": "Ölstand-Warnung"
+            },
+            "oil_deteriorate_warning": {
+                "name": "Ölqualitäts-Warnung"
             }
         },
         "button": {
@@ -111,6 +153,27 @@
             },
             "rear_right_tire_pressure": {
                 "name": "Reifendruck hinten rechts"
+            },
+            "drive1_drive_time": {
+                "name": "Fahrt 1 Fahrzeit"
+            },
+            "drive1_distance": {
+                "name": "Fahrt 1 Strecke"
+            },
+            "drive1_fuel_efficiency": {
+                "name": "Fahrt 1 Kraftstoffeffizienz"
+            },
+            "drive1_fuel_consumption": {
+                "name": "Fahrt 1 Kraftstoffverbrauch"
+            },
+            "oil_health_percentage": {
+                "name": "Ölqualität"
+            },
+            "next_maintenance_distance": {
+                "name": "Strecke bis nächster Inspektion"
+            },
+            "next_oil_change_distance": {
+                "name": "Strecke bis nächstem Ölwechsel"
             }
         },
         "switch": {

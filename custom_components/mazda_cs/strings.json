@@ -65,6 +65,27 @@
       },
       "oil_deteriorate_warning": {
         "name": "Oil deterioration warning"
+      },
+      "hazard_lights": {
+        "name": "Hazard lights"
+      },
+      "sunroof": {
+        "name": "Sunroof"
+      },
+      "sunroof_tilt": {
+        "name": "Sunroof tilt"
+      },
+      "driver_window": {
+        "name": "Driver window"
+      },
+      "passenger_window": {
+        "name": "Passenger window"
+      },
+      "rear_left_window": {
+        "name": "Rear left window"
+      },
+      "rear_right_window": {
+        "name": "Rear right window"
       }
     },
     "button": {
@@ -141,6 +162,24 @@
       },
       "next_maintenance_distance": {
         "name": "Next maintenance distance"
+      },
+      "drive1_fuel_efficiency": {
+        "name": "Drive 1 fuel efficiency"
+      },
+      "drive1_fuel_consumption": {
+        "name": "Drive 1 fuel consumption"
+      },
+      "oil_health_percentage": {
+        "name": "Oil health"
+      },
+      "drive1_fuel_efficiency_mpg": {
+        "name": "Drive 1 fuel efficiency (MPG)"
+      },
+      "drive1_fuel_consumption_gal100mi": {
+        "name": "Drive 1 fuel consumption (gal/100mi)"
+      },
+      "next_oil_change_distance": {
+        "name": "Next oil change distance"
       }
     },
     "switch": {
