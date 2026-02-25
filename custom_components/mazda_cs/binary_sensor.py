@@ -85,6 +85,7 @@ BINARY_SENSOR_ENTITIES = [
         translation_key="hood",
         icon="mdi:car",
         device_class=BinarySensorDeviceClass.DOOR,
+        is_supported=lambda data: data["hasBonnet"],
         value_fn=lambda data: data["status"]["doors"]["hoodOpen"],
     ),
     MazdaBinarySensorEntityDescription(

@@ -110,6 +110,7 @@ class Client:  # noqa: D101
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
                 "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05",
                 "hasRemoteStart": current_vec_base_info.get("remoteEngineStartFlg") != 2,
+                "hasBonnet": current_vec_base_info.get("bonnetOpenFlg") != 2,
             }
 
             vehicles.append(vehicle)
