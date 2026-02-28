@@ -90,6 +90,13 @@ def _ev_remaining_charging_time_supported(data):
         and data["evStatus"]["chargeInfo"]["basicChargeTimeMinutes"] is not None
     )
 
+def _ev_quick_charge_time_supported(data):
+    """Determine if quick charge time is supported."""
+    return (
+        data["isElectric"]
+        and data["evStatus"]["chargeInfo"]["quickChargeTimeMinutes"] is not None
+    )
+
 def _ev_remaining_range_supported(data):
     """Determine if remaining range is supported."""
     return (
@@ -250,6 +257,15 @@ SENSOR_ENTITIES = [
         value=_ev_remaining_charging_time_value,
     ),
     MazdaSensorEntityDescription(
+        key="ev_quick_charge_time",
+        translation_key="ev_quick_charge_time",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=_ev_quick_charge_time_supported,
+        value=lambda data: round(data["evStatus"]["chargeInfo"]["quickChargeTimeMinutes"]),
+    ),
+    MazdaSensorEntityDescription(
         key="ev_remaining_range",
         translation_key="ev_remaining_range",
         icon="mdi:ev-station",
@@ -332,8 +348,8 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["hasFuel"] and data["status"]["oilInfo"]["oilHealthPercentage"] is not None,
-        value=lambda data: data["status"]["oilInfo"]["oilHealthPercentage"],
+        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"] is not None,
+        value=lambda data: data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"],
     ),
     MazdaSensorEntityDescription(
         key="next_maintenance_distance",
@@ -347,15 +363,82 @@ SENSOR_ENTITIES = [
         value=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"],
     ),
     MazdaSensorEntityDescription(
+        key="oil_level_status",
+        translation_key="oil_level_status",
+        icon="mdi:oil-level",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilLevelStatus"] is not None,
+        value=lambda data: data["status"]["oilMaintenanceInfo"]["oilLevelStatus"],
+    ),
+    MazdaSensorEntityDescription(
         key="next_oil_change_distance",
         translation_key="next_oil_change_distance",
-        icon="mdi:oil",
+        icon="mdi:car-wrench",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["hasFuel"] and data["status"]["oilInfo"]["nextOilChangeDistanceKm"] is not None,
-        value=lambda data: data["status"]["oilInfo"]["nextOilChangeDistanceKm"],
+        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["nextOilChangeDistanceKm"] is not None,
+        value=lambda data: data["status"]["oilMaintenanceInfo"]["nextOilChangeDistanceKm"],
+    ),
+    MazdaSensorEntityDescription(
+        key="next_scr_maintenance_distance",
+        translation_key="next_scr_maintenance_distance",
+        icon="mdi:car-wrench",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"] is not None,
+        value=lambda data: data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"],
+    ),
+    MazdaSensorEntityDescription(
+        key="tns_lamp",
+        translation_key="tns_lamp",
+        icon="mdi:car-light-dimmed",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["tnsLight"]["tnsLamp"] is not None,
+        value=lambda data: data["status"]["tnsLight"]["tnsLamp"],
+    ),
+    MazdaSensorEntityDescription(
+        key="light_combi_sw_mode",
+        translation_key="light_combi_sw_mode",
+        icon="mdi:car-light-dimmed",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["tnsLight"]["lightCombiSWMode"] is not None,
+        value=lambda data: data["status"]["tnsLight"]["lightCombiSWMode"],
+    ),
+    MazdaSensorEntityDescription(
+        key="lght_sw_state",
+        translation_key="lght_sw_state",
+        icon="mdi:car-light-dimmed",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["tnsLight"]["lghtSwState"] is not None,
+        value=lambda data: data["status"]["tnsLight"]["lghtSwState"],
+    ),
+    MazdaSensorEntityDescription(
+        key="engine_state",
+        translation_key="engine_state",
+        icon="mdi:engine",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["electricalInformation"]["engineState"] is not None,
+        value=lambda data: data["status"]["electricalInformation"]["engineState"],
+    ),
+    MazdaSensorEntityDescription(
+        key="power_control_status",
+        translation_key="power_control_status",
+        icon="mdi:engine",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["electricalInformation"]["powerControlStatus"] is not None,
+        value=lambda data: data["status"]["electricalInformation"]["powerControlStatus"],
+    ),
+    MazdaSensorEntityDescription(
+        key="pw_sav_mode",
+        translation_key="pw_sav_mode",
+        icon="mdi:power-sleep",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["vehicleCondition"]["pwSavMode"] is not None,
+        value=lambda data: data["status"]["vehicleCondition"]["pwSavMode"],
     ),
 ]
 

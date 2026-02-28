@@ -27,6 +27,12 @@
             "ev_plugged_in": {
                 "name": "Eingesteckt"
             },
+            "ev_battery_heater_on": {
+                "name": "Batterieheizung"
+            },
+            "ev_battery_heater_auto": {
+                "name": "Batterieheizung (Auto)"
+            },
             "hood": {
                 "name": "Motorhaube"
             },
@@ -47,6 +53,9 @@
             },
             "hazard_lights": {
                 "name": "Warnblinklicht"
+            },
+            "scr_maintenance_warning": {
+                "name": "SCR-Wartungswarnung"
             },
             "sunroof": {
                 "name": "Schiebedach"
@@ -78,8 +87,14 @@
             "rear_right_tire_pressure_warning": {
                 "name": "Reifendruckwarnung hinten rechts"
             },
+            "tpms_battery_warning": {
+                "name": "β | TPMS Batterie"
+            },
             "brake_oil_level_warning": {
                 "name": "Bremsflüssigkeits-Warnung"
+            },
+            "maintenance_oil_warning": {
+                "name": "δ | MntOilAtFlg"
             },
             "oil_level_warning": {
                 "name": "Ölstand-Warnung"
@@ -127,6 +142,9 @@
             "ev_remaining_charging_time": {
                 "name" : "Verbleibende Ladezeit (AC)"
             },
+            "ev_quick_charge_time": {
+                "name": "Verbleibende Schnellladezeit"
+            },
             "ev_remaining_range": {
                 "name": "Reichweite"
             },
@@ -170,18 +188,48 @@
                 "name": "Fahrt 1 Kraftstoffverbrauch"
             },
             "oil_health_percentage": {
-                "name": "Ölqualität"
+                "name": "β | Ölqualität"
             },
             "next_maintenance_distance": {
                 "name": "Strecke bis nächster Inspektion"
             },
+            "oil_level_status": {
+                "name": "δ | OilLevelStatusMonitor"
+            },
             "next_oil_change_distance": {
                 "name": "Strecke bis nächstem Ölwechsel"
+            },
+            "next_scr_maintenance_distance": {
+                "name": "Strecke bis nächster SCR-Wartung"
+            },
+            "tns_lamp": {
+                "name": "δ | TnsLamp"
+            },
+            "light_combi_sw_mode": {
+                "name": "δ | LightCombiSWMode"
+            },
+            "lght_sw_state": {
+                "name": "δ | LghtSwState"
+            },
+            "engine_state": {
+                "name": "δ | EngineState"
+            },
+            "power_control_status": {
+                "name": "δ | PowerControlStatus"
+            },
+            "pw_sav_mode": {
+                "name": "δ | PwSavMode"
             }
         },
         "switch": {
             "charging": {
                 "name": "Aufladen"
+            },
+            "enable_windows": {
+                "name": "β| Fenstersensoren aktivieren"
+            },
+            "enable_dev_sensors": {
+                "name": "δ | Dev Sensors"
             }
         }
     }

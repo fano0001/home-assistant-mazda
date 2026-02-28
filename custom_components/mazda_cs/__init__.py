@@ -52,6 +52,7 @@ PLATFORMS = [
     Platform.CLIMATE,
     Platform.DEVICE_TRACKER,
     Platform.LOCK,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
 ]
@@ -208,6 +209,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
                 vehicle["region"] = region
+                vehicle["enableWindows"] = entry.options.get("enable_windows", False)
+                vehicle["enableDevSensors"] = entry.options.get("enable_dev_sensors", False)
                 vehicle["status"] = await with_timeout(
                     mazda_client.get_vehicle_status(vehicle["id"])
                 )

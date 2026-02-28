@@ -92,6 +92,12 @@ BUTTON_ENTITIES = [
         is_supported=lambda data: not data["isElectric"],
     ),
     MazdaButtonEntityDescription(
+        key="flash_lights",
+        translation_key="flash_lights",
+        icon="mdi:car-light-high",
+        is_supported=lambda data: data["hasFlashLight"],
+    ),
+    MazdaButtonEntityDescription(
         key="refresh_vehicle_status",
         translation_key="refresh_vehicle_status",
         icon="mdi:refresh",

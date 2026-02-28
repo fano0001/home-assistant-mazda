@@ -32,6 +32,7 @@ class Client:  # noqa: D101
         self._cached_vehicle_list = None
         self._cached_state = {}
         self._session_id = None
+        self._flash_light_counts: dict[int, int] = {}  # vehicle_id → CarFinderParameter (0/1/2)
 
     # Per-region locale and country code for the attach call, unsure if these are necessary
     _REGION_ATTACH_PARAMS = {
@@ -121,12 +122,16 @@ class Client:  # noqa: D101
                 "exteriorColorName": other_veh_info.get("OtherInformation", {}).get(
                     "exteriorColorName"
                 ),
+                "isPHEV": current_vec_base_info.get("phevFlg") == 1,
                 "isDiesel": current_vec_base_info.get("scrFlg") != 2,
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
                 "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05",
-                "hasRemoteStart": current_vec_base_info.get("remoteEngineStartFlg") != 2,
-                "hasBonnet": current_vec_base_info.get("bonnetOpenFlg") != 2,
-                "hasRearDoor": current_vec_base_info.get("rearDoorOpenFlg") != 2,
+                "hasRangeExtender": current_vec_base_info.get("rexFlg") == 1,
+                "hasRemoteStart": current_vec_base_info.get("remoteEngineStartFlg") == 1,
+                "hasBatteryHeater": current_vec_base_info.get("batteryHeaterFlg") == 1,
+                "hasFlashLight": current_vec_base_info.get("flashLightFlg") == 1,
+                "hasBonnet": current_vec_base_info.get("bonnetOpenFlg") == 1,
+                "hasRearDoor": current_vec_base_info.get("rearDoorOpenFlg") == 1,
             }
 
             vehicles.append(vehicle)
@@ -178,8 +183,6 @@ class Client:  # noqa: D101
                 "trunkOpen": alert_info.get("Door", {}).get("DrStatTrnkLg") == 1,
                 "hoodOpen": alert_info.get("Door", {}).get("DrStatHood") == 1,
                 "fuelLidOpen": alert_info.get("Door", {}).get("FuelLidOpenStatus") == 1,
-                "sunroofOpen": alert_info.get("Door", {}).get("SrSlideSignal") == 1,
-                "sunroofTilted": alert_info.get("Door", {}).get("SrTiltSignal") == 1,
             },
             "doorLocks": {
                 "driverDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwDrv")
@@ -198,8 +201,15 @@ class Client:  # noqa: D101
                 "passengerWindowOpen": alert_info.get("Pw", {}).get("PwPosPsngr") == 1,
                 "rearLeftWindowOpen": alert_info.get("Pw", {}).get("PwPosRl") == 1,
                 "rearRightWindowOpen": alert_info.get("Pw", {}).get("PwPosRr") == 1,
+                "sunroofOpen": alert_info.get("Door", {}).get("SrSlideSignal") == 1,
+                "sunroofTilted": alert_info.get("Door", {}).get("SrTiltSignal") == 1,
             },
             "hazardLightsOn": alert_info.get("HazardLamp", {}).get("HazardSw") == 1,
+            "tnsLight": {
+                "tnsLamp": alert_info.get("TnsLight", {}).get("TnsLamp"),
+                "lightCombiSWMode": alert_info.get("TnsLight", {}).get("LightCombiSWMode"),
+                "lghtSwState": alert_info.get("TnsLight", {}).get("LghtSwState"),
+            },
             "tirePressure": {
                 "frontLeftTirePressurePsi": remote_info.get("TPMSInformation", {}).get(
                     "FLTPrsDispPsi"
@@ -222,11 +232,13 @@ class Client:  # noqa: D101
                 "frontRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FRTyrePressWarn") == 1,
                 "rearLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RLTyrePressWarn") == 1,
                 "rearRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RRTyrePressWarn") == 1,
+                "tpmsBatteryWarning": remote_info.get("TPMSInformation", {}).get("TPMSSystemFlt") == 1,
             },
             "oilWarnings": {
                 "brakeOilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelSensWarnBRq") == 1,
                 "oilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelWarning") == 1,
                 "oilDeteriorateWarning": remote_info.get("OilMntInformation", {}).get("OilDeteriorateWarning") == 1,
+                "maintenanceOilWarning": remote_info.get("OilMntInformation", {}).get("MntOilAtFlg"),
             },
             "driveInformation": {
                 "drive1DriveTimeSeconds": remote_info.get("DriveInformation", {}).get("Drv1DrvTm"),
@@ -234,12 +246,25 @@ class Client:  # noqa: D101
                 "drive1FuelEfficiencyKmL": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelE"),
                 "drive1FuelConsumptionL100km": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelG"),
             },
-            "oilInfo": {
+            "oilMaintenanceInfo": {
                 "oilHealthPercentage": remote_info.get("OilMntInformation", {}).get("DROilDeteriorateLevel"),
                 "nextOilChangeDistanceKm": remote_info.get("OilMntInformation", {}).get("RemOilDistK"),
+                "oilLevelStatus": remote_info.get("OilMntInformation", {}).get("OilLevelStatusMonitor"),
+            },
+            "scrMaintenanceInfo": {
+                "scrMaintenanceWarning": remote_info.get("MntSCRInformation", {}).get("MntSCRAtFlg"),
+                "ureaTankLevel": remote_info.get("MntSCRInformation", {}).get("UreaTankLevel"),
+                "nextScrMaintenanceDistance": remote_info.get("MntSCRInformation", {}).get("RemainingMileage"),
             },
             "maintenanceInfo": {
                 "nextMaintenanceDistanceKm": remote_info.get("RegularMntInformation", {}).get("RemRegDistKm"),
+            },
+            "electricalInformation": {
+                "engineState": remote_info.get("ElectricalInformation", {}).get("EngineState"),
+                "powerControlStatus": remote_info.get("ElectricalInformation", {}).get("PowerControlStatus"),
+            },
+            "vehicleCondition": {
+                "pwSavMode": alert_info.get("VehicleCondition", {}).get("PwSavMode"),
             },
         }
 
@@ -324,6 +349,15 @@ class Client:  # noqa: D101
 
     async def turn_off_hazard_lights(self, vehicle_id):  # noqa: D102
         await self.controller.light_off(vehicle_id)
+
+    _FLASH_COUNT_TO_PARAM = {"2": 0, "10": 1, "30": 2}
+
+    def set_flash_light_count(self, vehicle_id: int, count: str) -> None:  # noqa: D102
+        self._flash_light_counts[vehicle_id] = self._FLASH_COUNT_TO_PARAM.get(count, 1)
+
+    async def flash_lights(self, vehicle_id: int) -> None:  # noqa: D102
+        car_finder_parameter = self._flash_light_counts.get(vehicle_id, 1)  # default: 10 flashes
+        await self.controller.flash_lights(vehicle_id, car_finder_parameter)
 
     async def unlock_doors(self, vehicle_id):  # noqa: D102
         self.__save_assumed_value(vehicle_id, "lock_state", False)
