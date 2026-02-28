@@ -1,7 +1,7 @@
 {
   "domain": "mazda_cs",
   "name": "Mazda Connected Services ng",
-  "codeowners": ["fano0001"],
+  "codeowners": ["@fano0001"],
   "config_flow": true,
   "dependencies": ["http"],
   "documentation": "https://github.com/fano0001/home-assistant-mazda/",
