@@ -11,4 +11,10 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
         - uses: "actions/checkout@v4"
-        - uses: "home-assistant/actions/hassfest@master"
+        - name: Validate with hassfest
+          run: |
+            docker run --rm \
+              -v ${{ github.workspace }}://github/workspace \
+              ghcr.io/home-assistant/hassfest \
+              --core-path /usr/src/homeassistant \
+              --integration-path //github/workspace/custom_components/mazda_cs
