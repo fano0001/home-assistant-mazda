@@ -16,5 +16,5 @@ jobs:
             docker run --rm \
               -v ${{ github.workspace }}://github/workspace \
               ghcr.io/home-assistant/hassfest \
-              --core-path /usr/src/homeassistant \
+              --core-path=/usr/src/homeassistant \
               --integration-path //github/workspace/custom_components/mazda_cs
