@@ -187,8 +187,8 @@
             "drive1_fuel_consumption": {
                 "name": "Fahrt 1 Kraftstoffverbrauch"
             },
-            "oil_health_percentage": {
-                "name": "β | Ölqualität"
+            "dr_oil_deteriorate_level": {
+                "name": "δ | DROilDeteriorateLevel"
             },
             "next_maintenance_distance": {
                 "name": "Strecke bis nächster Inspektion"
@@ -201,6 +201,9 @@
             },
             "next_scr_maintenance_distance": {
                 "name": "Strecke bis nächster SCR-Wartung"
+            },
+            "urea_tank_level": {
+                "name": "Harnstoff-Tankfüllstand"
             },
             "tns_lamp": {
                 "name": "δ | TnsLamp"
@@ -219,6 +222,9 @@
             },
             "pw_sav_mode": {
                 "name": "δ | PwSavMode"
+            },
+            "soc_ecm_a_est": {
+                "name": "δ | SocEcmAEst"
             }
         },
         "switch": {

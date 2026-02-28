@@ -263,6 +263,9 @@ class Client:  # noqa: D101
                 "engineState": remote_info.get("ElectricalInformation", {}).get("EngineState"),
                 "powerControlStatus": remote_info.get("ElectricalInformation", {}).get("PowerControlStatus"),
             },
+            "batteryStatus": {
+                "socEcmAEst": remote_info.get("BatteryStatus", {}).get("SocEcmAEst"),
+            },
             "vehicleCondition": {
                 "pwSavMode": alert_info.get("VehicleCondition", {}).get("PwSavMode"),
             },

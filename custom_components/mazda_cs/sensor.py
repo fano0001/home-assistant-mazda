@@ -342,13 +342,11 @@ SENSOR_ENTITIES = [
         value=lambda data: round(data["status"]["driveInformation"]["drive1FuelConsumptionL100km"] * 0.425144, 2),
     ),
     MazdaSensorEntityDescription(
-        key="oil_health_percentage",
-        translation_key="oil_health_percentage",
+        key="dr_oil_deteriorate_level",
+        translation_key="dr_oil_deteriorate_level",
         icon="mdi:oil",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"] is not None,
+        is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"] is not None,
         value=lambda data: data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"],
     ),
     MazdaSensorEntityDescription(
@@ -391,6 +389,16 @@ SENSOR_ENTITIES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"] is not None,
         value=lambda data: data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"],
+    ),
+    MazdaSensorEntityDescription(
+        key="urea_tank_level",
+        translation_key="urea_tank_level",
+        icon="mdi:car-cruise-control",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] is not None,
+        value=lambda data: round(data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] / 255 * 100, 1),
     ),
     MazdaSensorEntityDescription(
         key="tns_lamp",
@@ -439,6 +447,14 @@ SENSOR_ENTITIES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["enableDevSensors"] and data["status"]["vehicleCondition"]["pwSavMode"] is not None,
         value=lambda data: data["status"]["vehicleCondition"]["pwSavMode"],
+    ),
+    MazdaSensorEntityDescription(
+        key="soc_ecm_a_est",
+        translation_key="soc_ecm_a_est",
+        icon="mdi:car-battery",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["batteryStatus"]["socEcmAEst"] is not None,
+        value=lambda data: data["status"]["batteryStatus"]["socEcmAEst"],
     ),
 ]
 

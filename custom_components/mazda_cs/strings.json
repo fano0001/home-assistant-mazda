@@ -203,8 +203,8 @@
       "drive1_fuel_consumption": {
         "name": "Drive 1 fuel consumption"
       },
-      "oil_health_percentage": {
-        "name": "β | Oil health"
+      "dr_oil_deteriorate_level": {
+        "name": "δ | DROilDeteriorateLevel"
       },
       "drive1_fuel_efficiency_mpg": {
         "name": "Drive 1 fuel efficiency (MPG)"
@@ -220,6 +220,9 @@
       },
       "next_scr_maintenance_distance": {
         "name": "Next SCR maintenance distance"
+      },
+      "urea_tank_level": {
+        "name": "Urea tank level"
       },
       "tns_lamp": {
         "name": "δ | TnsLamp"
@@ -238,6 +241,9 @@
       },
       "pw_sav_mode": {
         "name": "δ | PwSavMode"
+      },
+      "soc_ecm_a_est": {
+        "name": "δ | SocEcmAEst"
       }
     },
     "switch": {
