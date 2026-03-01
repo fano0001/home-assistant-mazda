@@ -11,6 +11,8 @@ import aiohttp
 import jwt
 import voluptuous as vol
 
+from datetime import datetime, timezone
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_REGION, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -25,6 +27,7 @@ from homeassistant.helpers import (
     config_validation as cv,
     device_registry as dr,
 )
+
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -46,6 +49,8 @@ from .pymazda.exceptions import (
 
 _LOGGER = logging.getLogger(__name__)
 
+EVENT_REMOTE_SERVICE_RESULT = "mazda_cs_remote_service_result"
+
 PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
@@ -56,6 +61,22 @@ PLATFORMS = [
     Platform.SENSOR,
     Platform.SWITCH,
 ]
+
+
+async def _fire_remote_result(hass, client, vehicle_id, vin, action, command_utc):
+    """Background task: poll for remote service result and fire an HA event."""
+    result = await client.poll_remote_service_result(vehicle_id, command_utc)
+    if result:
+        hass.bus.async_fire(
+            EVENT_REMOTE_SERVICE_RESULT,
+            {"vehicle_id": vehicle_id, "vin": vin, "action": action, **result},
+        )
+        _LOGGER.debug(
+            "Remote result for %s vin=%s: success=%s title=%s",
+            action, vin, result["success"], result["title"],
+        )
+    else:
+        _LOGGER.debug("Remote result timed out: action=%s vin=%s", action, vin)
 
 
 async def with_timeout(task, timeout_seconds=30):
@@ -205,6 +226,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             vehicles = await with_timeout(mazda_client.get_vehicles())
 
+            # -------------------------------------------------------------------------
+            # TEST: getInboxList — commented out for future analysis
+            # actiontype values include:
+            # Safety & Security tab	"004,009,014,032,034"
+            # Activity History tab	"001,021,031,033"
+            # Maintenance / Health tab	"010"
+            # Vehicle Status tab (non-EV / base EV)	"003,019,022,023,024,026,027"
+            # Vehicle Status tab (EV with Battery Care)	"003,019,022,023,024,026,027,029,030"
+            # Status 0 = all, 2 = unread
+            # Uncomment to capture raw JSON response
+            # -------------------------------------------------------------------------
+            # try:
+            #     inbox_list_raw = await with_timeout(
+            #         mazda_client.get_inbox_list([v["id"] for v in vehicles])
+            #     )
+            #     _LOGGER.warning("TEST getInboxList: %s", inbox_list_raw)
+            # except Exception as ex:  # noqa: BLE001
+            #     _LOGGER.warning("TEST getInboxList failed: %s", ex)
+            # -------------------------------------------------------------------------
+
             # The Mazda API can throw an error when multiple simultaneous requests are
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
@@ -282,10 +323,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old config entries to new format."""
     if entry.version == 1:
-        # Clear old email/password data; this will trigger reauth
-        # since async_setup_entry checks for "token" key
+        # Preserve region; clear old email/password credentials.
+        # async_setup_entry will raise ConfigEntryAuthFailed (no "token" key),
+        # triggering reauth so the user completes OAuth2.
+        new_data = {CONF_REGION: entry.data.get(CONF_REGION, "MNAO")}
         hass.config_entries.async_update_entry(
-            entry, data={}, minor_version=1, version=2
+            entry, data=new_data, minor_version=1, version=2
         )
     return True
 
@@ -327,6 +370,12 @@ class MazdaEntity(CoordinatorEntity):
             manufacturer="Mazda",
             model=f"{self.data['modelYear']} {self.data['carlineName']}",
             name=self.vehicle_name,
+        )
+
+    def _track_remote_result(self, action: str, command_utc: datetime) -> None:
+        """Spawn a background task to poll for and fire the remote service result event."""
+        self.hass.async_create_task(
+            _fire_remote_result(self.hass, self.client, self.vehicle_id, self.vin, action, command_utc)
         )
 
     @property

@@ -1,4 +1,5 @@
 """Platform for Mazda switch integration."""
+from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
@@ -159,12 +160,14 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging the vehicle."""
+        command_utc = datetime.now(timezone.utc)
         await self.client.start_charging(self.vehicle_id)
-
+        self._track_remote_result("chargeStart", command_utc)
         await self.refresh_status_and_write_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Stop charging the vehicle."""
+        command_utc = datetime.now(timezone.utc)
         await self.client.stop_charging(self.vehicle_id)
-
+        self._track_remote_result("chargeStop", command_utc)
         await self.refresh_status_and_write_state()

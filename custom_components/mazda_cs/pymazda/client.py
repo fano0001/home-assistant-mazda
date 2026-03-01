@@ -1,5 +1,7 @@
-import datetime  # noqa: D100
+import asyncio  # noqa: D100
+import datetime
 import json
+import logging
 
 from .controller import Controller
 from .exceptions import MazdaConfigException
@@ -452,6 +454,55 @@ class Client:  # noqa: D101
 
     async def refresh_vehicle_status(self, vehicle_id):  # noqa: D102
         await self.controller.refresh_vehicle_status(vehicle_id)
+
+    async def get_inbox_list(self, internal_vin_list, actiontype="001,021,031,033", status=0, limit=100, offset=0):  # noqa: D102
+        return await self.controller.get_inbox_list(internal_vin_list, actiontype, status, limit, offset)
+
+    async def poll_remote_service_result(  # noqa: D102
+        self, vehicle_id: int, command_utc: datetime.datetime
+    ) -> dict | None:
+        """Poll inbox for the result of a remote command.
+
+        Checks at 7 s, 5 s, and 6 s after command_utc (max 3 API calls).
+        Returns a result dict on match, or None if no result found within 18 s.
+        """
+        _LOGGER = logging.getLogger(__name__)
+        # Allow 5 s clock-skew buffer; resultId embeds the server-side request timestamp
+        cutoff = command_utc - datetime.timedelta(seconds=5)
+
+        for delay in (9, 7, 6):  # cumulative waits: 7 s, 5 s, 6 s
+            await asyncio.sleep(delay)
+            try:
+                response = await self.controller.get_inbox_list(
+                    [vehicle_id], actiontype="001", status=0, limit=10
+                )
+                # Collect entries whose resultId timestamp >= cutoff (oldest-first match)
+                # resultId format: "001YYYYMMDDHHMMSS_01" — prefix(3) + timestamp(14) + suffix(3)
+                matching = []
+                for entry in response.get("InboxInfos", []):
+                    result_id = entry.get("resultId", "")
+                    if len(result_id) >= 17:
+                        try:
+                            result_dt = datetime.datetime.strptime(
+                                result_id[3:17], "%Y%m%d%H%M%S"
+                            ).replace(tzinfo=datetime.timezone.utc)
+                            if result_dt >= cutoff:
+                                matching.append(entry)
+                        except ValueError:
+                            pass
+                if matching:
+                    # List is newest-first; take the oldest (last) to match our command
+                    entry = matching[-1]
+                    return {
+                        "success": entry.get("messageContents") == "Success",
+                        "title": entry.get("messageTitle", ""),
+                        "message": entry.get("messageContents", ""),
+                        "details": entry.get("messageDetails", ""),
+                    }
+            except Exception:  # noqa: BLE001
+                _LOGGER.debug("poll_remote_service_result: inbox fetch failed (will retry)")
+
+        return None
 
     async def update_vehicle_nickname(self, vin, new_nickname):  # noqa: D102
         await self.controller.update_nickname(vin, new_nickname)
