@@ -455,5 +455,25 @@ class Controller:  # noqa: D101
 
         return response
 
+    async def get_inbox_list(self, internal_vin_list, actiontype="001,021,031,033", status=0, limit=100, offset=0):  # noqa: D102
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvinlist": [{"internalVin": v} for v in internal_vin_list],
+            "actiontype": actiontype,
+            "status": status,
+            "limit": limit,
+            "offset": offset,
+        }
+
+        response = await self.connection.api_request(
+            "POST",
+            "remoteServices/getInboxList/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
+        )
+
+        return response
+
     async def close(self):  # noqa: D102
         await self.connection.close()

@@ -1,6 +1,7 @@
 """Platform for Mazda climate integration."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.climate import (
@@ -149,10 +150,13 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set a new HVAC mode."""
+        command_utc = datetime.now(timezone.utc)
         if hvac_mode == HVACMode.HEAT_COOL:
             await self.client.turn_on_hvac(self.vehicle_id)
+            self._track_remote_result("hvacOn", command_utc)
         elif hvac_mode == HVACMode.OFF:
             await self.client.turn_off_hvac(self.vehicle_id)
+            self._track_remote_result("hvacOff", command_utc)
 
         self._handle_coordinator_update()
 
