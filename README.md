@@ -39,4 +39,60 @@ Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automat
    - Click "Load unpacked" and select the extracted folder
    - Try to authenticate
 
+# Notifications
+When a button is pressed, the integration starts a background process that polls the inbox in MyMazda 1-3 times (7s 12s 18s). As soon as a success or failure is detected, an event is fired in Home Assistant. This event can then be detected like any other and notifications can be sent through an automation. See examples below. 
+* **Timing:** is specifically related to the intervals of typically responses for success/failure/rejection over 100 alerts. 
+  * I may tweak the timing a second or two here and there, but I will keep this limitation, as both a sensible limitation and in an effort to reduce API calls to Mazda. Buttons presses send an event notification capturing the details.
+  * In a further effort to reduce calls to Mazda, the integration will send null button presses until this check is complete (Mazda rejects them with a busy notification anyways).
+## Every Event Example
+```
+alias: MyMazda Notify
+description: ""
+triggers:
+  - event_type: mazda_cs_remote_service_result
+    trigger: event
+actions:
+  - data:
+      title: >-
+        Mazda {{ action_labels.get(trigger.event.data.action,
+        trigger.event.data.action) }} {{ 'Succeeded' if
+        trigger.event.data.success else 'Failed' }}
+      message: >-
+        {% set label = action_labels.get(trigger.event.data.action,
+        trigger.event.data.action) %} {% if trigger.event.data.success %}
+          {{ label }} completed successfully.
+        {% else %}
+          {{ label }} failed: {{ trigger.event.data.details }}
+        {% endif %}
+    action: persistent_notification.create
+variables:
+  action_labels:
+    doorLock: Door Lock
+    doorUnlock: Door Unlock
+    start_engine: Engine Start
+    stop_engine: Engine Stop
+    turn_on_hazard_lights: Hazard Lights On
+    turn_off_hazard_lights: Hazard Lights Off
+    flash_lights: Flash Lights
+    hvacOn: Climate On
+    hvacOff: Climate Off
+    chargeStart: Charge Start
+    chargeStop: Charge Stop
+```
+## Single Event
+```
+alias: DoorUnlock
+description: ""
+triggers:
+  - event_type: mazda_cs_remote_service_result
+    event_data:
+      action: doorLock
+      success: true
+    trigger: event
+actions:
+  - data:
+      message: "Door lock: {{ trigger.event.data.details }}"
+    action: notify.mobile_phone #replace
+mode: single
 
+```
