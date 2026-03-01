@@ -66,10 +66,13 @@
             "tpms_battery_warning": {
                 "name": "β | TPMS Battery"
             },
+            "mnt_tyre_at_flg": {
+                "name": "δ | MntTyreAtFlg"
+            },
             "brake_oil_level_warning": {
                 "name": "Brake oil level warning"
             },
-            "maintenance_oil_warning": {
+            "mnt_oil_at_flg": {
                 "name": "δ | MntOilAtFlg"
             },
             "oil_level_warning": {

@@ -94,7 +94,7 @@ BINARY_SENSOR_ENTITIES = [
         translation_key="fuel_lid",
         icon="mdi:gas-station",
         device_class=BinarySensorDeviceClass.DOOR,
-        is_supported=lambda data: data["hasFuel"],
+        is_supported=lambda data: data["hasFuel"] and data["enableWindows"],
         value_fn=lambda data: data["status"]["doors"]["fuelLidOpen"],
     ),
     MazdaBinarySensorEntityDescription(
@@ -223,21 +223,28 @@ BINARY_SENSOR_ENTITIES = [
         value_fn=lambda data: data["status"]["tirePressureWarnings"]["tpmsBatteryWarning"],
     ),
     MazdaBinarySensorEntityDescription(
+        key="mnt_tyre_at_flg",
+        translation_key="mnt_tyre_at_flg",
+        icon="mdi:car-tire-alert",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"],
+        value_fn=lambda data: data["status"]["tirePressureWarnings"]["mntTyreAtFlg"],
+    ),
+    MazdaBinarySensorEntityDescription(
         key="brake_oil_level_warning",
         translation_key="brake_oil_level_warning",
         icon="mdi:car-brake-fluid-level",
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data["status"]["oilWarnings"]["brakeOilLevelWarning"],
+        value_fn=lambda data: data["status"]["oilMaintenanceInfo"]["brakeOilLevelWarning"],
     ),
     MazdaBinarySensorEntityDescription(
-        key="maintenance_oil_warning",
-        translation_key="maintenance_oil_warning",
+        key="mnt_oil_at_flg",
+        translation_key="mnt_oil_at_flg",
         icon="mdi:oil",
-        device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"],
-        value_fn=lambda data: bool(data["status"]["oilWarnings"]["maintenanceOilWarning"]),
+        value_fn=lambda data: bool(data["status"]["oilMaintenanceInfo"]["mntOilAtFlg"]),
     ),
     MazdaBinarySensorEntityDescription(
         key="oil_level_warning",
@@ -246,7 +253,7 @@ BINARY_SENSOR_ENTITIES = [
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["hasFuel"],
-        value_fn=lambda data: data["status"]["oilWarnings"]["oilLevelWarning"],
+        value_fn=lambda data: data["status"]["oilMaintenanceInfo"]["oilLevelWarning"],
     ),
     MazdaBinarySensorEntityDescription(
         key="oil_deteriorate_warning",
@@ -255,7 +262,7 @@ BINARY_SENSOR_ENTITIES = [
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["hasFuel"],
-        value_fn=lambda data: data["status"]["oilWarnings"]["oilDeteriorateWarning"],
+        value_fn=lambda data: data["status"]["oilMaintenanceInfo"]["oilDeteriorateWarning"],
     ),
 ]
 

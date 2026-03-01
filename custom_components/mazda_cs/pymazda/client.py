@@ -183,7 +183,10 @@ class Client:  # noqa: D101
                 "trunkOpen": alert_info.get("Door", {}).get("DrStatTrnkLg") == 1,
                 "hoodOpen": alert_info.get("Door", {}).get("DrStatHood") == 1,
                 "fuelLidOpen": alert_info.get("Door", {}).get("FuelLidOpenStatus") == 1,
+                # Not yet integrated: doorOpenWarning
+                "doorOpenWarning": alert_info.get("Door", {}).get("DrOpnWrn") == 1, 
             },
+            # Door locks not yet integrated as sensors
             "doorLocks": {
                 "driverDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwDrv")
                 == 1,
@@ -195,6 +198,7 @@ class Client:  # noqa: D101
                 == 1,
                 "rearRightDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwRr")
                 == 1,
+                "allDoorsLockedSignal": alert_info.get("Door", {}).get("AllDrSwSignal") == 1,
             },
             "windows": {
                 "driverWindowOpen": alert_info.get("Pw", {}).get("PwPosDrv") == 1,
@@ -203,6 +207,17 @@ class Client:  # noqa: D101
                 "rearRightWindowOpen": alert_info.get("Pw", {}).get("PwPosRr") == 1,
                 "sunroofOpen": alert_info.get("Door", {}).get("SrSlideSignal") == 1,
                 "sunroofTilted": alert_info.get("Door", {}).get("SrTiltSignal") == 1,
+            },
+            # SeatBeltInformation — not yet integrated as sensors
+            "seatBeltInformation": {
+                "seatBeltWrnDRq": remote_info.get("SeatBeltInformation", {}).get("SeatBeltWrnDRq"),
+                "firstRowBuckleDriver": remote_info.get("SeatBeltInformation", {}).get("FirstRowBuckleDriver"),
+                "firstRowBucklePsngr": remote_info.get("SeatBeltInformation", {}).get("FirstRowBucklePsngr"),
+                "ocsStatus": remote_info.get("SeatBeltInformation", {}).get("OCSStatus"),
+                "seatBeltStatDActl": remote_info.get("SeatBeltInformation", {}).get("SeatBeltStatDActl"),
+                "rlOcsStatDActl": remote_info.get("SeatBeltInformation", {}).get("RLOCSStatDActl"),
+                "rcOcsStatDActl": remote_info.get("SeatBeltInformation", {}).get("RCOCSStatDActl"),
+                "rrOcsStatDActl": remote_info.get("SeatBeltInformation", {}).get("RROCSStatDActl"),
             },
             "hazardLightsOn": alert_info.get("HazardLamp", {}).get("HazardSw") == 1,
             "tnsLight": {
@@ -228,17 +243,14 @@ class Client:  # noqa: D101
                 ),
             },
             "tirePressureWarnings": {
+                # TPMS Status not implemented
+                "tpmsStatus": remote_info.get("TPMSInformation", {}).get("TPMSStatus") == 1,
                 "frontLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FLTyrePressWarn") == 1,
                 "frontRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FRTyrePressWarn") == 1,
                 "rearLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RLTyrePressWarn") == 1,
                 "rearRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RRTyrePressWarn") == 1,
                 "tpmsBatteryWarning": remote_info.get("TPMSInformation", {}).get("TPMSSystemFlt") == 1,
-            },
-            "oilWarnings": {
-                "brakeOilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelSensWarnBRq") == 1,
-                "oilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelWarning") == 1,
-                "oilDeteriorateWarning": remote_info.get("OilMntInformation", {}).get("OilDeteriorateWarning") == 1,
-                "maintenanceOilWarning": remote_info.get("OilMntInformation", {}).get("MntOilAtFlg"),
+                "mntTyreAtFlg": remote_info.get("TPMSInformation", {}).get("MntTyreAtFlg") == 1,
             },
             "driveInformation": {
                 "drive1DriveTimeSeconds": remote_info.get("DriveInformation", {}).get("Drv1DrvTm"),
@@ -247,8 +259,13 @@ class Client:  # noqa: D101
                 "drive1FuelConsumptionL100km": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelG"),
             },
             "oilMaintenanceInfo": {
-                "oilHealthPercentage": remote_info.get("OilMntInformation", {}).get("DROilDeteriorateLevel"),
                 "nextOilChangeDistanceKm": remote_info.get("OilMntInformation", {}).get("RemOilDistK"),
+                "mntOilAtFlg": remote_info.get("OilMntInformation", {}).get("MntOilAtFlg"),
+                "oilDeteriorateWarning": remote_info.get("OilMntInformation", {}).get("OilDeteriorateWarning") == 1,
+                "oilHealthPercentage": remote_info.get("OilMntInformation", {}).get("DROilDeteriorateLevel"),
+                "mntOilLvlAtFlg": remote_info.get("OilMntInformation", {}).get("MntOilLvlAtFlg"),  # not yet implemented
+                "brakeOilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelSensWarnBRq") == 1,
+                "oilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelWarning") == 1,
                 "oilLevelStatus": remote_info.get("OilMntInformation", {}).get("OilLevelStatusMonitor"),
             },
             "scrMaintenanceInfo": {
