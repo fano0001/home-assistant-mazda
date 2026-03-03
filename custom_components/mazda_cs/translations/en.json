@@ -64,7 +64,7 @@
                 "name": "Rear right tire pressure warning"
             },
             "tpms_battery_warning": {
-                "name": "β | TPMS Battery"
+                "name": "β | Tire pressure battery"
             },
             "mnt_tyre_at_flg": {
                 "name": "δ | MntTyreAtFlg"
@@ -231,7 +231,13 @@
                 "name": "δ | TnsLamp"
             },
             "light_combi_sw_mode": {
-                "name": "δ | LightCombiSWMode"
+                "name": "β | Light switch mode",
+                "state": {
+                    "0": "Off",
+                    "1": "Auto",
+                    "2": "Parking lights",
+                    "3": "Low beams"
+                }
             },
             "lght_sw_state": {
                 "name": "δ | LghtSwState"
@@ -246,7 +252,7 @@
                 "name": "δ | PwSavMode"
             },
             "soc_ecm_a_est": {
-                "name": "δ | SocEcmAEst"
+                "name": "β | 12v battery SoC"
             }
         },
         "switch": {

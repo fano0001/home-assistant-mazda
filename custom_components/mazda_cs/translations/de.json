@@ -88,7 +88,7 @@
                 "name": "Reifendruckwarnung hinten rechts"
             },
             "tpms_battery_warning": {
-                "name": "β | TPMS Batterie"
+                "name": "β | Reifendruckbatterie"
             },
             "mnt_tyre_at_flg": {
                 "name": "δ | MntTyreAtFlg"
@@ -212,7 +212,13 @@
                 "name": "δ | TnsLamp"
             },
             "light_combi_sw_mode": {
-                "name": "δ | LightCombiSWMode"
+                "name": "β | Lichtschalter-Modus",
+                "state": {
+                    "0": "Aus",
+                    "1": "Auto",
+                    "2": "Standlicht",
+                    "3": "Abblendlicht"
+                }
             },
             "lght_sw_state": {
                 "name": "δ | LghtSwState"
@@ -227,7 +233,7 @@
                 "name": "δ | PwSavMode"
             },
             "soc_ecm_a_est": {
-                "name": "δ | SocEcmAEst"
+                "name": "β | 12V-Batterie SoC"
             }
         },
         "switch": {

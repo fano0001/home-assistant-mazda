@@ -412,9 +412,11 @@ SENSOR_ENTITIES = [
         key="light_combi_sw_mode",
         translation_key="light_combi_sw_mode",
         icon="mdi:car-light-dimmed",
+        device_class=SensorDeviceClass.ENUM,
+        options=["0", "1", "2", "3"],
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["enableDevSensors"] and data["status"]["tnsLight"]["lightCombiSWMode"] is not None,
-        value=lambda data: data["status"]["tnsLight"]["lightCombiSWMode"],
+        is_supported=lambda data: data["status"]["tnsLight"]["lightCombiSWMode"] is not None,
+        value=lambda data: str(data["status"]["tnsLight"]["lightCombiSWMode"]),
     ),
     MazdaSensorEntityDescription(
         key="lght_sw_state",
@@ -452,9 +454,11 @@ SENSOR_ENTITIES = [
         key="soc_ecm_a_est",
         translation_key="soc_ecm_a_est",
         icon="mdi:car-battery",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["enableDevSensors"] and data["status"]["batteryStatus"]["socEcmAEst"] is not None,
-        value=lambda data: data["status"]["batteryStatus"]["socEcmAEst"],
+        is_supported=lambda data: data["status"]["batteryStatus"]["socEcmAEst"] is not None and data["status"]["batteryStatus"]["socEcmAEst"] <= 127,
+        value=lambda data: round(data["status"]["batteryStatus"]["socEcmAEst"] / 127 * 100, 1),
     ),
 ]
 
