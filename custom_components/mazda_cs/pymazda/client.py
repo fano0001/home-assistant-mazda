@@ -188,7 +188,10 @@ class Client:  # noqa: D101
                 # Not yet integrated: doorOpenWarning
                 "doorOpenWarning": alert_info.get("Door", {}).get("DrOpnWrn") == 1, 
             },
-            # Door locks not yet integrated as sensors
+            # LockLinkSw = physical lock linkage rod position switch per door.
+            # Reads mechanical position, not commanded state — front/rear may differ
+            # at rest due to door design differences (rear doors have child lock linkage).
+            # Used to derive lock state but not exposed as individual sensors.
             "doorLocks": {
                 "driverDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwDrv")
                 == 1,
@@ -372,7 +375,7 @@ class Client:  # noqa: D101
     async def turn_off_hazard_lights(self, vehicle_id):  # noqa: D102
         await self.controller.light_off(vehicle_id)
 
-    _FLASH_COUNT_TO_PARAM = {"2": 0, "10": 1, "30": 2}
+    _FLASH_COUNT_TO_PARAM = {"2": 1, "10": 2, "30": 3}
 
     def set_flash_light_count(self, vehicle_id: int, count: str) -> None:  # noqa: D102
         self._flash_light_counts[vehicle_id] = self._FLASH_COUNT_TO_PARAM.get(count, 1)
@@ -463,14 +466,16 @@ class Client:  # noqa: D101
     ) -> dict | None:
         """Poll inbox for the result of a remote command.
 
-        Checks at 7 s, 5 s, and 6 s after command_utc (max 3 API calls).
-        Returns a result dict on match, or None if no result found within 18 s.
+        Checks at 22 s, 25 s, 28 s, and 45 s after command_utc (max 4 API calls).
+        Returns a result dict on match, or None if no result found within 45 s.
         """
         _LOGGER = logging.getLogger(__name__)
         # Allow 5 s clock-skew buffer; resultId embeds the server-side request timestamp
         cutoff = command_utc - datetime.timedelta(seconds=5)
 
-        for delay in (9, 7, 6):  # cumulative waits: 7 s, 5 s, 6 s
+        loop_start = datetime.datetime.now(datetime.timezone.utc)
+
+        for delay, elapsed in ((22, 22), (3, 25), (3, 28), (17, 45)):  # cumulative waits: 22 s, 3 s, 3 s, 17 s
             await asyncio.sleep(delay)
             try:
                 response = await self.controller.get_inbox_list(
@@ -493,6 +498,27 @@ class Client:  # noqa: D101
                 if matching:
                     # List is newest-first; take the oldest (last) to match our command
                     entry = matching[-1]
+                    # Re-derive result_dt from the matched entry (loop variable may be stale)
+                    matched_result_id = entry.get("resultId", "")
+                    matched_result_dt = datetime.datetime.strptime(
+                        matched_result_id[3:17], "%Y%m%d%H%M%S"
+                    ).replace(tzinfo=datetime.timezone.utc)
+                    result_id_delta = (matched_result_dt - loop_start).total_seconds()
+                    push_date_str = entry.get("pushDate", "")
+                    try:
+                        push_dt = datetime.datetime.strptime(
+                            push_date_str, "%Y%m%d%H%M%S"
+                        ).replace(tzinfo=datetime.timezone.utc)
+                        push_delta = (push_dt - loop_start).total_seconds()
+                        push_delta_str = f"{push_delta:+.1f}s"
+                    except ValueError:
+                        push_delta_str = "n/a"
+                    _LOGGER.warning(
+                        "poll_remote_service_result: match at %ds mark — result_id: %+.1fs from loop start, pushDate: %s from loop start",
+                        elapsed,
+                        result_id_delta,
+                        push_delta_str,
+                    )
                     return {
                         "success": entry.get("messageContents") == "Success",
                         "title": entry.get("messageTitle", ""),
