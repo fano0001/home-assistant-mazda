@@ -7,7 +7,7 @@
   "documentation": "https://github.com/fano0001/home-assistant-mazda/",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/fano0001/home-assistant-mazda/issues",
-  "homeassistant": "2025.4.0",
+  "homeassistant_version": "2025.4.0",
   "requirements": ["PyJWT>=2.0.0"],
   "version": "2.2.0"
 }
