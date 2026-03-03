@@ -233,7 +233,7 @@
                 "name": "δ | Energiesparmodus"
             },
             "soc_ecm_a_est": {
-                "name": "δ | 12V-Batterie SoC"
+                "name": "β | 12V-Batterie SoC"
             }
         },
         "switch": {

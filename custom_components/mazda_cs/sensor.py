@@ -452,7 +452,7 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["enableDevSensors"] and data["status"]["batteryStatus"]["socEcmAEst"] is not None and data["status"]["batteryStatus"]["socEcmAEst"] <= 127,
+        is_supported=lambda data: data["status"]["batteryStatus"]["socEcmAEst"] is not None and data["status"]["batteryStatus"]["socEcmAEst"] <= 127,
         value=lambda data: round(data["status"]["batteryStatus"]["socEcmAEst"] / 127 * 100, 1),
     ),
 ]

@@ -252,7 +252,7 @@
         "name": "δ | Power saving mode"
       },
       "soc_ecm_a_est": {
-        "name": "δ | 12v battery SoC"
+        "name": "β | 12v battery SoC"
       }
     },
     "switch": {
