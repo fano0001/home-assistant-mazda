@@ -49,7 +49,7 @@
                 "name": "Trunk"
             },
             "fuel_lid": {
-                "name": "Fuel lid"
+                "name": "δ | Fuel lid"
             },
             "front_left_tire_pressure_warning": {
                 "name": "Front left tire pressure warning"
@@ -64,7 +64,7 @@
                 "name": "Rear right tire pressure warning"
             },
             "tpms_battery_warning": {
-                "name": "β | TPMS Battery"
+                "name": "β | Tire pressure battery"
             },
             "mnt_tyre_at_flg": {
                 "name": "δ | MntTyreAtFlg"
@@ -104,6 +104,9 @@
             },
             "rear_right_window": {
                 "name": "Rear right window"
+            },
+            "tns_lamp": {
+                "name": "β | Exterior lights warning"
             }
         },
         "button": {
@@ -227,11 +230,14 @@
             "urea_tank_level": {
                 "name": "Urea tank level"
             },
-            "tns_lamp": {
-                "name": "δ | TnsLamp"
-            },
             "light_combi_sw_mode": {
-                "name": "δ | LightCombiSWMode"
+                "name": "Light switch mode",
+                "state": {
+                    "0": "Off",
+                    "1": "Auto",
+                    "2": "Parking lights",
+                    "3": "Low beams"
+                }
             },
             "lght_sw_state": {
                 "name": "δ | LghtSwState"
@@ -243,10 +249,10 @@
                 "name": "δ | PowerControlStatus"
             },
             "pw_sav_mode": {
-                "name": "δ | PwSavMode"
+                "name": "δ | Power saving mode"
             },
             "soc_ecm_a_est": {
-                "name": "δ | SocEcmAEst"
+                "name": "δ | 12v battery SoC"
             }
         },
         "switch": {
@@ -254,10 +260,10 @@
                 "name": "Charging"
             },
             "enable_windows": {
-                "name": "β | Window Sensors"
+                "name": "δ | Window sensors"
             },
             "enable_dev_sensors": {
-                "name": "δ | Dev Sensors"
+                "name": "δ | Development sensors"
             }
         }
     },

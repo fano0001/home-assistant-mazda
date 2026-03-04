@@ -370,7 +370,7 @@ class Client:  # noqa: D101
     async def turn_off_hazard_lights(self, vehicle_id):  # noqa: D102
         await self.controller.light_off(vehicle_id)
 
-    _FLASH_COUNT_TO_PARAM = {"2": 0, "10": 1, "30": 2}
+    _FLASH_COUNT_TO_PARAM = {"2": 1, "10": 2, "30": 3}
 
     def set_flash_light_count(self, vehicle_id: int, count: str) -> None:  # noqa: D102
         self._flash_light_counts[vehicle_id] = self._FLASH_COUNT_TO_PARAM.get(count, 1)

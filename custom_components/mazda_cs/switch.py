@@ -24,7 +24,8 @@ async def async_setup_entry(
 
     entities = [
         MazdaEnableWindowsSwitch(hass, config_entry, coordinator, index)
-        for index in range(len(coordinator.data))
+        for index, data in enumerate(coordinator.data)
+        if data["enableDevSensors"]
     ]
     entities += [
         MazdaEnableDevSensorsSwitch(hass, config_entry, coordinator, index)
