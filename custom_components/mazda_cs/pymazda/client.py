@@ -125,7 +125,7 @@ class Client:  # noqa: D101
                     "exteriorColorName"
                 ),
                 "isPHEV": current_vec_base_info.get("phevFlg") == 1,
-                "isDiesel": current_vec_base_info.get("scrFlg") != 2,
+                "hasSCR": current_vec_base_info.get("scrFlg") == 1,
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
                 "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05",
                 "hasRangeExtender": current_vec_base_info.get("rexFlg") == 1,
