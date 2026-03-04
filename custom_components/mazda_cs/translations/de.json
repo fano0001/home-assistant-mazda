@@ -27,6 +27,12 @@
             "ev_plugged_in": {
                 "name": "Eingesteckt"
             },
+            "ev_battery_heater_on": {
+                "name": "Batterieheizung"
+            },
+            "ev_battery_heater_auto": {
+                "name": "Batterieheizung (Auto)"
+            },
             "hood": {
                 "name": "Motorhaube"
             },
@@ -41,6 +47,66 @@
             },
             "trunk": {
                 "name": "Kofferraum"
+            },
+            "fuel_lid": {
+                "name": "δ | Tankdeckel"
+            },
+            "hazard_lights": {
+                "name": "Warnblinklicht"
+            },
+            "scr_maintenance_warning": {
+                "name": "SCR-Wartungswarnung"
+            },
+            "sunroof": {
+                "name": "Schiebedach"
+            },
+            "sunroof_tilt": {
+                "name": "Schiebedach (Kippstellung)"
+            },
+            "driver_window": {
+                "name": "Fahrerfenster"
+            },
+            "passenger_window": {
+                "name": "Beifahrerfenster"
+            },
+            "rear_left_window": {
+                "name": "Fenster hinten links"
+            },
+            "rear_right_window": {
+                "name": "Fenster hinten rechts"
+            },
+            "front_left_tire_pressure_warning": {
+                "name": "Reifendruckwarnung vorne links"
+            },
+            "front_right_tire_pressure_warning": {
+                "name": "Reifendruckwarnung vorne rechts"
+            },
+            "rear_left_tire_pressure_warning": {
+                "name": "Reifendruckwarnung hinten links"
+            },
+            "rear_right_tire_pressure_warning": {
+                "name": "Reifendruckwarnung hinten rechts"
+            },
+            "tpms_battery_warning": {
+                "name": "β | Reifendruckbatterie"
+            },
+            "mnt_tyre_at_flg": {
+                "name": "δ | MntTyreAtFlg"
+            },
+            "brake_oil_level_warning": {
+                "name": "Bremsflüssigkeits-Warnung"
+            },
+            "mnt_oil_at_flg": {
+                "name": "δ | MntOilAtFlg"
+            },
+            "oil_level_warning": {
+                "name": "Ölstand-Warnung"
+            },
+            "oil_deteriorate_warning": {
+                "name": "Ölqualitäts-Warnung"
+            },
+            "tns_lamp": {
+                "name": "β | Außenlicht-Warnung"
             }
         },
         "button": {
@@ -82,6 +148,9 @@
             "ev_remaining_charging_time": {
                 "name" : "Verbleibende Ladezeit (AC)"
             },
+            "ev_quick_charge_time": {
+                "name": "Verbleibende Schnellladezeit"
+            },
             "ev_remaining_range": {
                 "name": "Reichweite"
             },
@@ -108,11 +177,74 @@
             },
             "rear_right_tire_pressure": {
                 "name": "Reifendruck hinten rechts"
+            },
+            "tire_pressure_timestamp": {
+                "name": "Reifendruck zuletzt aktualisiert"
+            },
+            "drive1_drive_time": {
+                "name": "Fahrt 1 Fahrzeit"
+            },
+            "drive1_distance": {
+                "name": "Fahrt 1 Strecke"
+            },
+            "drive1_fuel_efficiency": {
+                "name": "Fahrt 1 Kraftstoffeffizienz"
+            },
+            "drive1_fuel_consumption": {
+                "name": "Fahrt 1 Kraftstoffverbrauch"
+            },
+            "dr_oil_deteriorate_level": {
+                "name": "δ | DROilDeteriorateLevel"
+            },
+            "next_maintenance_distance": {
+                "name": "Strecke bis nächster Inspektion"
+            },
+            "oil_level_status": {
+                "name": "δ | OilLevelStatusMonitor"
+            },
+            "next_oil_change_distance": {
+                "name": "Strecke bis nächstem Ölwechsel"
+            },
+            "next_scr_maintenance_distance": {
+                "name": "Strecke bis nächster SCR-Wartung"
+            },
+            "urea_tank_level": {
+                "name": "Harnstoff-Tankfüllstand"
+            },
+            "light_combi_sw_mode": {
+                "name": "Lichtschalter-Modus",
+                "state": {
+                    "0": "Aus",
+                    "1": "Auto",
+                    "2": "Standlicht",
+                    "3": "Abblendlicht"
+                }
+            },
+            "lght_sw_state": {
+                "name": "δ | LghtSwState"
+            },
+            "engine_state": {
+                "name": "δ | EngineState"
+            },
+            "power_control_status": {
+                "name": "δ | PowerControlStatus"
+            },
+            "pw_sav_mode": {
+                "name": "δ | Energiesparmodus"
+            },
+            "soc_ecm_a_est": {
+                "name": "δ | 12V-Batterie SoC"
             }
         },
         "switch": {
             "charging": {
                 "name": "Aufladen"
+            },
+            "enable_windows": {
+                "name": "δ | Fenstersensoren aktivieren"
+            },
+            "enable_dev_sensors": {
+                "name": "δ | Entwicklungssensoren"
             }
         }
     }

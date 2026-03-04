@@ -39,8 +39,74 @@
       "hood": {
         "name": "Hood"
       },
+      "fuel_lid": {
+        "name": "δ | Fuel lid"
+      },
       "ev_plugged_in": {
         "name": "Plugged in"
+      },
+      "ev_battery_heater_on": {
+        "name": "Battery heater"
+      },
+      "ev_battery_heater_auto": {
+        "name": "Battery heater auto"
+      },
+      "front_left_tire_pressure_warning": {
+        "name": "Front left tire pressure warning"
+      },
+      "front_right_tire_pressure_warning": {
+        "name": "Front right tire pressure warning"
+      },
+      "rear_left_tire_pressure_warning": {
+        "name": "Rear left tire pressure warning"
+      },
+      "rear_right_tire_pressure_warning": {
+        "name": "Rear right tire pressure warning"
+      },
+      "tpms_battery_warning": {
+        "name": "β | Tire pressure battery"
+      },
+      "mnt_tyre_at_flg": {
+        "name": "δ | MntTyreAtFlg"
+      },
+      "brake_oil_level_warning": {
+        "name": "Brake oil level warning"
+      },
+      "mnt_oil_at_flg": {
+        "name": "δ | MntOilAtFlg"
+      },
+      "oil_level_warning": {
+        "name": "Oil level warning"
+      },
+      "oil_deteriorate_warning": {
+        "name": "Oil deterioration warning"
+      },
+      "hazard_lights": {
+        "name": "Hazard lights"
+      },
+      "scr_maintenance_warning": {
+        "name": "SCR maintenance warning"
+      },
+      "sunroof": {
+        "name": "Sunroof"
+      },
+      "sunroof_tilt": {
+        "name": "Sunroof tilt"
+      },
+      "driver_window": {
+        "name": "Driver window"
+      },
+      "passenger_window": {
+        "name": "Passenger window"
+      },
+      "rear_left_window": {
+        "name": "Rear left window"
+      },
+      "rear_right_window": {
+        "name": "Rear right window"
+      },
+      "tns_lamp": {
+        "name": "β | Exterior lights warning"
       }
     },
     "button": {
@@ -55,6 +121,9 @@
       },
       "turn_off_hazard_lights": {
         "name": "Turn off hazard lights"
+      },
+      "flash_lights": {
+        "name": "Flash lights"
       },
       "refresh_vehicle_status": {
         "name": "Refresh status"
@@ -73,6 +142,16 @@
     "lock": {
       "lock": {
         "name": "[%key:component::lock::title%]"
+      }
+    },
+    "select": {
+      "flash_light_count": {
+        "name": "Flash light count",
+        "state": {
+          "2": "2 flashes",
+          "10": "10 flashes",
+          "30": "30 flashes"
+        }
       }
     },
     "sensor": {
@@ -97,19 +176,94 @@
       "rear_right_tire_pressure": {
         "name": "Rear right tire pressure"
       },
+      "tire_pressure_timestamp": {
+        "name": "Tire pressure last updated"
+      },
       "ev_charge_level": {
         "name": "Charge level"
       },
       "ev_remaining_range": {
         "name": "Remaining range"
       },
+      "ev_remaining_charging_time": {
+        "name": "Remaining charging time (AC)"
+      },
+      "ev_quick_charge_time": {
+        "name": "Remaining quick charge time"
+      },
       "ev_remaining_range_bev": {
         "name": "Remaining range BEV"
+      },
+      "drive1_drive_time": {
+        "name": "Drive 1 drive time"
+      },
+      "drive1_distance": {
+        "name": "Drive 1 distance"
+      },
+      "next_maintenance_distance": {
+        "name": "Next maintenance distance"
+      },
+      "drive1_fuel_efficiency": {
+        "name": "Drive 1 fuel efficiency"
+      },
+      "drive1_fuel_consumption": {
+        "name": "Drive 1 fuel consumption"
+      },
+      "dr_oil_deteriorate_level": {
+        "name": "δ | DROilDeteriorateLevel"
+      },
+      "drive1_fuel_efficiency_mpg": {
+        "name": "Drive 1 fuel efficiency (MPG)"
+      },
+      "drive1_fuel_consumption_gal100mi": {
+        "name": "Drive 1 fuel consumption (gal/100mi)"
+      },
+      "oil_level_status": {
+        "name": "δ | OilLevelStatusMonitor"
+      },
+      "next_oil_change_distance": {
+        "name": "Next oil change distance"
+      },
+      "next_scr_maintenance_distance": {
+        "name": "Next SCR maintenance distance"
+      },
+      "urea_tank_level": {
+        "name": "Urea tank level"
+      },
+      "light_combi_sw_mode": {
+        "name": "Light switch mode",
+        "state": {
+          "0": "Off",
+          "1": "Auto",
+          "2": "Parking lights",
+          "3": "Low beams"
+        }
+      },
+      "lght_sw_state": {
+        "name": "δ | LghtSwState"
+      },
+      "engine_state": {
+        "name": "δ | EngineState"
+      },
+      "power_control_status": {
+        "name": "δ | PowerControlStatus"
+      },
+      "pw_sav_mode": {
+        "name": "δ | Power saving mode"
+      },
+      "soc_ecm_a_est": {
+        "name": "δ | 12v battery SoC"
       }
     },
     "switch": {
       "charging": {
         "name": "Charging"
+      },
+      "enable_windows": {
+        "name": "δ | Window sensors"
+      },
+      "enable_dev_sensors": {
+        "name": "δ | Development sensors"
       }
     }
   },

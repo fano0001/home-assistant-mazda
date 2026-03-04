@@ -13,16 +13,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import (
-    MazdaAccountLockedException,
     MazdaAPI as MazdaAPIClient,
     MazdaAPIEncryptionException,
-    MazdaAuthenticationException,
     MazdaEntity,
     MazdaException,
     MazdaTokenExpiredException,
 )
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
-from .pymazda.exceptions import MazdaLoginFailedException
 
 
 async def handle_button_press(
@@ -38,11 +35,8 @@ async def handle_button_press(
         await api_method(vehicle_id)
     except (
         MazdaException,
-        MazdaAuthenticationException,
-        MazdaAccountLockedException,
         MazdaTokenExpiredException,
         MazdaAPIEncryptionException,
-        MazdaLoginFailedException,
     ) as ex:
         raise HomeAssistantError(ex) from ex
 
@@ -77,13 +71,13 @@ BUTTON_ENTITIES = [
         key="start_engine",
         translation_key="start_engine",
         icon="mdi:engine",
-        is_supported=lambda data: not data["isElectric"],
+        is_supported=lambda data: not data["isElectric"] and data["hasRemoteStart"],
     ),
     MazdaButtonEntityDescription(
         key="stop_engine",
         translation_key="stop_engine",
         icon="mdi:engine-off",
-        is_supported=lambda data: not data["isElectric"],
+        is_supported=lambda data: not data["isElectric"] and data["hasRemoteStart"],
     ),
     MazdaButtonEntityDescription(
         key="turn_on_hazard_lights",
@@ -96,6 +90,12 @@ BUTTON_ENTITIES = [
         translation_key="turn_off_hazard_lights",
         icon="mdi:hazard-lights",
         is_supported=lambda data: not data["isElectric"],
+    ),
+    MazdaButtonEntityDescription(
+        key="flash_lights",
+        translation_key="flash_lights",
+        icon="mdi:car-light-high",
+        is_supported=lambda data: data["hasFlashLight"],
     ),
     MazdaButtonEntityDescription(
         key="refresh_vehicle_status",

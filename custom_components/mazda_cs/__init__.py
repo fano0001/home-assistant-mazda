@@ -7,6 +7,7 @@ from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING
 
+import aiohttp
 import jwt
 import voluptuous as vol
 
@@ -36,11 +37,10 @@ from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DO
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
-    MazdaAccountLockedException,
     MazdaAPIEncryptionException,
-    MazdaAuthenticationException,
     MazdaException,
     MazdaSessionExpiredException,
+    MazdaTermsNotAcceptedException,
     MazdaTokenExpiredException,
 )
 
@@ -52,6 +52,7 @@ PLATFORMS = [
     Platform.CLIMATE,
     Platform.DEVICE_TRACKER,
     Platform.LOCK,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
 ]
@@ -207,6 +208,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # The Mazda API can throw an error when multiple simultaneous requests are
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
+                vehicle["region"] = region
+                vehicle["enableWindows"] = entry.options.get("enable_windows", False)
+                vehicle["enableDevSensors"] = entry.options.get("enable_dev_sensors", False)
                 vehicle["status"] = await with_timeout(
                     mazda_client.get_vehicle_status(vehicle["id"])
                 )
@@ -223,8 +227,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN][entry.entry_id][DATA_VEHICLES] = vehicles
 
             return vehicles
-        except MazdaAuthenticationException as ex:
-            raise ConfigEntryAuthFailed("Not authenticated with Mazda API") from ex
+        except MazdaTermsNotAcceptedException as ex:
+            raise UpdateFailed(
+                "Please accept the terms of service in the MyMazda app and try again"
+            ) from ex
+        except TimeoutError as ex:
+            raise UpdateFailed(
+                "Mazda API request timed out. The server may be temporarily unavailable."
+            ) from ex
+        except aiohttp.ClientConnectionError as ex:
+            _LOGGER.warning("Mazda API client connection error (will retry): %s", ex)
+            raise UpdateFailed(f"Cannot connect to Mazda API: {ex}") from ex
         except ConfigEntryAuthFailed:
             raise  # Let HA's coordinator trigger reauthentication
         except Exception as ex:

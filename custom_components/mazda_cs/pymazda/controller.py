@@ -176,6 +176,32 @@ class Controller:  # noqa: D101
 
         return response
 
+    async def flash_lights(self, internal_vin, car_finder_parameter=1):  # noqa: D102
+        # car_finder_parameter: 0=2 flashes, 1=10 flashes, 2=30 flashes (from APK SDMHazard)
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+            "commandinfo": {
+                "Hazard": {
+                    "HazardCommand": 2,
+                    "CarFinderParameter": car_finder_parameter,
+                }
+            },
+        }
+
+        response = await self.connection.api_request(
+            "POST",
+            "remoteServices/lightOn/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
+        )
+
+        if response["resultCode"] not in _SUCCESS_CODES:
+            raise MazdaException("Failed to flash lights")
+
+        return response
+
     async def light_off(self, internal_vin):  # noqa: D102
         post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
 

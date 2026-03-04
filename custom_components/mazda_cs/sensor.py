@@ -12,10 +12,11 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfPressure, UnitOfTime
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfPressure, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
+from homeassistant.util import dt as dt_util
 
 from . import MazdaEntity
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
@@ -87,6 +88,13 @@ def _ev_remaining_charging_time_supported(data):
     return (
         data["isElectric"]
         and data["evStatus"]["chargeInfo"]["basicChargeTimeMinutes"] is not None
+    )
+
+def _ev_quick_charge_time_supported(data):
+    """Determine if quick charge time is supported."""
+    return (
+        data["isElectric"]
+        and data["evStatus"]["chargeInfo"]["quickChargeTimeMinutes"] is not None
     )
 
 def _ev_remaining_range_supported(data):
@@ -184,7 +192,7 @@ SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
         key="front_left_tire_pressure",
         translation_key="front_left_tire_pressure",
-        icon="mdi:car-tire-alert",
+        icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UnitOfPressure.PSI,
         state_class=SensorStateClass.MEASUREMENT,
@@ -194,7 +202,7 @@ SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
         key="front_right_tire_pressure",
         translation_key="front_right_tire_pressure",
-        icon="mdi:car-tire-alert",
+        icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UnitOfPressure.PSI,
         state_class=SensorStateClass.MEASUREMENT,
@@ -204,7 +212,7 @@ SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
         key="rear_left_tire_pressure",
         translation_key="rear_left_tire_pressure",
-        icon="mdi:car-tire-alert",
+        icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UnitOfPressure.PSI,
         state_class=SensorStateClass.MEASUREMENT,
@@ -214,12 +222,21 @@ SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
         key="rear_right_tire_pressure",
         translation_key="rear_right_tire_pressure",
-        icon="mdi:car-tire-alert",
+        icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UnitOfPressure.PSI,
         state_class=SensorStateClass.MEASUREMENT,
         is_supported=_rear_right_tire_pressure_supported,
         value=_rear_right_tire_pressure_value,
+    ),
+    MazdaSensorEntityDescription(
+        key="tire_pressure_timestamp",
+        translation_key="tire_pressure_timestamp",
+        icon="mdi:tire",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["status"]["tirePressure"]["tirePressureTimestamp"] is not None,
+        value=lambda data: data["status"]["tirePressure"]["tirePressureTimestamp"].replace(tzinfo=dt_util.DEFAULT_TIME_ZONE),
     ),
     MazdaSensorEntityDescription(
         key="ev_charge_level",
@@ -240,6 +257,15 @@ SENSOR_ENTITIES = [
         value=_ev_remaining_charging_time_value,
     ),
     MazdaSensorEntityDescription(
+        key="ev_quick_charge_time",
+        translation_key="ev_quick_charge_time",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=_ev_quick_charge_time_supported,
+        value=lambda data: round(data["evStatus"]["chargeInfo"]["quickChargeTimeMinutes"]),
+    ),
+    MazdaSensorEntityDescription(
         key="ev_remaining_range",
         translation_key="ev_remaining_range",
         icon="mdi:ev-station",
@@ -258,6 +284,176 @@ SENSOR_ENTITIES = [
         state_class=SensorStateClass.MEASUREMENT,
         is_supported=_ev_remaining_bev_range_supported,
         value=_ev_remaining_range_bev_value,
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_drive_time",
+        translation_key="drive1_drive_time",
+        icon="mdi:car-clock",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=lambda data: data["status"]["driveInformation"]["drive1DriveTimeSeconds"] is not None,
+        value=lambda data: data["status"]["driveInformation"]["drive1DriveTimeSeconds"],
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_distance",
+        translation_key="drive1_distance",
+        icon="mdi:map-marker-distance",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=lambda data: data["status"]["driveInformation"]["drive1DistanceKm"] is not None,
+        value=lambda data: data["status"]["driveInformation"]["drive1DistanceKm"],
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_fuel_efficiency",
+        translation_key="drive1_fuel_efficiency",
+        icon="mdi:gas-station",
+        native_unit_of_measurement="km/L",
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=lambda data: data["hasFuel"] and data["region"] != "MNAO" and data["status"]["driveInformation"]["drive1FuelEfficiencyKmL"] is not None,
+        value=lambda data: data["status"]["driveInformation"]["drive1FuelEfficiencyKmL"],
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_fuel_consumption",
+        translation_key="drive1_fuel_consumption",
+        icon="mdi:gas-station",
+        native_unit_of_measurement="L/100km",
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=lambda data: data["hasFuel"] and data["region"] != "MNAO" and data["status"]["driveInformation"]["drive1FuelConsumptionL100km"] is not None,
+        value=lambda data: data["status"]["driveInformation"]["drive1FuelConsumptionL100km"],
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_fuel_efficiency_mpg",
+        translation_key="drive1_fuel_efficiency_mpg",
+        icon="mdi:gas-station",
+        native_unit_of_measurement="MPG",
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=lambda data: data["hasFuel"] and data["region"] == "MNAO" and data["status"]["driveInformation"]["drive1FuelEfficiencyKmL"] is not None,
+        value=lambda data: round(data["status"]["driveInformation"]["drive1FuelEfficiencyKmL"] * 2.35215, 1),
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_fuel_consumption_gal100mi",
+        translation_key="drive1_fuel_consumption_gal100mi",
+        icon="mdi:gas-station",
+        native_unit_of_measurement="gal/100mi",
+        state_class=SensorStateClass.MEASUREMENT,
+        is_supported=lambda data: data["hasFuel"] and data["region"] == "MNAO" and data["status"]["driveInformation"]["drive1FuelConsumptionL100km"] is not None,
+        value=lambda data: round(data["status"]["driveInformation"]["drive1FuelConsumptionL100km"] * 0.425144, 2),
+    ),
+    MazdaSensorEntityDescription(
+        key="dr_oil_deteriorate_level",
+        translation_key="dr_oil_deteriorate_level",
+        icon="mdi:oil",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"] is not None,
+        value=lambda data: data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"],
+    ),
+    MazdaSensorEntityDescription(
+        key="next_maintenance_distance",
+        translation_key="next_maintenance_distance",
+        icon="mdi:car-wrench",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"] is not None,
+        value=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"],
+    ),
+    MazdaSensorEntityDescription(
+        key="oil_level_status",
+        translation_key="oil_level_status",
+        icon="mdi:oil-level",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilLevelStatus"] is not None,
+        value=lambda data: data["status"]["oilMaintenanceInfo"]["oilLevelStatus"],
+    ),
+    MazdaSensorEntityDescription(
+        key="next_oil_change_distance",
+        translation_key="next_oil_change_distance",
+        icon="mdi:car-wrench",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["nextOilChangeDistanceKm"] is not None,
+        value=lambda data: data["status"]["oilMaintenanceInfo"]["nextOilChangeDistanceKm"],
+    ),
+    MazdaSensorEntityDescription(
+        key="next_scr_maintenance_distance",
+        translation_key="next_scr_maintenance_distance",
+        icon="mdi:car-wrench",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"] is not None,
+        value=lambda data: data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"],
+    ),
+    MazdaSensorEntityDescription(
+        key="urea_tank_level",
+        translation_key="urea_tank_level",
+        icon="mdi:car-cruise-control",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] is not None,
+        value=lambda data: round(data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] / 255 * 100, 1),
+    ),
+    MazdaSensorEntityDescription(
+        key="light_combi_sw_mode",
+        translation_key="light_combi_sw_mode",
+        icon="mdi:car-light-dimmed",
+        device_class=SensorDeviceClass.ENUM,
+        options=["0", "1", "2", "3"],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # Status updates after the engine is shut off (reflects last known switch position)
+        is_supported=lambda data: data["status"]["tnsLight"]["lightCombiSWMode"] is not None,
+        value=lambda data: str(data["status"]["tnsLight"]["lightCombiSWMode"]),
+    ),
+    MazdaSensorEntityDescription(
+        key="lght_sw_state",
+        translation_key="lght_sw_state",
+        icon="mdi:car-light-dimmed",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["tnsLight"]["lghtSwState"] is not None,
+        value=lambda data: data["status"]["tnsLight"]["lghtSwState"],
+    ),
+    MazdaSensorEntityDescription(
+        key="engine_state",
+        translation_key="engine_state",
+        icon="mdi:engine",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["electricalInformation"]["engineState"] is not None,
+        value=lambda data: data["status"]["electricalInformation"]["engineState"],
+    ),
+    MazdaSensorEntityDescription(
+        key="power_control_status",
+        translation_key="power_control_status",
+        icon="mdi:engine",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["electricalInformation"]["powerControlStatus"] is not None,
+        value=lambda data: data["status"]["electricalInformation"]["powerControlStatus"],
+    ),
+    MazdaSensorEntityDescription(
+        key="pw_sav_mode",
+        translation_key="pw_sav_mode",
+        icon="mdi:power-sleep",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["vehicleCondition"]["pwSavMode"] is not None,
+        value=lambda data: data["status"]["vehicleCondition"]["pwSavMode"],
+    ),
+    MazdaSensorEntityDescription(
+        key="soc_ecm_a_est",
+        translation_key="soc_ecm_a_est",
+        icon="mdi:car-battery",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["status"]["batteryStatus"]["socEcmAEst"] is not None and data["status"]["batteryStatus"]["socEcmAEst"] <= 127,
+        value=lambda data: round(data["status"]["batteryStatus"]["socEcmAEst"] / 127 * 100, 1),
     ),
 ]
 

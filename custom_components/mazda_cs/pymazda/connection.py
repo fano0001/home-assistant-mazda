@@ -16,11 +16,11 @@ from .crypto_utils import (
 )
 from .exceptions import (
     MazdaAPIEncryptionException,
-    MazdaAuthenticationException,
     MazdaConfigException,
     MazdaException,
     MazdaRequestInProgressException,
     MazdaSessionExpiredException,
+    MazdaTermsNotAcceptedException,
     MazdaTokenExpiredException,
 )
 from .sensordata.sensor_data_builder import SensorDataBuilder
@@ -415,6 +415,10 @@ class Connection:
         ):
             raise MazdaException(
                 "The engine can only be remotely started 2 consecutive times. Please drive the vehicle to reset the counter."
+            )
+        elif response_json.get("errorCode") == "400C01":
+            raise MazdaTermsNotAcceptedException(
+                "Please accept the terms of service in the MyMazda app and try again"
             )
         elif "error" in response_json:
             raise MazdaException("Request failed: " + response_json["error"])
