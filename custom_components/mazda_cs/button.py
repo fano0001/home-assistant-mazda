@@ -1,6 +1,7 @@
 """Platform for Mazda button integration."""
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -164,16 +165,19 @@ class MazdaButtonEntity(MazdaEntity, ButtonEntity):
     async def _poll_and_unlock(self, command_utc: datetime) -> None:
         """Poll for remote command result then re-allow button presses."""
         try:
-            result = await self.client.poll_remote_service_result(self.vehicle_id, command_utc)
-            if result:
-                self.hass.bus.async_fire(
-                    EVENT_REMOTE_SERVICE_RESULT,
-                    {
-                        "vehicle_id": self.vehicle_id,
-                        "vin": self.vin,
-                        "action": self.entity_description.key,
-                        **result,
-                    },
-                )
+            if self.data.get("enableButtonResultPolling", False):
+                result = await self.client.poll_remote_service_result(self.vehicle_id, command_utc)
+                if result:
+                    self.hass.bus.async_fire(
+                        EVENT_REMOTE_SERVICE_RESULT,
+                        {
+                            "vehicle_id": self.vehicle_id,
+                            "vin": self.vin,
+                            "action": self.entity_description.key,
+                            **result,
+                        },
+                    )
+            else:
+                await asyncio.sleep(20)
         finally:
             self._command_in_progress = False

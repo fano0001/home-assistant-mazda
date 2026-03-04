@@ -40,7 +40,7 @@
         "name": "Hood"
       },
       "fuel_lid": {
-        "name": "Fuel lid"
+        "name": "δ | Fuel lid"
       },
       "ev_plugged_in": {
         "name": "Plugged in"
@@ -104,6 +104,9 @@
       },
       "rear_right_window": {
         "name": "Rear right window"
+      },
+      "tns_lamp": {
+        "name": "β | Exterior lights warning"
       }
     },
     "button": {
@@ -207,7 +210,7 @@
         "name": "Drive 1 fuel consumption"
       },
       "dr_oil_deteriorate_level": {
-        "name": "δ | DROilDeteriorateLevel"
+        "name": "β | Oil health"
       },
       "drive1_fuel_efficiency_mpg": {
         "name": "Drive 1 fuel efficiency (MPG)"
@@ -227,11 +230,8 @@
       "urea_tank_level": {
         "name": "Urea tank level"
       },
-      "tns_lamp": {
-        "name": "δ | TnsLamp"
-      },
       "light_combi_sw_mode": {
-        "name": "β | Light switch mode",
+        "name": "Light switch mode",
         "state": {
           "0": "Off",
           "1": "Auto",
@@ -249,7 +249,7 @@
         "name": "δ | PowerControlStatus"
       },
       "pw_sav_mode": {
-        "name": "δ | PwSavMode"
+        "name": "δ | Power saving mode"
       },
       "soc_ecm_a_est": {
         "name": "β | 12v battery SoC"
@@ -260,10 +260,13 @@
         "name": "Charging"
       },
       "enable_windows": {
-        "name": "β | Window Sensors"
+        "name": "δ | Window sensors"
       },
       "enable_dev_sensors": {
-        "name": "δ | Dev Sensors"
+        "name": "δ | Development sensors"
+      },
+      "enable_button_result_polling": {
+        "name": "α | Button events (see readme)"
       }
     }
   },

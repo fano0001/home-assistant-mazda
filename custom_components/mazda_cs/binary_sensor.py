@@ -93,8 +93,9 @@ BINARY_SENSOR_ENTITIES = [
         key="fuel_lid",
         translation_key="fuel_lid",
         icon="mdi:gas-station",
-        device_class=BinarySensorDeviceClass.DOOR,
-        is_supported=lambda data: data["hasFuel"] and data["enableWindows"],
+        device_class=BinarySensorDeviceClass.PROBLEM, # Potentially fuel cap warning
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["hasFuel"] and data["enableDevSensors"],
         value_fn=lambda data: data["status"]["doors"]["fuelLidOpen"],
     ),
     MazdaBinarySensorEntityDescription(
@@ -217,7 +218,7 @@ BINARY_SENSOR_ENTITIES = [
     MazdaBinarySensorEntityDescription(
         key="tpms_battery_warning",
         translation_key="tpms_battery_warning",
-        icon="mdi:car-tire-alert",
+        icon="mdi:battery-charging-wireless-10",
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data["status"]["tirePressureWarnings"]["tpmsBatteryWarning"],
@@ -263,6 +264,15 @@ BINARY_SENSOR_ENTITIES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["hasFuel"],
         value_fn=lambda data: data["status"]["oilMaintenanceInfo"]["oilDeteriorateWarning"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="tns_lamp",
+        translation_key="tns_lamp",
+        icon="mdi:car-light-alert",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["status"]["tnsLight"]["tnsLamp"] is not None,
+        value_fn=lambda data: bool(data["status"]["tnsLight"]["tnsLamp"]),
     ),
 ]
 

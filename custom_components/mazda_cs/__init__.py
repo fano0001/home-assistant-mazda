@@ -36,7 +36,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import MazdaAuth
-from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN
+from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN, OPTION_BUTTON_RESULT_POLLING
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
@@ -252,6 +252,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 vehicle["region"] = region
                 vehicle["enableWindows"] = entry.options.get("enable_windows", False)
                 vehicle["enableDevSensors"] = entry.options.get("enable_dev_sensors", False)
+                vehicle["enableButtonResultPolling"] = entry.options.get(OPTION_BUTTON_RESULT_POLLING, False)
                 vehicle["status"] = await with_timeout(
                     mazda_client.get_vehicle_status(vehicle["id"])
                 )

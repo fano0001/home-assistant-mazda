@@ -49,7 +49,7 @@
                 "name": "Kofferraum"
             },
             "fuel_lid": {
-                "name": "Tankdeckel"
+                "name": "δ | Tankdeckel"
             },
             "hazard_lights": {
                 "name": "Warnblinklicht"
@@ -104,6 +104,9 @@
             },
             "oil_deteriorate_warning": {
                 "name": "Ölqualitäts-Warnung"
+            },
+            "tns_lamp": {
+                "name": "β | Außenlicht-Warnung"
             }
         },
         "button": {
@@ -191,7 +194,7 @@
                 "name": "Fahrt 1 Kraftstoffverbrauch"
             },
             "dr_oil_deteriorate_level": {
-                "name": "δ | DROilDeteriorateLevel"
+                "name": "β | Ölzustand"
             },
             "next_maintenance_distance": {
                 "name": "Strecke bis nächster Inspektion"
@@ -208,11 +211,8 @@
             "urea_tank_level": {
                 "name": "Harnstoff-Tankfüllstand"
             },
-            "tns_lamp": {
-                "name": "δ | TnsLamp"
-            },
             "light_combi_sw_mode": {
-                "name": "β | Lichtschalter-Modus",
+                "name": "Lichtschalter-Modus",
                 "state": {
                     "0": "Aus",
                     "1": "Auto",
@@ -230,7 +230,7 @@
                 "name": "δ | PowerControlStatus"
             },
             "pw_sav_mode": {
-                "name": "δ | PwSavMode"
+                "name": "δ | Energiesparmodus"
             },
             "soc_ecm_a_est": {
                 "name": "β | 12V-Batterie SoC"
@@ -241,10 +241,13 @@
                 "name": "Aufladen"
             },
             "enable_windows": {
-                "name": "β| Fenstersensoren aktivieren"
+                "name": "δ | Fenstersensoren aktivieren"
             },
             "enable_dev_sensors": {
-                "name": "δ | Dev Sensors"
+                "name": "δ | Entwicklungssensoren"
+            },
+            "enable_button_result_polling": {
+                "name": "α | Schaltflächenereignisse (siehe Readme)"
             }
         }
     }
