@@ -158,7 +158,7 @@ BINARY_SENSOR_ENTITIES = [
         icon="mdi:alert-circle-outline",
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["isDiesel"],
+        is_supported=lambda data: data["hasSCR"],
         value_fn=lambda data: bool(data["status"]["scrMaintenanceInfo"]["scrMaintenanceWarning"]),
     ),
     MazdaBinarySensorEntityDescription(

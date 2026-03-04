@@ -389,7 +389,7 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"] is not None,
+        is_supported=lambda data: data["hasSCR"] and data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"] is not None,
         value=lambda data: data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"],
     ),
     MazdaSensorEntityDescription(
@@ -399,7 +399,7 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] is not None,
+        is_supported=lambda data: data["hasSCR"] and data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] is not None,
         value=lambda data: round(data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] / 255 * 100, 1),
     ),
     MazdaSensorEntityDescription(
