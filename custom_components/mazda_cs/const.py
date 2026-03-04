@@ -7,6 +7,8 @@ DATA_COORDINATOR = "coordinator"
 DATA_REGION = "region"
 DATA_VEHICLES = "vehicles"
 
+OPTION_BUTTON_RESULT_POLLING = "enable_button_result_polling"
+
 MAZDA_REGIONS = {"MNAO": "North America", "MCI": "Canada", "MME": "Europe", "MJO": "Japan", "MA": "Australia"}
 
 # Per-region Azure AD B2C OAuth2 configuration

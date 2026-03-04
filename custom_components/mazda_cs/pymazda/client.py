@@ -191,7 +191,6 @@ class Client:  # noqa: D101
             # LockLinkSw = physical lock linkage rod position switch per door.
             # Reads mechanical position, not commanded state — front/rear may differ
             # at rest due to door design differences (rear doors have child lock linkage).
-            # Used to derive lock state but not exposed as individual sensors.
             "doorLocks": {
                 "driverDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwDrv")
                 == 1,
@@ -248,7 +247,7 @@ class Client:  # noqa: D101
                 ),
             },
             "tirePressureWarnings": {
-                # TPMS Status not implemented
+                # TPMS Status not implemented / redundant with individual warnings
                 "tpmsStatus": remote_info.get("TPMSInformation", {}).get("TPMSStatus") == 1,
                 "frontLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FLTyrePressWarn") == 1,
                 "frontRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FRTyrePressWarn") == 1,
@@ -466,8 +465,8 @@ class Client:  # noqa: D101
     ) -> dict | None:
         """Poll inbox for the result of a remote command.
 
-        Checks at 22 s, 25 s, 28 s, and 45 s after command_utc (max 4 API calls).
-        Returns a result dict on match, or None if no result found within 45 s.
+        Checks at 6 s, 18 s, 23 s, 28s, and 40 s after command_utc (typ. 2-4 API calls).
+        Returns a result dict on match, or None if no result found within 40 s.
         """
         _LOGGER = logging.getLogger(__name__)
         # Allow 5 s clock-skew buffer; resultId embeds the server-side request timestamp
@@ -475,7 +474,7 @@ class Client:  # noqa: D101
 
         loop_start = datetime.datetime.now(datetime.timezone.utc)
 
-        for delay, elapsed in ((22, 22), (3, 25), (3, 28), (17, 45)):  # cumulative waits: 22 s, 3 s, 3 s, 17 s
+        for delay, elapsed in ((6, 6), (12, 18), (5, 23), (5, 28), (12, 40)):  # cumulative waits
             await asyncio.sleep(delay)
             try:
                 response = await self.controller.get_inbox_list(
@@ -499,26 +498,26 @@ class Client:  # noqa: D101
                     # List is newest-first; take the oldest (last) to match our command
                     entry = matching[-1]
                     # Re-derive result_dt from the matched entry (loop variable may be stale)
-                    matched_result_id = entry.get("resultId", "")
-                    matched_result_dt = datetime.datetime.strptime(
-                        matched_result_id[3:17], "%Y%m%d%H%M%S"
-                    ).replace(tzinfo=datetime.timezone.utc)
-                    result_id_delta = (matched_result_dt - loop_start).total_seconds()
-                    push_date_str = entry.get("pushDate", "")
-                    try:
-                        push_dt = datetime.datetime.strptime(
-                            push_date_str, "%Y%m%d%H%M%S"
-                        ).replace(tzinfo=datetime.timezone.utc)
-                        push_delta = (push_dt - loop_start).total_seconds()
-                        push_delta_str = f"{push_delta:+.1f}s"
-                    except ValueError:
-                        push_delta_str = "n/a"
-                    _LOGGER.warning(
-                        "poll_remote_service_result: match at %ds mark — result_id: %+.1fs from loop start, pushDate: %s from loop start",
-                        elapsed,
-                        result_id_delta,
-                        push_delta_str,
-                    )
+                    # matched_result_id = entry.get("resultId", "")
+                    # matched_result_dt = datetime.datetime.strptime(
+                    #     matched_result_id[3:17], "%Y%m%d%H%M%S"
+                    # ).replace(tzinfo=datetime.timezone.utc)
+                    # result_id_delta = (matched_result_dt - loop_start).total_seconds()
+                    # push_date_str = entry.get("pushDate", "")
+                    # try:
+                    #     push_dt = datetime.datetime.strptime(
+                    #         push_date_str, "%Y%m%d%H%M%S"
+                    #     ).replace(tzinfo=datetime.timezone.utc)
+                    #     push_delta = (push_dt - loop_start).total_seconds()
+                    #     push_delta_str = f"{push_delta:+.1f}s"
+                    # except ValueError:
+                    #     push_delta_str = "n/a"
+                    # _LOGGER.warning(
+                    #     "poll_remote_service_result: match at %ds mark — result_id: %+.1fs from loop start, pushDate: %s from loop start",
+                    #     elapsed,
+                    #     result_id_delta,
+                    #     push_delta_str,
+                    # )
                     return {
                         "success": entry.get("messageContents") == "Success",
                         "title": entry.get("messageTitle", ""),

@@ -194,7 +194,7 @@
                 "name": "Fahrt 1 Kraftstoffverbrauch"
             },
             "dr_oil_deteriorate_level": {
-                "name": "δ | DROilDeteriorateLevel"
+                "name": "β | Ölzustand"
             },
             "next_maintenance_distance": {
                 "name": "Strecke bis nächster Inspektion"
@@ -245,6 +245,9 @@
             },
             "enable_dev_sensors": {
                 "name": "δ | Entwicklungssensoren"
+            },
+            "enable_button_result_polling": {
+                "name": "α | Schaltflächenereignisse (siehe Readme)"
             }
         }
     }
