@@ -39,12 +39,14 @@ Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automat
    - Click "Load unpacked" and select the extracted folder
    - Try to authenticate
 
-# Notifications
-When a button is pressed, the integration starts a background process that polls the inbox in MyMazda 1-3 times (7s 12s 18s). As soon as a success or failure is detected, an event is fired in Home Assistant. This event can then be detected like any other and notifications can be sent through an automation. See examples below. 
-* **Timing:** is specifically related to the intervals of typically responses for success/failure/rejection over 100 alerts. 
-  * I may tweak the timing a second or two here and there, but I will keep this limitation, as both a sensible limitation and in an effort to reduce API calls to Mazda. Buttons presses send an event notification capturing the details.
+# Remote Control Success/Failure Events (Notification Automations)
+**This is an opt-in featuere enabled via the 'Remote control events' switch in the diagnostic section of the integration.**
+
+When a button is pressed, the integration starts a background process that polls the inbox in MyMazda 1-5 times. As soon as a success or failure is detected, an event is fired in Home Assistant adn the process stops. This event can then be detected to trigger automations, including notifications. See examples below for notification automations. 
+* **Timing:** is specifically related to the intervals of typically responses for success/failure/rejection. 
+  * I may tweak the timing, but I will keep this limited polling, in an effort to reduce API calls to Mazda. Buttons presses send an event notification capturing the details of which button was pressed and the success or failure.
   * In a further effort to reduce calls to Mazda, the integration will send null button presses until this check is complete (Mazda rejects them with a busy notification anyways).
-## Every Event Example
+## Notifications — Every Event Example
 ```
 alias: MyMazda Notify
 description: ""
@@ -79,9 +81,9 @@ variables:
     chargeStart: Charge Start
     chargeStop: Charge Stop
 ```
-## Single Event
+## Notifications — Single Event Example
 ```
-alias: DoorUnlock
+alias: DoorLock
 description: ""
 triggers:
   - event_type: mazda_cs_remote_service_result
