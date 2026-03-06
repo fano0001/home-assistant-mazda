@@ -478,7 +478,7 @@ class Client:  # noqa: D101
             await asyncio.sleep(delay)
             try:
                 response = await self.controller.get_inbox_list(
-                    [vehicle_id], actiontype="001", status=0, limit=10
+                    [vehicle_id], actiontype="001,019,021", status=0, limit=10
                 )
                 # Collect entries whose resultId timestamp >= cutoff (oldest-first match)
                 # resultId format: "001YYYYMMDDHHMMSS_01" — prefix(3) + timestamp(14) + suffix(3)

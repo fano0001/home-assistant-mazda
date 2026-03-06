@@ -1,7 +1,6 @@
 """Platform for Mazda lock integration."""
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
@@ -71,22 +70,3 @@ class MazdaLock(MazdaEntity, LockEntity):
         self.async_write_ha_state()
         self.hass.async_create_task(self._poll_and_unlock("doorUnlock", command_utc))
 
-    async def _poll_and_unlock(self, action: str, command_utc: datetime) -> None:
-        """Poll for remote command result then re-allow lock/unlock commands."""
-        try:
-            if self.data.get("enableButtonResultPolling", False):
-                result = await self.client.poll_remote_service_result(self.vehicle_id, command_utc)
-                if result:
-                    self.hass.bus.async_fire(
-                        EVENT_REMOTE_SERVICE_RESULT,
-                        {
-                            "vehicle_id": self.vehicle_id,
-                            "vin": self.vin,
-                            "action": action,
-                            **result,
-                        },
-                    )
-            else:
-                await asyncio.sleep(20)
-        finally:
-            self._command_in_progress = False

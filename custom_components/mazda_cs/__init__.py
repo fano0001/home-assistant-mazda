@@ -36,7 +36,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import MazdaAuth
-from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN, OPTION_BUTTON_RESULT_POLLING
+from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN, OPTION_BUTTON_RESULT_POLLING, REMOTE_COMMAND_COOLDOWN_SECONDS
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
@@ -62,21 +62,6 @@ PLATFORMS = [
     Platform.SWITCH,
 ]
 
-
-async def _fire_remote_result(hass, client, vehicle_id, vin, action, command_utc):
-    """Background task: poll for remote service result and fire an HA event."""
-    result = await client.poll_remote_service_result(vehicle_id, command_utc)
-    if result:
-        hass.bus.async_fire(
-            EVENT_REMOTE_SERVICE_RESULT,
-            {"vehicle_id": vehicle_id, "vin": vin, "action": action, **result},
-        )
-        _LOGGER.debug(
-            "Remote result for %s vin=%s: success=%s title=%s",
-            action, vin, result["success"], result["title"],
-        )
-    else:
-        _LOGGER.debug("Remote result timed out: action=%s vin=%s", action, vin)
 
 
 async def with_timeout(task, timeout_seconds=30):
@@ -373,11 +358,26 @@ class MazdaEntity(CoordinatorEntity):
             name=self.vehicle_name,
         )
 
-    def _track_remote_result(self, action: str, command_utc: datetime) -> None:
-        """Spawn a background task to poll for and fire the remote service result event."""
-        self.hass.async_create_task(
-            _fire_remote_result(self.hass, self.client, self.vehicle_id, self.vin, action, command_utc)
-        )
+    async def _poll_and_unlock(self, action: str, command_utc: datetime) -> None:
+        """Poll for remote command result then reset the command-in-progress flag."""
+        try:
+            if self.data.get("enableButtonResultPolling", False):
+                result = await self.client.poll_remote_service_result(self.vehicle_id, command_utc)
+                if result:
+                    self.hass.bus.async_fire(
+                        EVENT_REMOTE_SERVICE_RESULT,
+                        {"vehicle_id": self.vehicle_id, "vin": self.vin, "action": action, **result},
+                    )
+                    _LOGGER.debug(
+                        "Remote result for %s vin=%s: success=%s title=%s",
+                        action, self.vin, result["success"], result["title"],
+                    )
+                else:
+                    _LOGGER.debug("Remote result timed out: action=%s vin=%s", action, self.vin)
+            else:
+                await asyncio.sleep(REMOTE_COMMAND_COOLDOWN_SECONDS)
+        finally:
+            self._command_in_progress = False
 
     @property
     def data(self):
