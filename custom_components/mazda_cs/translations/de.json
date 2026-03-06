@@ -247,7 +247,7 @@
                 "name": "δ | Entwicklungssensoren"
             },
             "enable_button_result_polling": {
-                "name": "α | Schaltflächenereignisse (siehe Readme)"
+                "name": "β | Fernbedienungsereignisse (siehe ReadMe)"
             }
         }
     }

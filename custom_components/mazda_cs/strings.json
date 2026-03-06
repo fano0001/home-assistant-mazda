@@ -266,7 +266,7 @@
         "name": "δ | Development sensors"
       },
       "enable_button_result_polling": {
-        "name": "α | Button events (see readme)"
+        "name": "β | Remote control events (see ReadMe)"
       }
     }
   },
