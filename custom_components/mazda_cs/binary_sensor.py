@@ -248,6 +248,14 @@ BINARY_SENSOR_ENTITIES = [
         value_fn=lambda data: bool(data["status"]["oilMaintenanceInfo"]["mntOilAtFlg"]),
     ),
     MazdaBinarySensorEntityDescription(
+        key="pw_sav_mode",
+        translation_key="pw_sav_mode",
+        icon="mdi:power-sleep",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["status"]["vehicleCondition"]["pwSavMode"] is not None and data["status"]["vehicleCondition"]["pwSavMode"] != 2,
+        value_fn=lambda data: bool(data["status"]["vehicleCondition"]["pwSavMode"]),
+    ),
+    MazdaBinarySensorEntityDescription(
         key="oil_level_warning",
         translation_key="oil_level_warning",
         icon="mdi:oil-level",
