@@ -97,6 +97,17 @@ APP_VERSION = "9.0.8"
 
 MAX_RETRIES = 4
 
+_LOG_REDACT_KEYS = {"vin", "internalVin", "imei", "iccId", "Longitude", "Latitude"}
+
+
+def _redact(data):
+    """Recursively redact sensitive keys from a dict/list before logging."""
+    if isinstance(data, dict):
+        return {k: "**REDACTED**" if k in _LOG_REDACT_KEYS else _redact(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_redact(item) for item in data]
+    return data
+
 
 class Connection:
     """Main class for handling MyMazda API connection."""
@@ -383,7 +394,9 @@ class Connection:
         )
 
         response_json = await response.json()
-        self.logger.debug("Response status: %s, body: %s", response.status, response_json)
+        # saving body logger for future debug purposes, but typically just noise
+        # self.logger.debug("Response status: %s, body: %s", response.status, response_json)
+        self.logger.debug("Response status: %s", response.status)
 
         if response_json.get("state") == "S":
             if "checkVersion" in uri:
@@ -392,7 +405,7 @@ class Connection:
                 decrypted_payload = self.__decrypt_payload_using_key(
                     response_json["payload"]
                 )
-                self.logger.debug("Response payload: %s", decrypted_payload)
+                self.logger.debug("Response payload: %s", _redact(decrypted_payload))
                 return decrypted_payload
         elif response_json.get("errorCode") == 600001:
             raise MazdaAPIEncryptionException("Server rejected encrypted request")
