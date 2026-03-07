@@ -107,6 +107,9 @@
             },
             "tns_lamp": {
                 "name": "β | Exterior lights warning"
+            },
+            "pw_sav_mode": {
+                "name": "β | Power saving mode"
             }
         },
         "button": {
@@ -248,9 +251,6 @@
             "power_control_status": {
                 "name": "δ | PowerControlStatus"
             },
-            "pw_sav_mode": {
-                "name": "δ | Power saving mode"
-            },
             "soc_ecm_a_est": {
                 "name": "β | 12v battery SoC"
             }
@@ -266,7 +266,7 @@
                 "name": "δ | Development sensors"
             },
             "enable_button_result_polling": {
-                "name": "β | Remote control events (see ReadMe)"
+                "name": "α | Remote control events (see ReadMe)"
             }
         }
     },

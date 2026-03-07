@@ -438,14 +438,6 @@ SENSOR_ENTITIES = [
         value=lambda data: data["status"]["electricalInformation"]["powerControlStatus"],
     ),
     MazdaSensorEntityDescription(
-        key="pw_sav_mode",
-        translation_key="pw_sav_mode",
-        icon="mdi:power-sleep",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["enableDevSensors"] and data["status"]["vehicleCondition"]["pwSavMode"] is not None,
-        value=lambda data: data["status"]["vehicleCondition"]["pwSavMode"],
-    ),
-    MazdaSensorEntityDescription(
         key="soc_ecm_a_est",
         translation_key="soc_ecm_a_est",
         icon="mdi:car-battery",

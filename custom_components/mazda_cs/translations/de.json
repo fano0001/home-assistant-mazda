@@ -107,6 +107,9 @@
             },
             "tns_lamp": {
                 "name": "β | Außenlicht-Warnung"
+            },
+            "pw_sav_mode": {
+                "name": "β | Energiesparmodus"
             }
         },
         "button": {
@@ -229,9 +232,6 @@
             "power_control_status": {
                 "name": "δ | PowerControlStatus"
             },
-            "pw_sav_mode": {
-                "name": "δ | Energiesparmodus"
-            },
             "soc_ecm_a_est": {
                 "name": "β | 12V-Batterie SoC"
             }
@@ -247,7 +247,7 @@
                 "name": "δ | Entwicklungssensoren"
             },
             "enable_button_result_polling": {
-                "name": "β | Fernbedienungsereignisse (siehe ReadMe)"
+                "name": "α | Fernbedienungsereignisse (siehe ReadMe)"
             }
         }
     }
