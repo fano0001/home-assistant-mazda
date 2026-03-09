@@ -36,7 +36,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import MazdaAuth
-from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN, OPTION_BUTTON_RESULT_POLLING, REMOTE_COMMAND_COOLDOWN_SECONDS
+from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_HEALTH_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN, OPTION_BUTTON_RESULT_POLLING, REMOTE_COMMAND_COOLDOWN_SECONDS
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
@@ -281,16 +281,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=timedelta(seconds=180),
     )
 
+    async def async_update_health_data():
+        """Fetch health report data for each vehicle. Returns a list aligned with coordinator.data."""
+        vehicles = coordinator.data or []
+        result = []
+        for vehicle in vehicles:
+            try:
+                health = await with_timeout(mazda_client.get_health_report(vehicle["id"]))
+                _LOGGER.debug("getHealthReport: %s", health)
+                result.append(health)
+            except Exception as ex:  # noqa: BLE001
+                _LOGGER.warning("getHealthReport failed: %s", ex)
+                result.append(None)
+        return result
+
+    health_coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=f"{DOMAIN}_health",
+        update_method=async_update_health_data,
+        update_interval=timedelta(hours=12),
+    )
+
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         DATA_CLIENT: mazda_client,
         DATA_COORDINATOR: coordinator,
+        DATA_HEALTH_COORDINATOR: health_coordinator,
         DATA_REGION: region,
         DATA_VEHICLES: [],
     }
 
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
+
+    # Schedule health report fetch in the background — non-critical, must not block setup
+    entry.async_create_background_task(
+        hass, health_coordinator.async_refresh(), "mazda_cs_health_initial_refresh"
+    )
 
     # Setup components
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

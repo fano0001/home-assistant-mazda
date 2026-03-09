@@ -90,6 +90,9 @@
             "tpms_battery_warning": {
                 "name": "β | Reifendruckbatterie"
             },
+            "tpms_system_fault": {
+                "name": "β | TPMS-Systemfehler"
+            },
             "mnt_tyre_at_flg": {
                 "name": "δ | MntTyreAtFlg"
             },
@@ -106,10 +109,13 @@
                 "name": "Ölqualitäts-Warnung"
             },
             "tns_lamp": {
-                "name": "β | Außenlicht-Warnung"
+                "name": "β | Außenlicht-an-Warnung"
             },
             "pw_sav_mode": {
                 "name": "β | Energiesparmodus"
+            },
+            "health_lights_problem": {
+                "name": "Leuchtmittelfehler"
             }
         },
         "button": {
@@ -247,7 +253,7 @@
                 "name": "δ | Entwicklungssensoren"
             },
             "enable_button_result_polling": {
-                "name": "α | Fernbedienungsereignisse (siehe ReadMe)"
+                "name": "β | Fernbedienungsereignisse (siehe ReadMe)"
             }
         }
     }

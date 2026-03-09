@@ -13,6 +13,13 @@
                 },
                 "description": "Select your region, then you will be redirected to sign in with your Mazda account."
             },
+            "reauth_region": {
+                "title": "Authentication method changed",
+                "description": "Mazda Connected Services now uses a new sign-in method. Please confirm your region below.\n\nNote: Canada (MCI) and Australia (MA) are new options that did not exist previously.",
+                "data": {
+                    "region": "Region"
+                }
+            },
             "reauth_confirm": {
                 "title": "Re-authenticate with Mazda",
                 "description": "Your Mazda session has expired. Please re-authenticate."
@@ -66,6 +73,9 @@
             "tpms_battery_warning": {
                 "name": "β | Tire pressure battery"
             },
+            "tpms_system_fault": {
+                "name": "β | Tire pressure system fault"
+            },
             "mnt_tyre_at_flg": {
                 "name": "δ | MntTyreAtFlg"
             },
@@ -106,10 +116,13 @@
                 "name": "Rear right window"
             },
             "tns_lamp": {
-                "name": "β | Exterior lights warning"
+                "name": "β | Exterior lights-on warning"
             },
             "pw_sav_mode": {
                 "name": "β | Power saving mode"
+            },
+            "health_lights_problem": {
+                "name": "Lights problem"
             }
         },
         "button": {
@@ -266,7 +279,7 @@
                 "name": "δ | Development sensors"
             },
             "enable_button_result_polling": {
-                "name": "α | Remote control events (see ReadMe)"
+                "name": "β | Remote control events (see ReadMe)"
             }
         }
     },

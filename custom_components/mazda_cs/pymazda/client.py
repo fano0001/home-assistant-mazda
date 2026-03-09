@@ -6,6 +6,8 @@ import logging
 from .controller import Controller
 from .exceptions import MazdaConfigException
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def _build_tpms_timestamp(tpms: dict):
     """Build a naive local datetime from TPMS display date/time fields, or None if unavailable."""
@@ -125,10 +127,10 @@ class Client:  # noqa: D101
                     "exteriorColorName"
                 ),
                 "isPHEV": current_vec_base_info.get("phevFlg") == 1,
-                "hasSCR": current_vec_base_info.get("scrFlg") == 1,
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
                 "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05",
                 "hasRangeExtender": current_vec_base_info.get("rexFlg") == 1,
+                "hasSCR": current_vec_base_info.get("scrFlg") == 1,
                 "hasRemoteStart": current_vec_base_info.get("remoteEngineStartFlg") == 1,
                 "hasBatteryHeater": current_vec_base_info.get("batteryHeaterFlg") == 1,
                 "hasFlashLight": current_vec_base_info.get("flashLightFlg") == 1,
@@ -247,13 +249,12 @@ class Client:  # noqa: D101
                 ),
             },
             "tirePressureWarnings": {
-                # TPMS Status not implemented / redundant with individual warnings
                 "tpmsStatus": remote_info.get("TPMSInformation", {}).get("TPMSStatus") == 1,
                 "frontLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FLTyrePressWarn") == 1,
                 "frontRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FRTyrePressWarn") == 1,
                 "rearLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RLTyrePressWarn") == 1,
                 "rearRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RRTyrePressWarn") == 1,
-                "tpmsBatteryWarning": remote_info.get("TPMSInformation", {}).get("TPMSSystemFlt") == 1,
+                "tpmsSystemFault": remote_info.get("TPMSInformation", {}).get("TPMSSystemFlt") == 1,
                 "mntTyreAtFlg": remote_info.get("TPMSInformation", {}).get("MntTyreAtFlg") == 1,
             },
             "driveInformation": {
@@ -457,6 +458,26 @@ class Client:  # noqa: D101
     async def refresh_vehicle_status(self, vehicle_id):  # noqa: D102
         await self.controller.refresh_vehicle_status(vehicle_id)
 
+    async def get_health_report(self, vehicle_id):  # noqa: D102
+        response = await self.controller.get_health_report(vehicle_id)
+        remote_info = response.get("remoteInfos", [{}])[0]
+        warnings = remote_info.get("Warnings", {})
+        return {
+            "warnings": {
+                "oilAmountExceed": bool(warnings.get("WngOilAmountExceed")),
+                "oilShortage":     bool(warnings.get("WngOilShortage")),
+                "headLamp":        bool(warnings.get("WngHeadLamp")),
+                "smallLamp":       bool(warnings.get("WngSmallLamp")),
+                "turnLamp":        bool(warnings.get("WngTurnLamp")),
+                "tailLamp":        bool(warnings.get("WngTailLamp")),
+                "brakeLamp":       bool(warnings.get("WngBreakLamp")),
+                "rearFogLamp":     bool(warnings.get("WngRearFogLamp")),
+                "backLamp":        bool(warnings.get("WngBackLamp")),
+                "tyrePressureLow": bool(warnings.get("WngTyrePressureLow")),
+                "tpmsStatus":      bool(warnings.get("WngTpmsStatus")),
+            }
+        }
+
     async def get_inbox_list(self, internal_vin_list, actiontype="001,021,031,033", status=0, limit=100, offset=0):  # noqa: D102
         return await self.controller.get_inbox_list(internal_vin_list, actiontype, status, limit, offset)
 
@@ -468,7 +489,6 @@ class Client:  # noqa: D101
         Checks at 6 s, 18 s, 23 s, 28s, and 40 s after command_utc (typ. 2-4 API calls).
         Returns a result dict on match, or None if no result found within 40 s.
         """
-        _LOGGER = logging.getLogger(__name__)
         # Allow 5 s clock-skew buffer; resultId embeds the server-side request timestamp
         cutoff = command_utc - datetime.timedelta(seconds=5)
 

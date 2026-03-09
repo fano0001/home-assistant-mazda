@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_HEALTH_COORDINATOR, DOMAIN
 
 
 @dataclass
@@ -35,6 +35,7 @@ class MazdaBinarySensorEntityDescription(
 
     # Function to determine whether the vehicle supports this binary sensor, given the coordinator data
     is_supported: Callable[[dict[str, Any]], bool] = lambda data: True
+    extra_attributes_fn: Callable[[dict[str, Any]], dict] | None = None
 
 
 def _plugged_in_supported(data):
@@ -221,7 +222,15 @@ BINARY_SENSOR_ENTITIES = [
         icon="mdi:battery-charging-wireless-10",
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data["status"]["tirePressureWarnings"]["tpmsBatteryWarning"],
+        value_fn=lambda data: data["status"]["tirePressureWarnings"]["tpmsStatus"],
+    ),
+    MazdaBinarySensorEntityDescription(
+        key="tpms_system_fault",
+        translation_key="tpms_system_fault",
+        icon="mdi:alert-octagon-outline",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data["status"]["tirePressureWarnings"]["tpmsSystemFault"],
     ),
     MazdaBinarySensorEntityDescription(
         key="mnt_tyre_at_flg",
@@ -284,6 +293,28 @@ BINARY_SENSOR_ENTITIES = [
     ),
 ]
 
+_LAMP_KEYS = ("headLamp", "smallLamp", "turnLamp", "tailLamp", "brakeLamp", "rearFogLamp", "backLamp")
+
+HEALTH_BINARY_SENSOR_ENTITIES: list[MazdaBinarySensorEntityDescription] = [
+    MazdaBinarySensorEntityDescription(
+        key="health_lights_problem",
+        translation_key="health_lights_problem",
+        icon="mdi:car-light-alert",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda h: any(h["warnings"][k] for k in _LAMP_KEYS) if h else None,
+        extra_attributes_fn=lambda h: {
+            "headlight_bulb":      h["warnings"]["headLamp"],
+            "cabin_light_bulb":    h["warnings"]["smallLamp"],
+            "turn_signal_bulb":    h["warnings"]["turnLamp"],
+            "tail_light_bulb":     h["warnings"]["tailLamp"],
+            "brake_light_bulb":    h["warnings"]["brakeLamp"],
+            "rear_fog_light_bulb": h["warnings"]["rearFogLamp"],
+            "trunk_light_bulb":    h["warnings"]["backLamp"],
+        } if h else {},
+    ),
+]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -293,13 +324,20 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    health_coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_HEALTH_COORDINATOR]
 
-    async_add_entities(
+    entities: list = [
         MazdaBinarySensorEntity(client, coordinator, index, description)
         for index, data in enumerate(coordinator.data)
         for description in BINARY_SENSOR_ENTITIES
         if description.is_supported(data)
-    )
+    ]
+    entities += [
+        MazdaHealthBinarySensorEntity(client, coordinator, health_coordinator, index, description)
+        for index in range(len(coordinator.data))
+        for description in HEALTH_BINARY_SENSOR_ENTITIES
+    ]
+    async_add_entities(entities)
 
 
 class MazdaBinarySensorEntity(MazdaEntity, BinarySensorEntity):
@@ -318,3 +356,43 @@ class MazdaBinarySensorEntity(MazdaEntity, BinarySensorEntity):
     def is_on(self):
         """Return the state of the binary sensor."""
         return self.entity_description.value_fn(self.data)
+
+
+class MazdaHealthBinarySensorEntity(MazdaEntity, BinarySensorEntity):
+    """Binary sensor backed by the 12-hour health report coordinator."""
+
+    entity_description: MazdaBinarySensorEntityDescription
+
+    def __init__(self, client, coordinator, health_coordinator, index, description):
+        """Initialize Mazda health binary sensor."""
+        super().__init__(client, coordinator, index)
+        self.health_coordinator = health_coordinator
+        self.entity_description = description
+        self._attr_unique_id = f"{self.vin}_{description.key}"
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to health coordinator updates in addition to main coordinator."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.health_coordinator.async_add_listener(
+                self._handle_coordinator_update, None
+            )
+        )
+
+    @property
+    def is_on(self):
+        """Return the state of the binary sensor."""
+        if self.health_coordinator.data is None:
+            return None
+        health = self.health_coordinator.data[self.index]
+        return self.entity_description.value_fn(health)
+
+    @property
+    def extra_state_attributes(self):
+        """Return per-bulb warning flags as attributes."""
+        if self.entity_description.extra_attributes_fn is None:
+            return None
+        if self.health_coordinator.data is None:
+            return None
+        health = self.health_coordinator.data[self.index]
+        return self.entity_description.extra_attributes_fn(health)
