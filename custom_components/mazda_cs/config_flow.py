@@ -65,9 +65,40 @@ class MazdaOAuth2FlowHandler(
         self.flow_impl = MazdaOAuth2Implementation(self.hass, self._region)
         return await self.async_step_auth()
 
+    # Re-enable after removing migration code — 2027 or later
+    # async def async_step_reauth(self, _: Mapping[str, Any]) -> ConfigFlowResult:
+    #     """Perform reauth upon an API authentication error."""
+    #     return await self.async_step_reauth_confirm()
+    
+    # Migration workflow from v1→v2: if no token, ask for region
     async def async_step_reauth(self, _: Mapping[str, Any]) -> ConfigFlowResult:
         """Perform reauth upon an API authentication error."""
+        reauth_entry = self._get_reauth_entry()
+        if not reauth_entry.data.get("token"):
+            # v1→v2 migration: no OAuth token yet, region may be wrong or missing
+            return await self.async_step_reauth_region()
         return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_region(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle region confirmation during v1→v2 migration reauth."""
+        if user_input is not None:
+            self._region = user_input[CONF_REGION]
+            return await self.async_step_pick_implementation()
+
+        reauth_entry = self._get_reauth_entry()
+        return self.async_show_form(
+            step_id="reauth_region",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_REGION,
+                        default=reauth_entry.data.get(CONF_REGION, "MNAO"),
+                    ): vol.In(MAZDA_REGIONS),
+                }
+            ),
+        )
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
@@ -76,7 +107,6 @@ class MazdaOAuth2FlowHandler(
         if user_input is None:
             return self.async_show_form(step_id="reauth_confirm")
 
-        # Get the region from the existing entry for reauth
         reauth_entry = self._get_reauth_entry()
         self._region = reauth_entry.data.get(CONF_REGION, "MNAO")
         return await self.async_step_pick_implementation()
