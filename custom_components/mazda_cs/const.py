@@ -8,7 +8,7 @@ DATA_REGION = "region"
 DATA_VEHICLES = "vehicles"
 
 OPTION_BUTTON_RESULT_POLLING = "enable_button_result_polling"
-REMOTE_COMMAND_COOLDOWN_SECONDS = 16
+REMOTE_COMMAND_COOLDOWN_SECONDS = 12
 
 MAZDA_REGIONS = {"MNAO": "North America", "MCI": "Canada", "MME": "Europe", "MJO": "Japan", "MA": "Australia"}
 
