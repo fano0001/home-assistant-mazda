@@ -250,6 +250,16 @@ class Controller:  # noqa: D101
 
         return response
 
+    async def get_user_info(self):  # noqa: D102
+        response = await self.connection.api_request(
+            "POST",
+            "remoteServices/getUserInfo/v4",
+            body_dict={"internaluserid": "__INTERNAL_ID__"},
+            needs_keys=True,
+            needs_auth=True,
+        )
+        return response
+
     async def get_nickname(self, vin):  # noqa: D102
         if len(vin) != 17:
             raise MazdaException("Invalid VIN")

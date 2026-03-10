@@ -65,6 +65,10 @@ class Client:  # noqa: D101
             self._session_id = None
             self.controller.connection.device_session_id = None
 
+    async def get_user_info(self):  # noqa: D102
+        """Fetch account user info from getUserInfo/v4 and return the raw response."""
+        return await self.controller.get_user_info()
+
     async def get_vehicles(self):  # noqa: D102
         if self._use_cached_vehicle_list and self._cached_vehicle_list is not None:
             return self._cached_vehicle_list

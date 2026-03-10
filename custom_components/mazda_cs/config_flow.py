@@ -13,6 +13,7 @@ from homeassistant.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN, MAZDA_REGIONS
 from .oauth import MazdaOAuth2Implementation
+from .pymazda.client import Client as MazdaAPI
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -139,5 +140,20 @@ class MazdaOAuth2FlowHandler(
             )
         self._abort_if_unique_id_configured()
 
-        # Use the user_id as the title (see if email can be found earlier and used here)
-        return self.async_create_entry(title=f"Mazda ({user_id[:8]})", data=data)
+        # Attempt to fetch the account email address for a friendlier title
+        title = f"Mazda ({user_id[:8]})"
+        try:
+            async def _token_provider():
+                return data["token"]["access_token"]
+
+            client = MazdaAPI(user_id, self._region, _token_provider)
+            await client.attach()
+            user_info = await client.get_user_info()
+            await client.close()
+            email = user_info.get("userInfo", {}).get("contactMailAddress", "")
+            if email:
+                title = f"Mazda ({email})"
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug("Could not fetch account email for title; using user_id fallback")
+
+        return self.async_create_entry(title=title, data=data)
