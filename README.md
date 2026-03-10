@@ -25,11 +25,10 @@ and place it inside your Home Assistant Core installation's `custom_components` 
 # Authentication
 
 > [!IMPORTANT]
-> All steps below must be performed in a Chromium based browser.
-> This chrome extension is required to successfully authenticate with Mazda. Do not skip this step!
-> This extension is tied to the file location on your computer and may disappear if you move the folder.
+> A browser extension is required to successfully authenticate with Mazda. Do not skip this step!
+> The chrome extension is tied to the folder location on your computer and may disappear if you move the folder.
 
-Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automated logins. Authentication requires a browser-based OAuth flow using a Chrome extension to capture the android mobile app's redirect URL.
+Mazda Connected Services uses OAuth authentication which blocks automated logins. Authentication requires a browser-based OAuth flow using a browser extension to capture the mobile app redirect URL.
 ## Setup
 
    ### chrome-extension
@@ -48,7 +47,7 @@ Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automat
    - Download the [latest safari-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/safari-extension.zip) from releases (or use `./browser-extensions/safari-extension/` from source)
    - Extract the zip file
    - Open the Xcode project
-   - Go to project settings and set your free developer account as the 'Team' for both Targets (`com.local.duke-energy-oauth-helper` and `com.local.duke-energy-oauth-helper.Extension`). Also ensure 'Signing Certificate' is set to 'Development'
+   - Go to project settings and set your free developer account as the 'Team' for both Targets (`com.mazda.oauth-helper` and `com.mazda.oauth-helper.extension`). Also ensure 'Signing Certificate' is set to 'Development'
    - Quit Safari if open and build the extension
    - Open Safari and enable the extension in Safari settings
    - Build the extension again
