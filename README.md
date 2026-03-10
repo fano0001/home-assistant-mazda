@@ -30,13 +30,26 @@ and place it inside your Home Assistant Core installation's `custom_components` 
 > This extension is tied to the file location on your computer and may disappear if you move the folder.
 
 Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automated logins. Authentication requires a browser-based OAuth flow using a Chrome extension to capture the android mobile app's redirect URL.
-
 ## Setup
-   - Download the [latest chrome-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/chrome-extension.zip) from releases (or use `./chrome-extension/` from source)
+
+   ### chrome-extension
+   
+   - Download the [latest chrome-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/chrome-extension.zip) from releases (or use `./browser-extensions/chrome-extension/` from source)
    - Extract the zip file (or use source)
    - Open Google Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select the extracted folder
    - Try to authenticate
 
+   ### safari-extension
 
+   Requires Xcode and a free developer account
+
+   - Download the [latest safari-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/safari-extension.zip) from releases (or use `./browser-extensions/safari-extension/` from source)
+   - Extract the zip file
+   - Open the Xcode project
+   - Go to project settings and set your free developer account as the 'Team' for both Targets (`com.local.duke-energy-oauth-helper` and `com.local.duke-energy-oauth-helper.Extension`). Also ensure 'Signing Certificate' is set to 'Development'
+   - Quit Safari if open and build the extension
+   - Open Safari and enable the extension in Safari settings
+   - Build the extension again
+   - The app window should indicate the extension is 'On'.
