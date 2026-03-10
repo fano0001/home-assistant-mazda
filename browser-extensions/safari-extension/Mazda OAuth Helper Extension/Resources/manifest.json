@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Mazda OAuth Helper",
+  "version": "1.0.0",
+  "description": "Captures Mazda mobile OAuth redirects for use with aiodukeenergy library",
+  "permissions": ["webNavigation", "tabs"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon16.svg",
+    "48": "icon48.svg",
+    "128": "icon128.svg"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Mazda OAuth Helper",
+    "default_icon": {
+      "16": "icon16.svg",
+      "48": "icon48.svg",
+      "128": "icon128.svg"
+    }
+  }
+}
