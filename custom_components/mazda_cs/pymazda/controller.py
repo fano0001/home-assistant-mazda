@@ -7,8 +7,8 @@ _SUCCESS_CODES = {"200S00", "MSG200001"}
 
 
 class Controller:  # noqa: D101
-    def __init__(self, email, region, access_token_provider, session_refresh_provider=None, websession=None):  # noqa: D107
-        self.connection = Connection(email, region, access_token_provider, session_refresh_provider, websession)
+    def __init__(self, user_sub, region, access_token_provider, session_refresh_provider=None, websession=None):  # noqa: D107
+        self.connection = Connection(user_sub, region, access_token_provider, session_refresh_provider, websession)
 
     async def attach(self, locale="en-US", country="US"):  # noqa: D102
         """Register device session with Mazda backend. Must be called after login."""

@@ -25,12 +25,12 @@ def _build_tpms_timestamp(tpms: dict):
 
 class Client:  # noqa: D101
     def __init__(  # noqa: D107
-        self, email, region, access_token_provider, websession=None, use_cached_vehicle_list=False
+        self, user_sub, region, access_token_provider, websession=None, use_cached_vehicle_list=False
     ):
-        if email is None or len(email) == 0:
-            raise MazdaConfigException("Invalid or missing email address")
+        if user_sub is None or len(user_sub) == 0:
+            raise MazdaConfigException("Invalid or missing user identity (JWT sub claim)")
 
-        self.controller = Controller(email, region, access_token_provider, session_refresh_provider=self.attach, websession=websession)
+        self.controller = Controller(user_sub, region, access_token_provider, session_refresh_provider=self.attach, websession=websession)
         self._region = region
         self._use_cached_vehicle_list = use_cached_vehicle_list
         self._cached_vehicle_list = None

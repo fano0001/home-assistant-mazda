@@ -124,16 +124,14 @@ class Connection:
 
     def __init__(
         self,
-        email,
+        user_sub,
         region,
         access_token_provider,
         session_refresh_provider=None,
         websession=None,
     ):  # noqa: D107
-        self.email = email
         self.access_token_provider = access_token_provider
         self.session_refresh_provider = session_refresh_provider
-        # self._refreshing_session = False --- remove later if unbroken
 
         if region in REGION_CONFIG:
             region_config = REGION_CONFIG[region]
@@ -144,7 +142,7 @@ class Connection:
         else:
             raise MazdaConfigException("Invalid region")
 
-        self.base_api_device_id = hashlib.sha1(email.encode()).hexdigest()
+        self.base_api_device_id = hashlib.sha1(user_sub.encode()).hexdigest()
         self.device_session_id = None  # Set to attach sessionId after successful attach
 
         self.enc_key = None

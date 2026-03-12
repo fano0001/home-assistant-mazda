@@ -99,13 +99,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception as err:
         raise ConfigEntryAuthFailed from err
 
-    # Extract email from the access token JWT for pymazda Connection
-    email = ""
+    # Extract JWT sub claim for device identity (used to derive device-id header)
+    user_sub = ""
     try:
         token_data = jwt.decode(
             session.token["access_token"], options={"verify_signature": False}
         )
-        email = token_data.get("sub", "")
+        user_sub = token_data.get("sub", "")
         _LOGGER.debug(
             "Access token claims: sub=%s, scp=%s, tfp=%s, exp=%s, azp=%s",
             token_data.get("sub"),
@@ -115,17 +115,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             token_data.get("azp"),
         )
     except (jwt.DecodeError, KeyError):
-        _LOGGER.warning("Could not decode email from access token")
+        _LOGGER.warning("Could not decode sub claim from access token")
 
-    if not email:
+    if not user_sub:
         _LOGGER.error("No 'sub' claim in access token — cannot identify user")
 
-    _LOGGER.debug("Using sub=%s as device identity for region=%s", email, region)
+    _LOGGER.debug("Using sub=%s as device identity for region=%s", user_sub, region)
 
     auth = MazdaAuth(session)
     websession = aiohttp_client.async_get_clientsession(hass)
     mazda_client = MazdaAPI(
-        email,
+        user_sub,
         region,
         access_token_provider=auth.async_get_access_token,
         websession=websession,
