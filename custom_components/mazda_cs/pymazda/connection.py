@@ -430,6 +430,9 @@ class Connection:
             ssl=ssl_context,
         )
 
+        if response.status == 429:
+            raise MazdaException("Rate limited by Mazda API (429) — will retry on next cycle")
+
         response_json = await response.json()
         # saving body logger for future debug purposes, but typically just noise
         # self.logger.debug("Response status: %s, body: %s", response.status, response_json)

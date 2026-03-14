@@ -96,8 +96,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         await session.async_ensure_token_valid()
+    except ConfigEntryAuthFailed:
+        raise
+    except (aiohttp.ClientConnectionError, TimeoutError) as err:
+        raise ConfigEntryNotReady(f"Transient connection error during token validation, will retry: {err}") from err
     except Exception as err:
-        raise ConfigEntryAuthFailed from err
+        raise ConfigEntryNotReady(f"Unexpected error during token validation: {err}") from err
 
     # Extract JWT sub claim for device identity (used to derive device-id header)
     user_sub = ""
