@@ -3,7 +3,13 @@
   "name": "Mazda OAuth Helper",
   "version": "1.0.0",
   "description": "Captures Mazda mobile OAuth redirects for use with aiodukeenergy library",
-  "permissions": ["webNavigation", "tabs"],
+  "permissions": ["webNavigation", "tabs", "cookies"],
+  "host_permissions": [
+    "https://*.na.id.mazda.com/*",
+    "https://*.eu.id.mazda.com/*",
+    "https://*.ap.id.mazda.com/*",
+    "https://*.au.id.mazda.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },

@@ -33,6 +33,31 @@
         font-size: 12px;
         color: #2e7d32;
       }
+
+      .btn-clear {
+        display: block;
+        width: 100%;
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: #c0392b;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        box-sizing: border-box;
+      }
+
+      .btn-clear:hover {
+        background: #a93226;
+      }
+
+      #clear-status {
+        margin-top: 8px;
+        font-size: 12px;
+        min-height: 16px;
+        color: #555;
+      }
     </style>
   </head>
   <body>
@@ -45,5 +70,8 @@
       authorization code will be displayed automatically.
     </p>
     <div class="status">✓ Extension active and ready</div>
+    <button class="btn-clear" id="clear-cookies">Clear Mazda Cookies</button>
+    <div id="clear-status"></div>
+    <script src="popup.js"></script>
   </body>
 </html>
