@@ -115,7 +115,7 @@
                 "name": "β | Energiesparmodus"
             },
             "health_lights_problem": {
-                "name": "Leuchtmittelfehler"
+                "name": "Leuchtmittelfehler-Warnung"
             }
         },
         "button": {
@@ -176,7 +176,10 @@
                 "name": "Reichweite benzin"
             },
             "last_integration_update": {
-                "name": "Fahrzeugstatus zuletzt abgerufen"
+                "name": "δ | Fahrzeugstatus zuletzt abgerufen"
+            },
+            "vehicle_status_timestamp": {
+                "name": "δ | Fahrzeugstatus zuletzt aktualisiert"
             },
             "fuel_remaining_percentage": {
                 "name": "Tank Füllstand in %"

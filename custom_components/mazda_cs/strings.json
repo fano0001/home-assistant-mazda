@@ -122,7 +122,7 @@
         "name": "β | Power saving mode"
       },
       "health_lights_problem": {
-        "name": "Lights problem"
+        "name": "Light problem warning"
       }
     },
     "button": {
@@ -172,7 +172,10 @@
     },
     "sensor": {
       "last_integration_update": {
-        "name": "Vehicle status last checked"
+        "name": "δ | Vehicle status last checked"
+      },
+      "vehicle_status_timestamp": {
+        "name": "δ | Vehicle status last updated"
       },
       "fuel_remaining_percentage": {
         "name": "Fuel remaining percentage"

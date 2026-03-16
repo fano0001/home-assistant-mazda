@@ -170,7 +170,14 @@ class Client:  # noqa: D101
             )
 
         vehicle_status = {
-            "lastUpdatedTimestamp": alert_info.get("OccurrenceDate"),
+            "lastUpdatedTimestamp": max(
+                (
+                    datetime.datetime.strptime(ts, "%Y%m%d%H%M%S").replace(tzinfo=datetime.timezone.utc)
+                    for ts in [remote_info.get("OccurrenceDate"), alert_info.get("OccurrenceDate")]
+                    if ts
+                ),
+                default=None,
+            ),
             "latitude": latitude,
             "longitude": longitude,
             "positionTimestamp": remote_info.get("PositionInfo", {}).get(
@@ -310,7 +317,7 @@ class Client:  # noqa: D101
             "lock_state",
             lock_value,
             datetime.datetime.strptime(
-                vehicle_status["lastUpdatedTimestamp"], "%Y%m%d%H%M%S"
+                alert_info.get("OccurrenceDate"), "%Y%m%d%H%M%S"
             ).replace(tzinfo=datetime.UTC),
         )
 

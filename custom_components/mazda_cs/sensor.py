@@ -161,15 +161,6 @@ def _ev_remaining_range_bev_value(data):
 
 SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
-        key="last_integration_update",
-        translation_key="last_integration_update",
-        icon="mdi:calendar-clock",
-        device_class=SensorDeviceClass.TIMESTAMP,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: True,
-        value=lambda data: data["lastIntegrationUpdate"],
-    ),
-    MazdaSensorEntityDescription(
         key="fuel_remaining_percentage",
         translation_key="fuel_remaining_percentage",
         icon="mdi:gas-station",
@@ -191,7 +182,7 @@ SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
         key="odometer",
         translation_key="odometer",
-        icon="mdi:speedometer",
+        icon="mdi:counter",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.TOTAL_INCREASING,
