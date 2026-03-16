@@ -94,9 +94,8 @@ BINARY_SENSOR_ENTITIES = [
         key="fuel_lid",
         translation_key="fuel_lid",
         icon="mdi:gas-station",
-        device_class=BinarySensorDeviceClass.PROBLEM, # Potentially fuel cap warning
-        entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["hasFuel"] and data["enableDevSensors"],
+        device_class=BinarySensorDeviceClass.DOOR,
+        is_supported=lambda data: data["hasFuel"],
         value_fn=lambda data: data["status"]["doors"]["fuelLidOpen"],
     ),
     MazdaBinarySensorEntityDescription(

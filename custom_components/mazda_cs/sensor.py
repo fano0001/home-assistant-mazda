@@ -161,6 +161,15 @@ def _ev_remaining_range_bev_value(data):
 
 SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
+        key="last_integration_update",
+        translation_key="last_integration_update",
+        icon="mdi:calendar-clock",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: True,
+        value=lambda data: data["lastIntegrationUpdate"],
+    ),
+    MazdaSensorEntityDescription(
         key="fuel_remaining_percentage",
         translation_key="fuel_remaining_percentage",
         icon="mdi:gas-station",
@@ -232,7 +241,7 @@ SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
         key="tire_pressure_timestamp",
         translation_key="tire_pressure_timestamp",
-        icon="mdi:tire",
+        icon="mdi:calendar-clock",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["status"]["tirePressure"]["tirePressureTimestamp"] is not None,

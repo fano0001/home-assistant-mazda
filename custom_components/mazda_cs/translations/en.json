@@ -56,7 +56,7 @@
                 "name": "Trunk"
             },
             "fuel_lid": {
-                "name": "δ | Fuel lid"
+                "name": "Fuel lid"
             },
             "front_left_tire_pressure_warning": {
                 "name": "Front left tire pressure warning"
@@ -116,7 +116,7 @@
                 "name": "Rear right window"
             },
             "tns_lamp": {
-                "name": "β | Exterior lights-on warning"
+                "name": "Exterior lights-on warning"
             },
             "pw_sav_mode": {
                 "name": "β | Power saving mode"
@@ -194,6 +194,9 @@
             },
             "fuel_distance_remaining": {
                 "name": "Fuel distance remaining"
+            },
+            "last_integration_update": {
+                "name": "Vehicle status last checked"
             },
             "fuel_remaining_percentage": {
                 "name": "Fuel remaining percentage"
@@ -279,7 +282,7 @@
                 "name": "δ | Development sensors"
             },
             "enable_button_result_polling": {
-                "name": "β | Remote control events (see ReadMe)"
+                "name": "ο | Remote control events (see ReadMe)"
             }
         }
     },
