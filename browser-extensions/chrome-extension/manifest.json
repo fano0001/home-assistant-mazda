@@ -1,9 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Mazda OAuth Helper",
-  "version": "1.0.0",
-  "description": "Captures Mazda mobile OAuth redirects for use with aiodukeenergy library",
+  "version": "1.1.0",
+  "description": "Intercepts Mazda mobile OAuth redirects and performs browser-side token exchange for Home Assistant",
   "permissions": ["webNavigation", "tabs"],
+  "host_permissions": [
+    "https://*.id.mazda.com/*",
+    "https://*.b2clogin.com/*",
+    "https://*.onmicrosoft.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
