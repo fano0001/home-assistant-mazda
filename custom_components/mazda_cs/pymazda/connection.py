@@ -90,9 +90,9 @@ REGION_CONFIG = {
 }
 # APP_PACKAGE_ID: Android package name, used in app-unique-id header
 APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "MyMazda/9.0.8 (Linux; Android 14)"
+USER_AGENT_BASE_API = "MyMazda/9.0.11 (Linux; Android 16)"
 APP_OS = "ANDROID"
-APP_VERSION = "9.0.8"
+APP_VERSION = "9.0.11"
 
 MAX_RETRIES = 4
 
