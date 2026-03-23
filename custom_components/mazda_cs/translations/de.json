@@ -179,7 +179,7 @@
                 "name": "δ | Fahrzeugstatus zuletzt abgerufen"
             },
             "vehicle_status_timestamp": {
-                "name": "δ | Fahrzeugstatus zuletzt aktualisiert"
+                "name": "Fahrzeugstatus zuletzt aktualisiert"
             },
             "fuel_remaining_percentage": {
                 "name": "Tank Füllstand in %"

@@ -175,7 +175,7 @@
         "name": "δ | Vehicle status last checked"
       },
       "vehicle_status_timestamp": {
-        "name": "δ | Vehicle status last updated"
+        "name": "Vehicle status last updated"
       },
       "fuel_remaining_percentage": {
         "name": "Fuel remaining percentage"
