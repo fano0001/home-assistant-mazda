@@ -245,7 +245,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 vehicle["status"] = await with_timeout(
                     mazda_client.get_vehicle_status(vehicle["id"])
                 )
-                vehicle["lastIntegrationUpdate"] = datetime.now(timezone.utc)
 
                 # If vehicle is electric, get additional EV-specific status info
                 if vehicle["isElectric"]:
