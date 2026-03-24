@@ -431,7 +431,9 @@ class Connection:
         )
 
         if response.status == 429:
-            raise MazdaException("Rate limited by Mazda API (429) — will retry on next cycle")
+            raise MazdaException(
+                "Rate limited by Mazda API (429) — will retry on next cycle"
+            )
 
         response_json = await response.json()
         # saving body logger for future debug purposes, but typically just noise

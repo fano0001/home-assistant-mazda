@@ -25,26 +25,41 @@ def _build_tpms_timestamp(tpms: dict):
 
 class Client:  # noqa: D101
     def __init__(  # noqa: D107
-        self, user_sub, region, access_token_provider, websession=None, use_cached_vehicle_list=False
+        self,
+        user_sub,
+        region,
+        access_token_provider,
+        websession=None,
+        use_cached_vehicle_list=False,
     ):
         if user_sub is None or len(user_sub) == 0:
-            raise MazdaConfigException("Invalid or missing user identity (JWT sub claim)")
+            raise MazdaConfigException(
+                "Invalid or missing user identity (JWT sub claim)"
+            )
 
-        self.controller = Controller(user_sub, region, access_token_provider, session_refresh_provider=self.attach, websession=websession)
+        self.controller = Controller(
+            user_sub,
+            region,
+            access_token_provider,
+            session_refresh_provider=self.attach,
+            websession=websession,
+        )
         self._region = region
         self._use_cached_vehicle_list = use_cached_vehicle_list
         self._cached_vehicle_list = None
         self._cached_state = {}
         self._session_id = None
-        self._flash_light_counts: dict[int, int] = {}  # vehicle_id → CarFinderParameter (0/1/2)
+        self._flash_light_counts: dict[
+            int, int
+        ] = {}  # vehicle_id → CarFinderParameter (0/1/2)
 
     # Per-region locale and country code for the attach call, unsure if these are necessary
     _REGION_ATTACH_PARAMS = {
         "MNAO": ("en-US", "US"),
-        "MCI":  ("en-CA", "CA"),
-        "MME":  ("en-GB", "GB"),
-        "MJO":  ("ja-JP", "JP"),
-        "MA":   ("en-AU", "AU"),
+        "MCI": ("en-CA", "CA"),
+        "MME": ("en-GB", "GB"),
+        "MJO": ("ja-JP", "JP"),
+        "MA": ("en-AU", "AU"),
     }
 
     async def attach(self):  # noqa: D102
@@ -172,8 +187,13 @@ class Client:  # noqa: D101
         vehicle_status = {
             "lastUpdatedTimestamp": max(
                 (
-                    datetime.datetime.strptime(ts, "%Y%m%d%H%M%S").replace(tzinfo=datetime.timezone.utc)
-                    for ts in [remote_info.get("OccurrenceDate"), alert_info.get("OccurrenceDate")]
+                    datetime.datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
+                        tzinfo=datetime.timezone.utc
+                    )
+                    for ts in [
+                        remote_info.get("OccurrenceDate"),
+                        alert_info.get("OccurrenceDate"),
+                    ]
                     if ts
                 ),
                 default=None,
@@ -199,7 +219,7 @@ class Client:  # noqa: D101
                 "hoodOpen": alert_info.get("Door", {}).get("DrStatHood") == 1,
                 "fuelLidOpen": alert_info.get("Door", {}).get("FuelLidOpenStatus") == 1,
                 # Not yet integrated: doorOpenWarning
-                "doorOpenWarning": alert_info.get("Door", {}).get("DrOpnWrn") == 1, 
+                "doorOpenWarning": alert_info.get("Door", {}).get("DrOpnWrn") == 1,
             },
             # LockLinkSw = physical lock linkage rod position switch per door.
             # Reads mechanical position, not commanded state — front/rear may differ
@@ -392,7 +412,9 @@ class Client:  # noqa: D101
         self._flash_light_counts[vehicle_id] = self._FLASH_COUNT_TO_PARAM.get(count, 1)
 
     async def flash_lights(self, vehicle_id: int) -> None:  # noqa: D102
-        car_finder_parameter = self._flash_light_counts.get(vehicle_id, 1)  # default: 10 flashes
+        car_finder_parameter = self._flash_light_counts.get(
+            vehicle_id, 1
+        )  # default: 10 flashes
         await self.controller.flash_lights(vehicle_id, car_finder_parameter)
 
     async def unlock_doors(self, vehicle_id):  # noqa: D102
@@ -476,21 +498,30 @@ class Client:  # noqa: D101
         return {
             "warnings": {
                 "oilAmountExceed": bool(warnings.get("WngOilAmountExceed")),
-                "oilShortage":     bool(warnings.get("WngOilShortage")),
-                "headLamp":        bool(warnings.get("WngHeadLamp")),
-                "smallLamp":       bool(warnings.get("WngSmallLamp")),
-                "turnLamp":        bool(warnings.get("WngTurnLamp")),
-                "tailLamp":        bool(warnings.get("WngTailLamp")),
-                "brakeLamp":       bool(warnings.get("WngBreakLamp")),
-                "rearFogLamp":     bool(warnings.get("WngRearFogLamp")),
-                "backLamp":        bool(warnings.get("WngBackLamp")),
+                "oilShortage": bool(warnings.get("WngOilShortage")),
+                "headLamp": bool(warnings.get("WngHeadLamp")),
+                "smallLamp": bool(warnings.get("WngSmallLamp")),
+                "turnLamp": bool(warnings.get("WngTurnLamp")),
+                "tailLamp": bool(warnings.get("WngTailLamp")),
+                "brakeLamp": bool(warnings.get("WngBreakLamp")),
+                "rearFogLamp": bool(warnings.get("WngRearFogLamp")),
+                "backLamp": bool(warnings.get("WngBackLamp")),
                 "tyrePressureLow": bool(warnings.get("WngTyrePressureLow")),
-                "tpmsStatus":      bool(warnings.get("WngTpmsStatus")),
+                "tpmsStatus": bool(warnings.get("WngTpmsStatus")),
             }
         }
 
-    async def get_inbox_list(self, internal_vin_list, actiontype="001,021,031,033", status=0, limit=100, offset=0):  # noqa: D102
-        return await self.controller.get_inbox_list(internal_vin_list, actiontype, status, limit, offset)
+    async def get_inbox_list(
+        self,
+        internal_vin_list,
+        actiontype="001,021,031,033",
+        status=0,
+        limit=100,
+        offset=0,
+    ):  # noqa: D102
+        return await self.controller.get_inbox_list(
+            internal_vin_list, actiontype, status, limit, offset
+        )
 
     async def poll_remote_service_result(  # noqa: D102
         self, vehicle_id: int, command_utc: datetime.datetime
@@ -505,7 +536,13 @@ class Client:  # noqa: D101
 
         loop_start = datetime.datetime.now(datetime.timezone.utc)
 
-        for delay, elapsed in ((6, 6), (12, 18), (5, 23), (5, 28), (12, 40)):  # cumulative waits
+        for delay, elapsed in (
+            (6, 6),
+            (12, 18),
+            (5, 23),
+            (5, 28),
+            (12, 40),
+        ):  # cumulative waits
             await asyncio.sleep(delay)
             try:
                 response = await self.controller.get_inbox_list(
@@ -556,7 +593,9 @@ class Client:  # noqa: D101
                         "details": entry.get("messageDetails", ""),
                     }
             except Exception:  # noqa: BLE001
-                _LOGGER.debug("poll_remote_service_result: inbox fetch failed (will retry)")
+                _LOGGER.debug(
+                    "poll_remote_service_result: inbox fetch failed (will retry)"
+                )
 
         return None
 

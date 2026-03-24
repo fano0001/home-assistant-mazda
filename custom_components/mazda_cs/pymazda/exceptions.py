@@ -7,7 +7,6 @@ class MazdaConfigException(Exception):  # noqa: D100
         self.status = status
 
 
-
 class MazdaTokenExpiredException(Exception):
     """Raised when server reports that the access token has expired."""
 
@@ -33,7 +32,6 @@ class MazdaException(Exception):
         """Initialize exception."""
         super().__init__(status)
         self.status = status
-
 
 
 class MazdaRequestInProgressException(Exception):
