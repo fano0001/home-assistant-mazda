@@ -70,7 +70,7 @@ class MazdaOAuth2FlowHandler(
     # async def async_step_reauth(self, _: Mapping[str, Any]) -> ConfigFlowResult:
     #     """Perform reauth upon an API authentication error."""
     #     return await self.async_step_reauth_confirm()
-    
+
     # Migration workflow from v1→v2: if no token, ask for region
     async def async_step_reauth(self, _: Mapping[str, Any]) -> ConfigFlowResult:
         """Perform reauth upon an API authentication error."""
@@ -143,6 +143,7 @@ class MazdaOAuth2FlowHandler(
         # Attempt to fetch the account email address for a friendlier title
         title = f"Mazda ({user_id[:8]})"
         try:
+
             async def _token_provider():
                 return data["token"]["access_token"]
 
@@ -154,6 +155,8 @@ class MazdaOAuth2FlowHandler(
             if email:
                 title = f"Mazda ({email})"
         except Exception:  # noqa: BLE001
-            _LOGGER.debug("Could not fetch account email for title; using user_id fallback")
+            _LOGGER.debug(
+                "Could not fetch account email for title; using user_id fallback"
+            )
 
         return self.async_create_entry(title=title, data=data)

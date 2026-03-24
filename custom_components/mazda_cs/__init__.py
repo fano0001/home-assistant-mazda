@@ -36,7 +36,16 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import MazdaAuth
-from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_HEALTH_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN, OPTION_BUTTON_RESULT_POLLING, REMOTE_COMMAND_COOLDOWN_SECONDS
+from .const import (
+    DATA_CLIENT,
+    DATA_COORDINATOR,
+    DATA_HEALTH_COORDINATOR,
+    DATA_REGION,
+    DATA_VEHICLES,
+    DOMAIN,
+    OPTION_BUTTON_RESULT_POLLING,
+    REMOTE_COMMAND_COOLDOWN_SECONDS,
+)
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
@@ -61,7 +70,6 @@ PLATFORMS = [
     Platform.SENSOR,
     Platform.SWITCH,
 ]
-
 
 
 async def with_timeout(task, timeout_seconds=30):
@@ -99,9 +107,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ConfigEntryAuthFailed:
         raise
     except (aiohttp.ClientConnectionError, TimeoutError) as err:
-        raise ConfigEntryNotReady(f"Transient connection error during token validation, will retry: {err}") from err
+        raise ConfigEntryNotReady(
+            f"Transient connection error during token validation, will retry: {err}"
+        ) from err
     except Exception as err:
-        raise ConfigEntryNotReady(f"Unexpected error during token validation: {err}") from err
+        raise ConfigEntryNotReady(
+            f"Unexpected error during token validation: {err}"
+        ) from err
 
     # Extract JWT sub claim for device identity (used to derive device-id header)
     user_sub = ""
@@ -208,7 +220,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         attach_result = await mazda_client.attach()
         _LOGGER.debug("Device session attached to Mazda backend: %s", attach_result)
     except Exception as ex:
-        _LOGGER.warning("attach failed (continuing anyway to test getVecBaseInfos): %s", ex)
+        _LOGGER.warning(
+            "attach failed (continuing anyway to test getVecBaseInfos): %s", ex
+        )
 
     async def async_update_data():
         """Fetch data from Mazda API."""
@@ -240,8 +254,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             for vehicle in vehicles:
                 vehicle["region"] = region
                 vehicle["enableWindows"] = entry.options.get("enable_windows", False)
-                vehicle["enableDevSensors"] = entry.options.get("enable_dev_sensors", False)
-                vehicle["enableButtonResultPolling"] = entry.options.get(OPTION_BUTTON_RESULT_POLLING, False)
+                vehicle["enableDevSensors"] = entry.options.get(
+                    "enable_dev_sensors", False
+                )
+                vehicle["enableButtonResultPolling"] = entry.options.get(
+                    OPTION_BUTTON_RESULT_POLLING, False
+                )
                 vehicle["status"] = await with_timeout(
                     mazda_client.get_vehicle_status(vehicle["id"])
                 )
@@ -291,7 +309,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         result = []
         for vehicle in vehicles:
             try:
-                health = await with_timeout(mazda_client.get_health_report(vehicle["id"]))
+                health = await with_timeout(
+                    mazda_client.get_health_report(vehicle["id"])
+                )
                 _LOGGER.debug("getHealthReport: %s", health)
                 result.append(health)
             except Exception as ex:  # noqa: BLE001
@@ -394,18 +414,30 @@ class MazdaEntity(CoordinatorEntity):
         """Poll for remote command result then reset the command-in-progress flag."""
         try:
             if self.data.get("enableButtonResultPolling", False):
-                result = await self.client.poll_remote_service_result(self.vehicle_id, command_utc)
+                result = await self.client.poll_remote_service_result(
+                    self.vehicle_id, command_utc
+                )
                 if result:
                     self.hass.bus.async_fire(
                         EVENT_REMOTE_SERVICE_RESULT,
-                        {"vehicle_id": self.vehicle_id, "vin": self.vin, "action": action, **result},
+                        {
+                            "vehicle_id": self.vehicle_id,
+                            "vin": self.vin,
+                            "action": action,
+                            **result,
+                        },
                     )
                     _LOGGER.debug(
                         "Remote result for %s vin=%s: success=%s title=%s",
-                        action, self.vin, result["success"], result["title"],
+                        action,
+                        self.vin,
+                        result["success"],
+                        result["title"],
                     )
                 else:
-                    _LOGGER.debug("Remote result timed out: action=%s vin=%s", action, self.vin)
+                    _LOGGER.debug(
+                        "Remote result timed out: action=%s vin=%s", action, self.vin
+                    )
             else:
                 await asyncio.sleep(REMOTE_COMMAND_COOLDOWN_SECONDS)
         finally:

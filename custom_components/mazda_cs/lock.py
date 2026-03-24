@@ -1,4 +1,5 @@
 """Platform for Mazda lock integration."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -69,4 +70,3 @@ class MazdaLock(MazdaEntity, LockEntity):
         self._command_in_progress = True
         self.async_write_ha_state()
         self.hass.async_create_task(self._poll_and_unlock("doorUnlock", command_utc))
-

@@ -11,7 +11,13 @@ DATA_VEHICLES = "vehicles"
 OPTION_BUTTON_RESULT_POLLING = "enable_button_result_polling"
 REMOTE_COMMAND_COOLDOWN_SECONDS = 3
 
-MAZDA_REGIONS = {"MNAO": "North America", "MCI": "Canada", "MME": "Europe", "MJO": "Japan", "MA": "Australia"}
+MAZDA_REGIONS = {
+    "MNAO": "North America",
+    "MCI": "Canada",
+    "MME": "Europe",
+    "MJO": "Japan",
+    "MA": "Australia",
+}
 
 # Per-region Azure AD B2C OAuth2 configuration
 # Values sourced from assets/res/raw/*_mzal_config.json in com.interrait.mymazda 9.0.8 APK
@@ -69,15 +75,17 @@ OAUTH2_AUTH = {
     },
 }
 
-MOBILE_REDIRECT_URI = "msauth://com.interrait.mymazda/%2FnKMu1%2BlCjy5%2Be7OF9vfp4eFBks%3D"
+MOBILE_REDIRECT_URI = (
+    "msauth://com.interrait.mymazda/%2FnKMu1%2BlCjy5%2Be7OF9vfp4eFBks%3D"
+)
 
 # Regional OAuth2 hosts (authority_host_name from *_mzal_config.json)
 OAUTH2_HOSTS = {
     "MNAO": "na.id.mazda.com",
-    "MCI":  "na.id.mazda.com",  # Canada shares MNAO auth infrastructure, confirmed in mzal config
-    "MME":  "eu.id.mazda.com",
-    "MJO":  "ap.id.mazda.com",
-    "MA":   "au.id.mazda.com",
+    "MCI": "na.id.mazda.com",  # Canada shares MNAO auth infrastructure, confirmed in mzal config
+    "MME": "eu.id.mazda.com",
+    "MJO": "ap.id.mazda.com",
+    "MA": "au.id.mazda.com",
 }
 
 # MSAL client identifiers (sent with authorize requests)

@@ -1,12 +1,13 @@
 """Platform for Mazda switch integration."""
+
 from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory #For dev switch
+from homeassistant.const import EntityCategory  # For dev switch
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo #For dev switch
+from homeassistant.helpers.device_registry import DeviceInfo  # For dev switch
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 

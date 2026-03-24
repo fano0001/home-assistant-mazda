@@ -1,4 +1,5 @@
 """Platform for Mazda button integration."""
+
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -159,4 +160,6 @@ class MazdaButtonEntity(MazdaEntity, ButtonEntity):
         )
         if self.entity_description.track_result:
             self._command_in_progress = True
-            self.hass.async_create_task(self._poll_and_unlock(self.entity_description.key, command_utc))
+            self.hass.async_create_task(
+                self._poll_and_unlock(self.entity_description.key, command_utc)
+            )

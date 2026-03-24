@@ -1,4 +1,5 @@
 """Platform for Mazda select integration."""
+
 from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
@@ -53,7 +54,9 @@ class MazdaFlashLightCountSelect(MazdaEntity, SelectEntity, RestoreEntity):
     async def async_added_to_hass(self) -> None:
         """Restore last selected option on HA restart."""
         await super().async_added_to_hass()
-        if (last_state := await self.async_get_last_state()) and last_state.state in FLASH_LIGHT_OPTIONS:
+        if (
+            last_state := await self.async_get_last_state()
+        ) and last_state.state in FLASH_LIGHT_OPTIONS:
             self._attr_current_option = last_state.state
             self.client.set_flash_light_count(self.vehicle_id, last_state.state)
 
