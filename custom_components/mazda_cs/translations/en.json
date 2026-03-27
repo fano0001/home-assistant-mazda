@@ -71,10 +71,10 @@
                 "name": "Rear right tire pressure warning"
             },
             "tpms_battery_warning": {
-                "name": "β | Tire pressure battery"
+                "name": "Tire pressure battery"
             },
             "tpms_system_fault": {
-                "name": "β | Tire pressure system fault"
+                "name": "Tire pressure system fault"
             },
             "mnt_tyre_at_flg": {
                 "name": "δ | MntTyreAtFlg"
@@ -119,7 +119,7 @@
                 "name": "Exterior lights-on warning"
             },
             "pw_sav_mode": {
-                "name": "β | Power saving mode"
+                "name": "Power saving mode"
             },
             "health_lights_problem": {
                 "name": "Light problem warning"
@@ -195,9 +195,6 @@
             "fuel_distance_remaining": {
                 "name": "Fuel distance remaining"
             },
-            "last_integration_update": {
-                "name": "δ | Vehicle status last checked"
-            },
             "vehicle_status_timestamp": {
                 "name": "Vehicle status last updated"
             },
@@ -232,7 +229,7 @@
                 "name": "Drive 1 fuel consumption"
             },
             "dr_oil_deteriorate_level": {
-                "name": "β | Oil health"
+                "name": "Oil health"
             },
             "drive1_fuel_efficiency_mpg": {
                 "name": "Drive 1 fuel efficiency (MPG)"
@@ -271,7 +268,7 @@
                 "name": "δ | PowerControlStatus"
             },
             "soc_ecm_a_est": {
-                "name": "β | 12v battery SoC"
+                "name": "12v battery state of charge"
             }
         },
         "switch": {

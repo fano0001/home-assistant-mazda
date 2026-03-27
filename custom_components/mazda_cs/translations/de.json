@@ -88,10 +88,10 @@
                 "name": "Reifendruckwarnung hinten rechts"
             },
             "tpms_battery_warning": {
-                "name": "β | Reifendruckbatterie"
+                "name": "Reifendruckbatterie"
             },
             "tpms_system_fault": {
-                "name": "β | TPMS-Systemfehler"
+                "name": "TPMS-Systemfehler"
             },
             "mnt_tyre_at_flg": {
                 "name": "δ | MntTyreAtFlg"
@@ -112,7 +112,7 @@
                 "name": "Außenlicht-an-Warnung"
             },
             "pw_sav_mode": {
-                "name": "β | Energiesparmodus"
+                "name": "Energiesparmodus"
             },
             "health_lights_problem": {
                 "name": "Leuchtmittelfehler-Warnung"
@@ -175,9 +175,6 @@
             "fuel_distance_remaining": {
                 "name": "Reichweite benzin"
             },
-            "last_integration_update": {
-                "name": "δ | Fahrzeugstatus zuletzt abgerufen"
-            },
             "vehicle_status_timestamp": {
                 "name": "Fahrzeugstatus zuletzt aktualisiert"
             },
@@ -209,7 +206,7 @@
                 "name": "Fahrt 1 Kraftstoffverbrauch"
             },
             "dr_oil_deteriorate_level": {
-                "name": "β | Ölzustand"
+                "name": "Ölzustand"
             },
             "next_maintenance_distance": {
                 "name": "Strecke bis nächster Inspektion"
@@ -245,7 +242,7 @@
                 "name": "δ | PowerControlStatus"
             },
             "soc_ecm_a_est": {
-                "name": "β | 12V-Batterie SoC"
+                "name": "12V-Batterie Ladezustand"
             }
         },
         "switch": {
