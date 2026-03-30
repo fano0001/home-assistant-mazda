@@ -150,6 +150,7 @@ BINARY_SENSOR_ENTITIES = [
         key="hazard_lights",
         translation_key="hazard_lights",
         icon="mdi:hazard-lights",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data["status"]["hazardLightsOn"],
     ),
     MazdaBinarySensorEntityDescription(

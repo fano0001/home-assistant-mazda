@@ -92,7 +92,7 @@
                 "name": "Oil deterioration warning"
             },
             "hazard_lights": {
-                "name": "Hazard lights"
+                "name": "Hazard lights-on warning"
             },
             "scr_maintenance_warning": {
                 "name": "SCR maintenance warning"

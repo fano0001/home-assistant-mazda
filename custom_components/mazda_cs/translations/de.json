@@ -52,7 +52,7 @@
                 "name": "Tankdeckel"
             },
             "hazard_lights": {
-                "name": "Warnblinklicht"
+                "name": "Warnblinklicht aktiv"
             },
             "scr_maintenance_warning": {
                 "name": "SCR-Wartungswarnung"
