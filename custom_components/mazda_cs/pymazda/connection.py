@@ -437,8 +437,7 @@ class Connection:
 
         response_json = await response.json()
         # saving body logger for future debug purposes, but typically just noise
-        # self.logger.debug("Response status: %s, body: %s", response.status, response_json)
-        self.logger.debug("Response status: %s", response.status)
+        self.logger.debug("Response status: %s, body: %s", response.status, response_json)
 
         if response_json.get("state") == "S":
             if "checkVersion" in uri:
@@ -462,7 +461,7 @@ class Connection:
             )
         elif (
             response_json.get("errorCode") == 920000
-            and response_json.get("extraCode") == "400S01"
+            and response_json.get("extraCode") == "MSG400101"
         ):
             raise MazdaRequestInProgressException(
                 "Request already in progress, please wait and try again"
