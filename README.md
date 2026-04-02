@@ -44,7 +44,7 @@ Mazda Connected Services uses OAuth authentication which blocks automated logins
 
    ### safari-extension
 
-   Requires Xcode and a free developer account
+   > Requires Xcode and a free developer account
 
    - Download the [latest safari-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/safari-extension.zip) from releases (or use `./browser-extensions/safari-extension/` from source)
    - Extract the zip file
@@ -54,3 +54,14 @@ Mazda Connected Services uses OAuth authentication which blocks automated logins
    - Open Safari and enable the extension in Safari settings
    - Build the extension again
    - The app window should indicate the extension is 'On'.
+
+# Remote Control Events v1 (Notification Automation)
+
+> **This is a early, beta, opt-in feature enabled via the 'Remote control events' switch in the diagnostic section of the integration.**
+> I am working on v2 with proper push support and event documentation will be changing, meaning **automations will need updating in the future**. v1 lays the groundwork for v2 and is functionally very close to proper push support, if not ideal.
+
+When a button is pressed (lock, hazard, climate), the integration starts a background process that polls the inbox in MyMazda 1-5 times. As soon as a success or failure is detected, an event is fired in Home Assistant and the process stops. This event can then be detected to trigger automations, including notifications. See the [examples folder](https://github.com/fano0001/home-assistant-mazda/tree/main/examples/mazda_cs_remote_control_events.md) for notification automation. 
+
+* **Timing:** is specifically related to the intervals of typical responses for success/failure/rejection. 
+  * This will be obviated in v2, so unlikely I'll adjust further.
+  * In an effort to reduce calls to Mazda, the integration will send null button presses until this check is complete (Mazda rejects them with a busy notification anyways).
