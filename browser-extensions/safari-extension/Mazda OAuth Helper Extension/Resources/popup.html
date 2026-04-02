@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mazda OAuth Helper</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        width: 300px;
+        padding: 16px;
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 16px;
+        color: #1a5276;
+        margin: 0 0 12px 0;
+      }
+
+      p {
+        font-size: 13px;
+        color: #666;
+        margin: 0 0 12px 0;
+        line-height: 1.5;
+      }
+
+      .status {
+        background: #e8f5e9;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 12px;
+        color: #2e7d32;
+        margin-bottom: 12px;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid #e0e0e0;
+        margin: 12px 0;
+      }
+
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 8px 0;
+      }
+
+      #clearBtn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 8px 12px;
+        background: #c0392b;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        box-sizing: border-box;
+      }
+
+      #clearBtn:hover:not(:disabled) { background: #a93226; }
+      #clearBtn:disabled { background: #aaa; cursor: default; }
+
+      #clearStatus {
+        display: none;
+        margin-top: 8px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+
+      #clearStatus.working { background: #fff3e0; color: #e65100; }
+      #clearStatus.success { background: #e8f5e9; color: #2e7d32; }
+      #clearStatus.error   { background: #fce4ec; color: #b71c1c; word-break: break-word; }
+    </style>
+  </head>
+  <body>
+    <h1>Mazda OAuth Helper</h1>
+    <p>
+      This extension captures authorization codes from Mazda's OAuth flow.
+    </p>
+    <p>
+      Start the login process from your application. After you log in, the
+      redirect URL will be re-written to point to 'Link to Home Assistant'.
+    </p>
+    <div class="status">✓ Extension active and ready</div>
+
+    <hr />
+
+    <p class="section-label">Session Management</p>
+    <button id="clearBtn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        <path d="M10 11v6M14 11v6"/>
+        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+      </svg>
+      Clear Mazda Login Cookies
+    </button>
+    <div id="clearStatus"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

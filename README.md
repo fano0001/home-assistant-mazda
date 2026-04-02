@@ -2,9 +2,11 @@
 # Introduction
 This is a fork of the Mazda Connected Services integration originally written by bdr99 that has been packaged into a HACS compatible custom integration. The original code was part of the Home Assistant core integrations prior to a DMCA takedown notice issue by Mazda Motor Corporation.  It should restore all functionality previously available in the core integration.
 
-# Mazda API v2 — Australia Region
+# Mazda API v2 — MJO / 日本 / Australia Region
 * Mazda has moved NA, EU, and CA, to v2 of their API with a new authentication method. However the Australian region is currently still using the v1 API. Android app changes indicate the switch is coming (has v2 information coded for AU), but Mazda is staggering release. EU was December, and NA/CA was February. The intgration should be ready for you as soon as Mazda switches your region.
 * **[PLEASE STAY ON 1.8.5](https://github.com/fano0001/home-assistant-mazda/releases/tag/v1.8.5)** for now. Use the manual installation instructions below or manually select v1.8.5 in HACS under the 'mazda_cs' HACS page -> 3 dots top right-> Download/Redownload -> 'Need Another Vesion'.
+* マツダは、北米（NA）、欧州（EU）、およびカナダ（CA）の各地域について、新しい認証方式を採用したAPIのバージョン2（v2）への移行を完了しました。しかしながら、オーストラリア地域については、現時点では依然としてv1 APIが使用されています。モバイルアプリの更新内容からは、まもなく移行が実施される兆候が見受けられます（アプリのコード内にオーストラリア向けのv2関連情報がすでに組み込まれています）が、マツダは各地域へのリリースを段階的に進めているようです。欧州地域への適用は12月に、北米・カナダ地域への適用は2月にそれぞれ行われました。マツダ側で貴殿の地域への切り替えが完了し次第、本連携機能も直ちにご利用いただけるようになる見込みです。（Google 翻訳）
+* **[当面の間は 1.8.5 に留まってください](https://github.com/fano0001/home-assistant-mazda/releases/tag/v1.8.5)** 以下の手動インストール手順を使用するか、HACS の「mazda_cs」ページから手動で v1.8.5 を選択してください。右上の 3 つのドット→ダウンロード / 再ダウンロード→別のバージョンが必要。（Google 翻訳）
 
 # Installation
 
@@ -25,76 +27,30 @@ and place it inside your Home Assistant Core installation's `custom_components` 
 # Authentication
 
 > [!IMPORTANT]
-> All steps below must be performed in a Chromium based browser.
-> This chrome extension is required to successfully authenticate with Mazda. Do not skip this step!
-> This extension is tied to the file location on your computer and may disappear if you move the folder.
+> A browser extension is required to successfully authenticate with Mazda. Do not skip this step!
+> The chrome extension is tied to the folder location on your computer and may disappear if you move the folder.
 
-Mazda Connected Services uses OAuth with CAPTCHA protection which blocks automated logins. Authentication requires a browser-based OAuth flow using a Chrome extension to capture the android mobile app's redirect URL.
-
+Mazda Connected Services uses OAuth authentication which blocks automated logins. Authentication requires a browser-based OAuth flow using a browser extension to capture the mobile app redirect URL.
 ## Setup
-   - Download the [latest chrome-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/chrome-extension.zip) from releases (or use `./chrome-extension/` from source)
+
+   ### chrome-extension
+   
+   - Download the [latest chrome-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/chrome-extension.zip) from releases (or use `./browser-extensions/chrome-extension/` from source)
    - Extract the zip file (or use source)
    - Open Google Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select the extracted folder
    - Try to authenticate
 
-# Remote Control Success/Failure Events (Notification Automations)
-**This is an opt-in featuere enabled via the 'Remote control events' switch in the diagnostic section of the integration.**
+   ### safari-extension
 
-When a button is pressed, the integration starts a background process that polls the inbox in MyMazda 1-5 times. As soon as a success or failure is detected, an event is fired in Home Assistant adn the process stops. This event can then be detected to trigger automations, including notifications. See examples below for notification automations. 
-* **Timing:** is specifically related to the intervals of typically responses for success/failure/rejection. 
-  * I may tweak the timing, but I will keep this limited polling, in an effort to reduce API calls to Mazda. Buttons presses send an event notification capturing the details of which button was pressed and the success or failure.
-  * In a further effort to reduce calls to Mazda, the integration will send null button presses until this check is complete (Mazda rejects them with a busy notification anyways).
-## Notifications — Every Event Example
-```
-alias: MyMazda Notify
-description: ""
-triggers:
-  - event_type: mazda_cs_remote_service_result
-    trigger: event
-actions:
-  - data:
-      title: >-
-        Mazda {{ action_labels.get(trigger.event.data.action,
-        trigger.event.data.action) }} {{ 'Succeeded' if
-        trigger.event.data.success else 'Failed' }}
-      message: >-
-        {% set label = action_labels.get(trigger.event.data.action,
-        trigger.event.data.action) %} {% if trigger.event.data.success %}
-          {{ label }} completed successfully.
-        {% else %}
-          {{ label }} failed: {{ trigger.event.data.details }}
-        {% endif %}
-    action: persistent_notification.create
-variables:
-  action_labels:
-    doorLock: Door Lock
-    doorUnlock: Door Unlock
-    start_engine: Engine Start
-    stop_engine: Engine Stop
-    turn_on_hazard_lights: Hazard Lights On
-    turn_off_hazard_lights: Hazard Lights Off
-    flash_lights: Flash Lights
-    hvacOn: Climate On
-    hvacOff: Climate Off
-    chargeStart: Charge Start
-    chargeStop: Charge Stop
-```
-## Notifications — Single Event Example
-```
-alias: DoorLock
-description: ""
-triggers:
-  - event_type: mazda_cs_remote_service_result
-    event_data:
-      action: doorLock
-      success: true
-    trigger: event
-actions:
-  - data:
-      message: "Door lock: {{ trigger.event.data.details }}"
-    action: notify.mobile_phone #replace
-mode: single
+   Requires Xcode and a free developer account
 
-```
+   - Download the [latest safari-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/safari-extension.zip) from releases (or use `./browser-extensions/safari-extension/` from source)
+   - Extract the zip file
+   - Open the Xcode project
+   - Go to project settings and set your free developer account as the 'Team' for both Targets (`com.mazda.oauth-helper` and `com.mazda.oauth-helper.extension`). Also ensure 'Signing Certificate' is set to 'Development'
+   - Quit Safari if open and build the extension
+   - Open Safari and enable the extension in Safari settings
+   - Build the extension again
+   - The app window should indicate the extension is 'On'.

@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "Mazda OAuth Helper",
+        "description": "The display name for the extension."
+    },
+    "extension_description": {
+        "message": "Captures Mazda mobile OAuth redirects for use with Home Assistant and other applications.",
+        "description": "Description of what the extension does."
+    }
+}

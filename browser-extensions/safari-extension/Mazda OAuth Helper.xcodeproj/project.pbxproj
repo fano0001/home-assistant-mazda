@@ -1,0 +1,949 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 70;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		EF3A65D62F68E61E0071B6B8 /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = EF3A65D52F68E61E0071B6B8 /* popup.js */; };
+		EF5228442F5D1BF300277125 /* mazdaIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = EF5228432F5D1BF300277125 /* mazdaIcon.png */; };
+		EF58EF2F2F5FA34C00C9572A /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = EF58EF2E2F5FA34B00C9572A /* manifest.json */; };
+		EF88C21A2F5E5613000BCEBB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EF88C2192F5E5613000BCEBB /* Assets.xcassets */; };
+		EF9A3CFF2F481BAE00E42E3A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF9A3CED2F481BAE00E42E3A /* AppDelegate.swift */; };
+		EF9A3D002F481BAE00E42E3A /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF9A3CEE2F481BAE00E42E3A /* ViewController.swift */; };
+		EF9A3D012F481BAE00E42E3A /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CEF2F481BAE00E42E3A /* Main.storyboard */; };
+		EF9A3D022F481BAE00E42E3A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CF02F481BAE00E42E3A /* Assets.xcassets */; };
+		EF9A3D032F481BAE00E42E3A /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CF12F481BAE00E42E3A /* Main.html */; };
+		EF9A3D042F481BAE00E42E3A /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CF22F481BAE00E42E3A /* Script.js */; };
+		EF9A3D052F481BAE00E42E3A /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CF32F481BAE00E42E3A /* Style.css */; };
+		EF9A3D072F481BAE00E42E3A /* Mazda OAuth Helper Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EF9A3CEC2F481BAE00E42E3A /* Mazda OAuth Helper Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EF9A3D082F481BAE00E42E3A /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF9A3CF52F481BAE00E42E3A /* SafariWebExtensionHandler.swift */; };
+		EF9A3D0A2F481BAE00E42E3A /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CF82F481BAE00E42E3A /* background.js */; };
+		EF9A3D0B2F481BAE00E42E3A /* capture.html in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CF92F481BAE00E42E3A /* capture.html */; };
+		EF9A3D0C2F481BAE00E42E3A /* capture.js in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CFA2F481BAE00E42E3A /* capture.js */; };
+		EF9A3D0D2F481BAE00E42E3A /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = EF9A3CFB2F481BAE00E42E3A /* popup.html */; };
+		EFAC06D12F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EFAC06B92F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EF9A3D212F481BAE00E42E3A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EF9A3CE22F481BAE00E42E3A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EF9A3D192F481BAE00E42E3A;
+			remoteInfo = "Mazda OAuth Helper Extension";
+		};
+		EFAC06CF2F60C79A006F7E54 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EF9A3CE22F481BAE00E42E3A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EFAC06B82F60C79A006F7E54;
+			remoteInfo = "com.mazda.oauth-helper-extension-ios";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EF9A3D142F481BAE00E42E3A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				EF9A3D072F481BAE00E42E3A /* Mazda OAuth Helper Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EFAC06D62F60C79A006F7E54 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				EFAC06D12F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		EF3A65D52F68E61E0071B6B8 /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = popup.js; sourceTree = "<group>"; };
+		EF5228432F5D1BF300277125 /* mazdaIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = mazdaIcon.png; sourceTree = "<group>"; };
+		EF58EF2E2F5FA34B00C9572A /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		EF58EF302F5FA83000C9572A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EF88C2192F5E5613000BCEBB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EF9A3CEB2F481BAE00E42E3A /* Mazda OAuth Helper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mazda OAuth Helper.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		EF9A3CEC2F481BAE00E42E3A /* Mazda OAuth Helper Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Mazda OAuth Helper Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		EF9A3CED2F481BAE00E42E3A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		EF9A3CEE2F481BAE00E42E3A /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		EF9A3CEF2F481BAE00E42E3A /* Main.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Main.storyboard; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		EF9A3CF02F481BAE00E42E3A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EF9A3CF12F481BAE00E42E3A /* Main.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Main.html; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		EF9A3CF22F481BAE00E42E3A /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		EF9A3CF32F481BAE00E42E3A /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		EF9A3CF52F481BAE00E42E3A /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		EF9A3CF62F481BAE00E42E3A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EF9A3CF82F481BAE00E42E3A /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = background.js; sourceTree = "<group>"; };
+		EF9A3CF92F481BAE00E42E3A /* capture.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = capture.html; sourceTree = "<group>"; };
+		EF9A3CFA2F481BAE00E42E3A /* capture.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = capture.js; sourceTree = "<group>"; };
+		EF9A3CFB2F481BAE00E42E3A /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
+		EFAC06AA2F60C75D006F7E54 /* com.mazda.oauth-helper-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "com.mazda.oauth-helper-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		EFAC06B92F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "com.mazda.oauth-helper-extension-ios.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EFAC06D22F60C79A006F7E54 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EFAC06B82F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios */;
+		};
+		EFAC06FA2F60D9DF006F7E54 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EFAC06A92F60C75D006F7E54 /* com.mazda.oauth-helper-ios */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		EFAC06AB2F60C75D006F7E54 /* Mazda OAuth Helper-iOS */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (EFAC06FA2F60D9DF006F7E54 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = "Mazda OAuth Helper-iOS"; sourceTree = "<group>"; };
+		EFAC06BA2F60C79A006F7E54 /* Mazda OAuth Helper-iOS Extension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (EFAC06D22F60C79A006F7E54 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (Resources/_locales, Resources/images, ); path = "Mazda OAuth Helper-iOS Extension"; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EF9A3D132F481BAE00E42E3A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EF9A3D172F481BAE00E42E3A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EFAC06A72F60C75D006F7E54 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EFAC06B62F60C79A006F7E54 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EF9A3CE12F481BAD00E42E3A = {
+			isa = PBXGroup;
+			children = (
+				EF9A3CE72F481BAE00E42E3A /* Mazda OAuth Helper */,
+				EF9A3CE92F481BAE00E42E3A /* Mazda OAuth Helper Extension */,
+				EFAC06AB2F60C75D006F7E54 /* Mazda OAuth Helper-iOS */,
+				EFAC06BA2F60C79A006F7E54 /* Mazda OAuth Helper-iOS Extension */,
+				EF9A3CE62F481BAE00E42E3A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EF9A3CE62F481BAE00E42E3A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EF9A3CEB2F481BAE00E42E3A /* Mazda OAuth Helper.app */,
+				EF9A3CEC2F481BAE00E42E3A /* Mazda OAuth Helper Extension.appex */,
+				EFAC06AA2F60C75D006F7E54 /* com.mazda.oauth-helper-ios.app */,
+				EFAC06B92F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EF9A3CE72F481BAE00E42E3A /* Mazda OAuth Helper */ = {
+			isa = PBXGroup;
+			children = (
+				EF58EF302F5FA83000C9572A /* Info.plist */,
+				EF9A3CED2F481BAE00E42E3A /* AppDelegate.swift */,
+				EF9A3CEE2F481BAE00E42E3A /* ViewController.swift */,
+				EF9A3CEF2F481BAE00E42E3A /* Main.storyboard */,
+				EF9A3CF02F481BAE00E42E3A /* Assets.xcassets */,
+				EF9A3CE82F481BAE00E42E3A /* Resources */,
+			);
+			path = "Mazda OAuth Helper";
+			sourceTree = "<group>";
+		};
+		EF9A3CE82F481BAE00E42E3A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EF9A3CF12F481BAE00E42E3A /* Main.html */,
+				EF9A3CF22F481BAE00E42E3A /* Script.js */,
+				EF5228432F5D1BF300277125 /* mazdaIcon.png */,
+				EF9A3CF32F481BAE00E42E3A /* Style.css */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		EF9A3CE92F481BAE00E42E3A /* Mazda OAuth Helper Extension */ = {
+			isa = PBXGroup;
+			children = (
+				EF9A3CF52F481BAE00E42E3A /* SafariWebExtensionHandler.swift */,
+				EF9A3CF62F481BAE00E42E3A /* Info.plist */,
+				EF88C2192F5E5613000BCEBB /* Assets.xcassets */,
+				EF9A3CEA2F481BAE00E42E3A /* Resources */,
+			);
+			path = "Mazda OAuth Helper Extension";
+			sourceTree = "<group>";
+		};
+		EF9A3CEA2F481BAE00E42E3A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EF58EF2E2F5FA34B00C9572A /* manifest.json */,
+				EF9A3CF82F481BAE00E42E3A /* background.js */,
+				EF9A3CF92F481BAE00E42E3A /* capture.html */,
+				EF9A3CFA2F481BAE00E42E3A /* capture.js */,
+				EF9A3CFB2F481BAE00E42E3A /* popup.html */,
+				EF3A65D52F68E61E0071B6B8 /* popup.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EF9A3D182F481BAE00E42E3A /* Mazda OAuth Helper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EF9A3D1E2F481BAE00E42E3A /* Build configuration list for PBXNativeTarget "Mazda OAuth Helper" */;
+			buildPhases = (
+				EF9A3D112F481BAE00E42E3A /* Sources */,
+				EF9A3D122F481BAE00E42E3A /* Resources */,
+				EF9A3D132F481BAE00E42E3A /* Frameworks */,
+				EF9A3D142F481BAE00E42E3A /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EF9A3D202F481BAE00E42E3A /* PBXTargetDependency */,
+			);
+			name = "Mazda OAuth Helper";
+			productName = "Mazda OAuth Helper";
+			productReference = EF9A3CEB2F481BAE00E42E3A /* Mazda OAuth Helper.app */;
+			productType = "com.apple.product-type.application";
+		};
+		EF9A3D192F481BAE00E42E3A /* Mazda OAuth Helper Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EF9A3D1F2F481BAE00E42E3A /* Build configuration list for PBXNativeTarget "Mazda OAuth Helper Extension" */;
+			buildPhases = (
+				EF9A3D152F481BAE00E42E3A /* Sources */,
+				EF9A3D162F481BAE00E42E3A /* Resources */,
+				EF9A3D172F481BAE00E42E3A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Mazda OAuth Helper Extension";
+			productName = "Mazda OAuth Helper Extension";
+			productReference = EF9A3CEC2F481BAE00E42E3A /* Mazda OAuth Helper Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		EFAC06A92F60C75D006F7E54 /* com.mazda.oauth-helper-ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EFAC06B42F60C75E006F7E54 /* Build configuration list for PBXNativeTarget "com.mazda.oauth-helper-ios" */;
+			buildPhases = (
+				EFAC06A62F60C75D006F7E54 /* Sources */,
+				EFAC06A72F60C75D006F7E54 /* Frameworks */,
+				EFAC06A82F60C75D006F7E54 /* Resources */,
+				EFAC06D62F60C79A006F7E54 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EFAC06D02F60C79A006F7E54 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				EFAC06AB2F60C75D006F7E54 /* Mazda OAuth Helper-iOS */,
+			);
+			name = "com.mazda.oauth-helper-ios";
+			packageProductDependencies = (
+			);
+			productName = "com.mazda.oauth-helper-ios";
+			productReference = EFAC06AA2F60C75D006F7E54 /* com.mazda.oauth-helper-ios.app */;
+			productType = "com.apple.product-type.application";
+		};
+		EFAC06B82F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EFAC06D32F60C79A006F7E54 /* Build configuration list for PBXNativeTarget "com.mazda.oauth-helper-extension-ios" */;
+			buildPhases = (
+				EFAC06B52F60C79A006F7E54 /* Sources */,
+				EFAC06B62F60C79A006F7E54 /* Frameworks */,
+				EFAC06B72F60C79A006F7E54 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EFAC06BA2F60C79A006F7E54 /* Mazda OAuth Helper-iOS Extension */,
+			);
+			name = "com.mazda.oauth-helper-extension-ios";
+			packageProductDependencies = (
+			);
+			productName = "com.mazda.oauth-helper-extension-ios";
+			productReference = EFAC06B92F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EF9A3CE22F481BAE00E42E3A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					EF9A3D182F481BAE00E42E3A = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					EF9A3D192F481BAE00E42E3A = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					EFAC06A92F60C75D006F7E54 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					EFAC06B82F60C79A006F7E54 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+				};
+			};
+			buildConfigurationList = EF9A3CE52F481BAE00E42E3A /* Build configuration list for PBXProject "Mazda OAuth Helper" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = EF9A3CE12F481BAD00E42E3A;
+			minimizedProjectReferenceProxies = 1;
+			productRefGroup = EF9A3CE62F481BAE00E42E3A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EF9A3D182F481BAE00E42E3A /* Mazda OAuth Helper */,
+				EF9A3D192F481BAE00E42E3A /* Mazda OAuth Helper Extension */,
+				EFAC06A92F60C75D006F7E54 /* com.mazda.oauth-helper-ios */,
+				EFAC06B82F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EF9A3D122F481BAE00E42E3A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF9A3D012F481BAE00E42E3A /* Main.storyboard in Resources */,
+				EF9A3D022F481BAE00E42E3A /* Assets.xcassets in Resources */,
+				EF9A3D032F481BAE00E42E3A /* Main.html in Resources */,
+				EF9A3D042F481BAE00E42E3A /* Script.js in Resources */,
+				EF9A3D052F481BAE00E42E3A /* Style.css in Resources */,
+				EF5228442F5D1BF300277125 /* mazdaIcon.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EF9A3D162F481BAE00E42E3A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF3A65D62F68E61E0071B6B8 /* popup.js in Resources */,
+				EF9A3D0A2F481BAE00E42E3A /* background.js in Resources */,
+				EF9A3D0B2F481BAE00E42E3A /* capture.html in Resources */,
+				EF9A3D0C2F481BAE00E42E3A /* capture.js in Resources */,
+				EF88C21A2F5E5613000BCEBB /* Assets.xcassets in Resources */,
+				EF58EF2F2F5FA34C00C9572A /* manifest.json in Resources */,
+				EF9A3D0D2F481BAE00E42E3A /* popup.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EFAC06A82F60C75D006F7E54 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EFAC06B72F60C79A006F7E54 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EF9A3D112F481BAE00E42E3A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF9A3CFF2F481BAE00E42E3A /* AppDelegate.swift in Sources */,
+				EF9A3D002F481BAE00E42E3A /* ViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EF9A3D152F481BAE00E42E3A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF9A3D082F481BAE00E42E3A /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EFAC06A62F60C75D006F7E54 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EFAC06B52F60C79A006F7E54 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EF9A3D202F481BAE00E42E3A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EF9A3D192F481BAE00E42E3A /* Mazda OAuth Helper Extension */;
+			targetProxy = EF9A3D212F481BAE00E42E3A /* PBXContainerItemProxy */;
+		};
+		EFAC06D02F60C79A006F7E54 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EFAC06B82F60C79A006F7E54 /* com.mazda.oauth-helper-extension-ios */;
+			targetProxy = EFAC06CF2F60C79A006F7E54 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		EF9A3CE32F481BAE00E42E3A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_LOOPS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		EF9A3CE42F481BAE00E42E3A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_LOOPS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+			};
+			name = Release;
+		};
+		EF9A3D1A2F481BAE00E42E3A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Mazda OAuth Helper/Info.plist";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mazda.oauth-helper";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		EF9A3D1B2F481BAE00E42E3A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Mazda OAuth Helper/Info.plist";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mazda.oauth-helper";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		EF9A3D1C2F481BAE00E42E3A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AUTOMATION_APPLE_EVENTS = NO;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				INFOPLIST_FILE = "Mazda OAuth Helper Extension/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mazda.oauth-helper.extension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		EF9A3D1D2F481BAE00E42E3A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AUTOMATION_APPLE_EVENTS = NO;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				INFOPLIST_FILE = "Mazda OAuth Helper Extension/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mazda.oauth-helper.extension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		EFAC06B22F60C75E006F7E54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Mazda OAuth Helper-iOS/Info.plist";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mazda.oauth-helper-ios";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EFAC06B32F60C75E006F7E54 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Mazda OAuth Helper-iOS/Info.plist";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mazda.oauth-helper-ios";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		EFAC06D42F60C79A006F7E54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Mazda OAuth Helper-iOS Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Mazda OAuth Helper Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mazda.oauth-helper-ios.extension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EFAC06D52F60C79A006F7E54 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Mazda OAuth Helper-iOS Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Mazda OAuth Helper Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.mazda.oauth-helper-ios.extension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		EF9A3CE52F481BAE00E42E3A /* Build configuration list for PBXProject "Mazda OAuth Helper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EF9A3CE32F481BAE00E42E3A /* Debug */,
+				EF9A3CE42F481BAE00E42E3A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EF9A3D1E2F481BAE00E42E3A /* Build configuration list for PBXNativeTarget "Mazda OAuth Helper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EF9A3D1A2F481BAE00E42E3A /* Debug */,
+				EF9A3D1B2F481BAE00E42E3A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EF9A3D1F2F481BAE00E42E3A /* Build configuration list for PBXNativeTarget "Mazda OAuth Helper Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EF9A3D1C2F481BAE00E42E3A /* Debug */,
+				EF9A3D1D2F481BAE00E42E3A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EFAC06B42F60C75E006F7E54 /* Build configuration list for PBXNativeTarget "com.mazda.oauth-helper-ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EFAC06B22F60C75E006F7E54 /* Debug */,
+				EFAC06B32F60C75E006F7E54 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EFAC06D32F60C79A006F7E54 /* Build configuration list for PBXNativeTarget "com.mazda.oauth-helper-extension-ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EFAC06D42F60C79A006F7E54 /* Debug */,
+				EFAC06D52F60C79A006F7E54 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = EF9A3CE22F481BAE00E42E3A /* Project object */;
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>com​.mazda​.oauth​-helper​.msauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>msauth</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>com​.mazda​.oauth​-helper​.msauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>msauth.com.mazdausa.mazdaiphone</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

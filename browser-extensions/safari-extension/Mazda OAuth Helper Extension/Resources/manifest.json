@@ -1,15 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Mazda OAuth Helper",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Captures Mazda mobile OAuth redirects for use with pymazda library",
   "permissions": ["webNavigation", "tabs", "cookies"],
-  "host_permissions": [
-    "https://*.na.id.mazda.com/*",
-    "https://*.eu.id.mazda.com/*",
-    "https://*.ap.id.mazda.com/*",
-    "https://*.au.id.mazda.com/*"
-  ],
+  "host_permissions": ["*://*.mazda.com/*"],
   "background": {
     "service_worker": "background.js"
   },
