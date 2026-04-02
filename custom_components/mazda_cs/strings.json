@@ -13,6 +13,13 @@
         },
         "description": "Select your region, then you will be redirected to sign in with your Mazda account."
       },
+      "reauth_region": {
+        "title": "Authentication method changed",
+        "description": "Mazda Connected Services now uses a new sign-in method. Please confirm your region below.\n\nNote: Canada (MCI) and Australia (MA) are new options that did not exist previously.",
+        "data": {
+          "region": "Region"
+        }
+      },
       "reauth_confirm": {
         "title": "Re-authenticate with Mazda",
         "description": "Your Mazda session has expired. Please re-authenticate."
@@ -40,7 +47,7 @@
         "name": "Hood"
       },
       "fuel_lid": {
-        "name": "δ | Fuel lid"
+        "name": "Fuel lid"
       },
       "ev_plugged_in": {
         "name": "Plugged in"
@@ -64,7 +71,10 @@
         "name": "Rear right tire pressure warning"
       },
       "tpms_battery_warning": {
-        "name": "β | Tire pressure battery"
+        "name": "Tire pressure battery"
+      },
+      "tpms_system_fault": {
+        "name": "Tire pressure system fault"
       },
       "mnt_tyre_at_flg": {
         "name": "δ | MntTyreAtFlg"
@@ -82,7 +92,7 @@
         "name": "Oil deterioration warning"
       },
       "hazard_lights": {
-        "name": "Hazard lights"
+        "name": "Hazard lights-on warning"
       },
       "scr_maintenance_warning": {
         "name": "SCR maintenance warning"
@@ -106,7 +116,13 @@
         "name": "Rear right window"
       },
       "tns_lamp": {
-        "name": "β | Exterior lights warning"
+        "name": "Exterior lights-on warning"
+      },
+      "pw_sav_mode": {
+        "name": "Power saving mode"
+      },
+      "health_lights_problem": {
+        "name": "Light problem warning"
       }
     },
     "button": {
@@ -155,6 +171,9 @@
       }
     },
     "sensor": {
+      "vehicle_status_timestamp": {
+        "name": "Vehicle status last updated"
+      },
       "fuel_remaining_percentage": {
         "name": "Fuel remaining percentage"
       },
@@ -210,7 +229,7 @@
         "name": "Drive 1 fuel consumption"
       },
       "dr_oil_deteriorate_level": {
-        "name": "δ | DROilDeteriorateLevel"
+        "name": "Oil health"
       },
       "drive1_fuel_efficiency_mpg": {
         "name": "Drive 1 fuel efficiency (MPG)"
@@ -248,11 +267,8 @@
       "power_control_status": {
         "name": "δ | PowerControlStatus"
       },
-      "pw_sav_mode": {
-        "name": "δ | Power saving mode"
-      },
       "soc_ecm_a_est": {
-        "name": "δ | 12v battery SoC"
+        "name": "12v battery state of charge"
       }
     },
     "switch": {
@@ -264,6 +280,9 @@
       },
       "enable_dev_sensors": {
         "name": "δ | Development sensors"
+      },
+      "enable_button_result_polling": {
+        "name": "ο | Remote control events (see ReadMe)"
       }
     }
   },

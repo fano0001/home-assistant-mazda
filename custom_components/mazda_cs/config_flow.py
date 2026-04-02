@@ -13,6 +13,7 @@ from homeassistant.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN, MAZDA_REGIONS
 from .oauth import MazdaOAuth2Implementation
+from .pymazda.client import Client as MazdaAPI
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -65,9 +66,40 @@ class MazdaOAuth2FlowHandler(
         self.flow_impl = MazdaOAuth2Implementation(self.hass, self._region)
         return await self.async_step_auth()
 
+    # Re-enable after removing migration code — 2027 or later
+    # async def async_step_reauth(self, _: Mapping[str, Any]) -> ConfigFlowResult:
+    #     """Perform reauth upon an API authentication error."""
+    #     return await self.async_step_reauth_confirm()
+
+    # Migration workflow from v1→v2: if no token, ask for region
     async def async_step_reauth(self, _: Mapping[str, Any]) -> ConfigFlowResult:
         """Perform reauth upon an API authentication error."""
+        reauth_entry = self._get_reauth_entry()
+        if not reauth_entry.data.get("token"):
+            # v1→v2 migration: no OAuth token yet, region may be wrong or missing
+            return await self.async_step_reauth_region()
         return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_region(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle region confirmation during v1→v2 migration reauth."""
+        if user_input is not None:
+            self._region = user_input[CONF_REGION]
+            return await self.async_step_pick_implementation()
+
+        reauth_entry = self._get_reauth_entry()
+        return self.async_show_form(
+            step_id="reauth_region",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_REGION,
+                        default=reauth_entry.data.get(CONF_REGION, "MNAO"),
+                    ): vol.In(MAZDA_REGIONS),
+                }
+            ),
+        )
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
@@ -76,7 +108,6 @@ class MazdaOAuth2FlowHandler(
         if user_input is None:
             return self.async_show_form(step_id="reauth_confirm")
 
-        # Get the region from the existing entry for reauth
         reauth_entry = self._get_reauth_entry()
         self._region = reauth_entry.data.get(CONF_REGION, "MNAO")
         return await self.async_step_pick_implementation()
@@ -109,5 +140,23 @@ class MazdaOAuth2FlowHandler(
             )
         self._abort_if_unique_id_configured()
 
-        # Use the user_id as the title (see if email can be found earlier and used here)
-        return self.async_create_entry(title=f"Mazda ({user_id[:8]})", data=data)
+        # Attempt to fetch the account email address for a friendlier title
+        title = f"Mazda ({user_id[:8]})"
+        try:
+
+            async def _token_provider():
+                return data["token"]["access_token"]
+
+            client = MazdaAPI(user_id, self._region, _token_provider)
+            await client.attach()
+            user_info = await client.get_user_info()
+            await client.close()
+            email = user_info.get("userInfo", {}).get("contactMailAddress", "")
+            if email:
+                title = f"Mazda ({email})"
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug(
+                "Could not fetch account email for title; using user_id fallback"
+            )
+
+        return self.async_create_entry(title=title, data=data)

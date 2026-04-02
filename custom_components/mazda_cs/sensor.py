@@ -161,6 +161,15 @@ def _ev_remaining_range_bev_value(data):
 
 SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
+        key="vehicle_status_timestamp",
+        translation_key="vehicle_status_timestamp",
+        icon="mdi:calendar-clock",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["status"]["lastUpdatedTimestamp"] is not None,
+        value=lambda data: data["status"]["lastUpdatedTimestamp"],
+    ),
+    MazdaSensorEntityDescription(
         key="fuel_remaining_percentage",
         translation_key="fuel_remaining_percentage",
         icon="mdi:gas-station",
@@ -182,7 +191,7 @@ SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
         key="odometer",
         translation_key="odometer",
-        icon="mdi:speedometer",
+        icon="mdi:counter",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -232,7 +241,7 @@ SENSOR_ENTITIES = [
     MazdaSensorEntityDescription(
         key="tire_pressure_timestamp",
         translation_key="tire_pressure_timestamp",
-        icon="mdi:tire",
+        icon="mdi:calendar-clock",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["status"]["tirePressure"]["tirePressureTimestamp"] is not None,
@@ -348,7 +357,7 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"] is not None,
+        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"] is not None,
         value=lambda data: data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"],
     ),
     MazdaSensorEntityDescription(
@@ -389,7 +398,7 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"] is not None,
+        is_supported=lambda data: data["hasSCR"] and data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"] is not None,
         value=lambda data: data["status"]["scrMaintenanceInfo"]["nextScrMaintenanceDistance"],
     ),
     MazdaSensorEntityDescription(
@@ -399,7 +408,7 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["isDiesel"] and data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] is not None,
+        is_supported=lambda data: data["hasSCR"] and data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] is not None,
         value=lambda data: round(data["status"]["scrMaintenanceInfo"]["ureaTankLevel"] / 255 * 100, 1),
     ),
     MazdaSensorEntityDescription(
@@ -438,21 +447,13 @@ SENSOR_ENTITIES = [
         value=lambda data: data["status"]["electricalInformation"]["powerControlStatus"],
     ),
     MazdaSensorEntityDescription(
-        key="pw_sav_mode",
-        translation_key="pw_sav_mode",
-        icon="mdi:power-sleep",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["enableDevSensors"] and data["status"]["vehicleCondition"]["pwSavMode"] is not None,
-        value=lambda data: data["status"]["vehicleCondition"]["pwSavMode"],
-    ),
-    MazdaSensorEntityDescription(
         key="soc_ecm_a_est",
         translation_key="soc_ecm_a_est",
         icon="mdi:car-battery",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["enableDevSensors"] and data["status"]["batteryStatus"]["socEcmAEst"] is not None and data["status"]["batteryStatus"]["socEcmAEst"] <= 127,
+        is_supported=lambda data: data["status"]["batteryStatus"]["socEcmAEst"] is not None and data["status"]["batteryStatus"]["socEcmAEst"] <= 127,
         value=lambda data: round(data["status"]["batteryStatus"]["socEcmAEst"] / 127 * 100, 1),
     ),
 ]

@@ -11,6 +11,8 @@ import aiohttp
 import jwt
 import voluptuous as vol
 
+from datetime import datetime, timezone
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_REGION, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -25,6 +27,7 @@ from homeassistant.helpers import (
     config_validation as cv,
     device_registry as dr,
 )
+
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -33,7 +36,16 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import MazdaAuth
-from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DATA_VEHICLES, DOMAIN
+from .const import (
+    DATA_CLIENT,
+    DATA_COORDINATOR,
+    DATA_HEALTH_COORDINATOR,
+    DATA_REGION,
+    DATA_VEHICLES,
+    DOMAIN,
+    OPTION_BUTTON_RESULT_POLLING,
+    REMOTE_COMMAND_COOLDOWN_SECONDS,
+)
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
@@ -45,6 +57,8 @@ from .pymazda.exceptions import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+EVENT_REMOTE_SERVICE_RESULT = "mazda_cs_remote_service_result"
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -90,16 +104,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         await session.async_ensure_token_valid()
+    except ConfigEntryAuthFailed:
+        raise
+    except (aiohttp.ClientConnectionError, TimeoutError) as err:
+        raise ConfigEntryNotReady(
+            f"Transient connection error during token validation, will retry: {err}"
+        ) from err
     except Exception as err:
-        raise ConfigEntryAuthFailed from err
+        raise ConfigEntryNotReady(
+            f"Unexpected error during token validation: {err}"
+        ) from err
 
-    # Extract email from the access token JWT for pymazda Connection
-    email = ""
+    # Extract JWT sub claim for device identity (used to derive device-id header)
+    user_sub = ""
     try:
         token_data = jwt.decode(
             session.token["access_token"], options={"verify_signature": False}
         )
-        email = token_data.get("sub", "")
+        user_sub = token_data.get("sub", "")
         _LOGGER.debug(
             "Access token claims: sub=%s, scp=%s, tfp=%s, exp=%s, azp=%s",
             token_data.get("sub"),
@@ -109,17 +131,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             token_data.get("azp"),
         )
     except (jwt.DecodeError, KeyError):
-        _LOGGER.warning("Could not decode email from access token")
+        _LOGGER.warning("Could not decode sub claim from access token")
 
-    if not email:
+    if not user_sub:
         _LOGGER.error("No 'sub' claim in access token — cannot identify user")
 
-    _LOGGER.debug("Using sub=%s as device identity for region=%s", email, region)
+    _LOGGER.debug("Using sub=%s as device identity for region=%s", user_sub, region)
 
     auth = MazdaAuth(session)
     websession = aiohttp_client.async_get_clientsession(hass)
     mazda_client = MazdaAPI(
-        email,
+        user_sub,
         region,
         access_token_provider=auth.async_get_access_token,
         websession=websession,
@@ -198,19 +220,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         attach_result = await mazda_client.attach()
         _LOGGER.debug("Device session attached to Mazda backend: %s", attach_result)
     except Exception as ex:
-        _LOGGER.warning("attach failed (continuing anyway to test getVecBaseInfos): %s", ex)
+        _LOGGER.warning(
+            "attach failed (continuing anyway to test getVecBaseInfos): %s", ex
+        )
 
     async def async_update_data():
         """Fetch data from Mazda API."""
         try:
             vehicles = await with_timeout(mazda_client.get_vehicles())
 
+            # -------------------------------------------------------------------------
+            # TEST: getInboxList — commented out for future analysis
+            # actiontype values include:
+            # Safety & Security tab	"004,009,014,032,034"
+            # Activity History tab	"001,021,031,033"
+            # Maintenance / Health tab	"010"
+            # Vehicle Status tab (non-EV / base EV)	"003,019,022,023,024,026,027"
+            # Vehicle Status tab (EV with Battery Care)	"003,019,022,023,024,026,027,029,030"
+            # Status 0 = all, 2 = unread
+            # Uncomment to capture raw JSON response
+            # -------------------------------------------------------------------------
+            # try:
+            #     inbox_list_raw = await with_timeout(
+            #         mazda_client.get_inbox_list([v["id"] for v in vehicles])
+            #     )
+            #     _LOGGER.warning("TEST getInboxList: %s", inbox_list_raw)
+            # except Exception as ex:  # noqa: BLE001
+            #     _LOGGER.warning("TEST getInboxList failed: %s", ex)
+            # -------------------------------------------------------------------------
+
             # The Mazda API can throw an error when multiple simultaneous requests are
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
                 vehicle["region"] = region
                 vehicle["enableWindows"] = entry.options.get("enable_windows", False)
-                vehicle["enableDevSensors"] = entry.options.get("enable_dev_sensors", False)
+                vehicle["enableDevSensors"] = entry.options.get(
+                    "enable_dev_sensors", False
+                )
+                vehicle["enableButtonResultPolling"] = entry.options.get(
+                    OPTION_BUTTON_RESULT_POLLING, False
+                )
                 vehicle["status"] = await with_timeout(
                     mazda_client.get_vehicle_status(vehicle["id"])
                 )
@@ -254,16 +303,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=timedelta(seconds=180),
     )
 
+    async def async_update_health_data():
+        """Fetch health report data for each vehicle. Returns a list aligned with coordinator.data."""
+        vehicles = coordinator.data or []
+        result = []
+        for vehicle in vehicles:
+            try:
+                health = await with_timeout(
+                    mazda_client.get_health_report(vehicle["id"])
+                )
+                _LOGGER.debug("getHealthReport: %s", health)
+                result.append(health)
+            except Exception as ex:  # noqa: BLE001
+                _LOGGER.warning("getHealthReport failed: %s", ex)
+                result.append(None)
+        return result
+
+    health_coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=f"{DOMAIN}_health",
+        update_method=async_update_health_data,
+        update_interval=timedelta(hours=12),
+    )
+
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         DATA_CLIENT: mazda_client,
         DATA_COORDINATOR: coordinator,
+        DATA_HEALTH_COORDINATOR: health_coordinator,
         DATA_REGION: region,
         DATA_VEHICLES: [],
     }
 
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
+
+    # Schedule health report fetch in the background — non-critical, must not block setup
+    entry.async_create_background_task(
+        hass, health_coordinator.async_refresh(), "mazda_cs_health_initial_refresh"
+    )
 
     # Setup components
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -282,10 +361,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old config entries to new format."""
     if entry.version == 1:
-        # Clear old email/password data; this will trigger reauth
-        # since async_setup_entry checks for "token" key
+        # Preserve region; clear old email/password credentials.
+        # async_setup_entry will raise ConfigEntryAuthFailed (no "token" key),
+        # triggering reauth so the user completes OAuth2.
+        new_data = {CONF_REGION: entry.data.get(CONF_REGION, "MNAO")}
         hass.config_entries.async_update_entry(
-            entry, data={}, minor_version=1, version=2
+            entry, data=new_data, minor_version=1, version=2
         )
     return True
 
@@ -328,6 +409,39 @@ class MazdaEntity(CoordinatorEntity):
             model=f"{self.data['modelYear']} {self.data['carlineName']}",
             name=self.vehicle_name,
         )
+
+    async def _poll_and_unlock(self, action: str, command_utc: datetime) -> None:
+        """Poll for remote command result then reset the command-in-progress flag."""
+        try:
+            if self.data.get("enableButtonResultPolling", False):
+                result = await self.client.poll_remote_service_result(
+                    self.vehicle_id, command_utc
+                )
+                if result:
+                    self.hass.bus.async_fire(
+                        EVENT_REMOTE_SERVICE_RESULT,
+                        {
+                            "vehicle_id": self.vehicle_id,
+                            "vin": self.vin,
+                            "action": action,
+                            **result,
+                        },
+                    )
+                    _LOGGER.debug(
+                        "Remote result for %s vin=%s: success=%s title=%s",
+                        action,
+                        self.vin,
+                        result["success"],
+                        result["title"],
+                    )
+                else:
+                    _LOGGER.debug(
+                        "Remote result timed out: action=%s vin=%s", action, self.vin
+                    )
+            else:
+                await asyncio.sleep(REMOTE_COMMAND_COOLDOWN_SECONDS)
+        finally:
+            self._command_in_progress = False
 
     @property
     def data(self):

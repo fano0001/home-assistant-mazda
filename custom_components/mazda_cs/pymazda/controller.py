@@ -7,14 +7,27 @@ _SUCCESS_CODES = {"200S00", "MSG200001"}
 
 
 class Controller:  # noqa: D101
-    def __init__(self, email, region, access_token_provider, session_refresh_provider=None, websession=None):  # noqa: D107
-        self.connection = Connection(email, region, access_token_provider, session_refresh_provider, websession)
+    def __init__(
+        self,
+        user_sub,
+        region,
+        access_token_provider,
+        session_refresh_provider=None,
+        websession=None,
+    ):  # noqa: D107
+        self.connection = Connection(
+            user_sub,
+            region,
+            access_token_provider,
+            session_refresh_provider,
+            websession,
+        )
 
     async def attach(self, locale="en-US", country="US"):  # noqa: D102
         """Register device session with Mazda backend. Must be called after login."""
         post_body = {
             "internaluserid": "__INTERNAL_ID__",
-            "serviceType": 0,   # 0=CV (Connected Vehicle services); -1=MyMazda (app features)
+            "serviceType": 0,  # 0=CV (Connected Vehicle services); -1=MyMazda (app features)
             "deviceInfo": {
                 "deviceToken": self.connection.base_api_device_id,
                 "deviceType": 1,
@@ -129,7 +142,10 @@ class Controller:  # noqa: D101
         return response
 
     async def door_unlock(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -145,7 +161,10 @@ class Controller:  # noqa: D101
         return response
 
     async def door_lock(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -161,7 +180,10 @@ class Controller:  # noqa: D101
         return response
 
     async def light_on(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -203,7 +225,10 @@ class Controller:  # noqa: D101
         return response
 
     async def light_off(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -219,7 +244,10 @@ class Controller:  # noqa: D101
         return response
 
     async def engine_start(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -235,7 +263,10 @@ class Controller:  # noqa: D101
         return response
 
     async def engine_stop(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -248,6 +279,16 @@ class Controller:  # noqa: D101
         if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to stop engine")
 
+        return response
+
+    async def get_user_info(self):  # noqa: D102
+        response = await self.connection.api_request(
+            "POST",
+            "remoteServices/getUserInfo/v4",
+            body_dict={"internaluserid": "__INTERNAL_ID__"},
+            needs_keys=True,
+            needs_auth=True,
+        )
         return response
 
     async def get_nickname(self, vin):  # noqa: D102
@@ -328,7 +369,10 @@ class Controller:  # noqa: D101
             raise MazdaException("Failed to send POI")
 
     async def charge_start(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -344,7 +388,10 @@ class Controller:  # noqa: D101
         return response
 
     async def charge_stop(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -360,7 +407,10 @@ class Controller:  # noqa: D101
         return response
 
     async def get_hvac_setting(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -408,7 +458,10 @@ class Controller:  # noqa: D101
         return response
 
     async def hvac_on(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -424,7 +477,10 @@ class Controller:  # noqa: D101
         return response
 
     async def hvac_off(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -440,7 +496,10 @@ class Controller:  # noqa: D101
         return response
 
     async def refresh_vehicle_status(self, internal_vin):  # noqa: D102
-        post_body = {"internaluserid": "__INTERNAL_ID__", "internalvin": str(internal_vin)}
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
 
         response = await self.connection.api_request(
             "POST",
@@ -452,6 +511,33 @@ class Controller:  # noqa: D101
 
         if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to refresh vehicle status")
+
+        return response
+
+    async def get_inbox_list(
+        self,
+        internal_vin_list,
+        actiontype="001,021,031,033",
+        status=0,
+        limit=100,
+        offset=0,
+    ):  # noqa: D102
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvinlist": [{"internalVin": v} for v in internal_vin_list],
+            "actiontype": actiontype,
+            "status": status,
+            "limit": limit,
+            "offset": offset,
+        }
+
+        response = await self.connection.api_request(
+            "POST",
+            "remoteServices/getInboxList/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
+        )
 
         return response
 

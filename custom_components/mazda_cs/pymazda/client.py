@@ -1,8 +1,12 @@
-import datetime  # noqa: D100
+import asyncio  # noqa: D100
+import datetime
 import json
+import logging
 
 from .controller import Controller
 from .exceptions import MazdaConfigException
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _build_tpms_timestamp(tpms: dict):
@@ -21,26 +25,41 @@ def _build_tpms_timestamp(tpms: dict):
 
 class Client:  # noqa: D101
     def __init__(  # noqa: D107
-        self, email, region, access_token_provider, websession=None, use_cached_vehicle_list=False
+        self,
+        user_sub,
+        region,
+        access_token_provider,
+        websession=None,
+        use_cached_vehicle_list=False,
     ):
-        if email is None or len(email) == 0:
-            raise MazdaConfigException("Invalid or missing email address")
+        if user_sub is None or len(user_sub) == 0:
+            raise MazdaConfigException(
+                "Invalid or missing user identity (JWT sub claim)"
+            )
 
-        self.controller = Controller(email, region, access_token_provider, session_refresh_provider=self.attach, websession=websession)
+        self.controller = Controller(
+            user_sub,
+            region,
+            access_token_provider,
+            session_refresh_provider=self.attach,
+            websession=websession,
+        )
         self._region = region
         self._use_cached_vehicle_list = use_cached_vehicle_list
         self._cached_vehicle_list = None
         self._cached_state = {}
         self._session_id = None
-        self._flash_light_counts: dict[int, int] = {}  # vehicle_id → CarFinderParameter (0/1/2)
+        self._flash_light_counts: dict[
+            int, int
+        ] = {}  # vehicle_id → CarFinderParameter (0/1/2)
 
     # Per-region locale and country code for the attach call, unsure if these are necessary
     _REGION_ATTACH_PARAMS = {
         "MNAO": ("en-US", "US"),
-        "MCI":  ("en-CA", "CA"),
-        "MME":  ("en-GB", "GB"),
-        "MJO":  ("ja-JP", "JP"),
-        "MA":   ("en-AU", "AU"),
+        "MCI": ("en-CA", "CA"),
+        "MME": ("en-GB", "GB"),
+        "MJO": ("ja-JP", "JP"),
+        "MA": ("en-AU", "AU"),
     }
 
     async def attach(self):  # noqa: D102
@@ -60,6 +79,10 @@ class Client:  # noqa: D101
             await self.controller.detach(self._session_id)
             self._session_id = None
             self.controller.connection.device_session_id = None
+
+    async def get_user_info(self):  # noqa: D102
+        """Fetch account user info from getUserInfo/v4 and return the raw response."""
+        return await self.controller.get_user_info()
 
     async def get_vehicles(self):  # noqa: D102
         if self._use_cached_vehicle_list and self._cached_vehicle_list is not None:
@@ -123,10 +146,10 @@ class Client:  # noqa: D101
                     "exteriorColorName"
                 ),
                 "isPHEV": current_vec_base_info.get("phevFlg") == 1,
-                "isDiesel": current_vec_base_info.get("scrFlg") != 2,
                 "isElectric": current_vec_base_info.get("econnectType", 0) == 1,
                 "hasFuel": other_veh_info.get("CVServiceInformation", {}).get("fuelType", "00") != "05",
                 "hasRangeExtender": current_vec_base_info.get("rexFlg") == 1,
+                "hasSCR": current_vec_base_info.get("scrFlg") == 1,
                 "hasRemoteStart": current_vec_base_info.get("remoteEngineStartFlg") == 1,
                 "hasBatteryHeater": current_vec_base_info.get("batteryHeaterFlg") == 1,
                 "hasFlashLight": current_vec_base_info.get("flashLightFlg") == 1,
@@ -162,7 +185,19 @@ class Client:  # noqa: D101
             )
 
         vehicle_status = {
-            "lastUpdatedTimestamp": alert_info.get("OccurrenceDate"),
+            "lastUpdatedTimestamp": max(
+                (
+                    datetime.datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
+                        tzinfo=datetime.timezone.utc
+                    )
+                    for ts in [
+                        remote_info.get("OccurrenceDate"),
+                        alert_info.get("OccurrenceDate"),
+                    ]
+                    if ts
+                ),
+                default=None,
+            ),
             "latitude": latitude,
             "longitude": longitude,
             "positionTimestamp": remote_info.get("PositionInfo", {}).get(
@@ -184,9 +219,11 @@ class Client:  # noqa: D101
                 "hoodOpen": alert_info.get("Door", {}).get("DrStatHood") == 1,
                 "fuelLidOpen": alert_info.get("Door", {}).get("FuelLidOpenStatus") == 1,
                 # Not yet integrated: doorOpenWarning
-                "doorOpenWarning": alert_info.get("Door", {}).get("DrOpnWrn") == 1, 
+                "doorOpenWarning": alert_info.get("Door", {}).get("DrOpnWrn") == 1,
             },
-            # Door locks not yet integrated as sensors
+            # LockLinkSw = physical lock linkage rod position switch per door.
+            # Reads mechanical position, not commanded state — front/rear may differ
+            # at rest due to door design differences (rear doors have child lock linkage).
             "doorLocks": {
                 "driverDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwDrv")
                 == 1,
@@ -243,13 +280,12 @@ class Client:  # noqa: D101
                 ),
             },
             "tirePressureWarnings": {
-                # TPMS Status not implemented
                 "tpmsStatus": remote_info.get("TPMSInformation", {}).get("TPMSStatus") == 1,
                 "frontLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FLTyrePressWarn") == 1,
                 "frontRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("FRTyrePressWarn") == 1,
                 "rearLeftTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RLTyrePressWarn") == 1,
                 "rearRightTirePressureWarning": remote_info.get("TPMSInformation", {}).get("RRTyrePressWarn") == 1,
-                "tpmsBatteryWarning": remote_info.get("TPMSInformation", {}).get("TPMSSystemFlt") == 1,
+                "tpmsSystemFault": remote_info.get("TPMSInformation", {}).get("TPMSSystemFlt") == 1,
                 "mntTyreAtFlg": remote_info.get("TPMSInformation", {}).get("MntTyreAtFlg") == 1,
             },
             "driveInformation": {
@@ -301,7 +337,7 @@ class Client:  # noqa: D101
             "lock_state",
             lock_value,
             datetime.datetime.strptime(
-                vehicle_status["lastUpdatedTimestamp"], "%Y%m%d%H%M%S"
+                alert_info.get("OccurrenceDate"), "%Y%m%d%H%M%S"
             ).replace(tzinfo=datetime.UTC),
         )
 
@@ -376,7 +412,9 @@ class Client:  # noqa: D101
         self._flash_light_counts[vehicle_id] = self._FLASH_COUNT_TO_PARAM.get(count, 1)
 
     async def flash_lights(self, vehicle_id: int) -> None:  # noqa: D102
-        car_finder_parameter = self._flash_light_counts.get(vehicle_id, 1)  # default: 10 flashes
+        car_finder_parameter = self._flash_light_counts.get(
+            vehicle_id, 1
+        )  # default: 10 flashes
         await self.controller.flash_lights(vehicle_id, car_finder_parameter)
 
     async def unlock_doors(self, vehicle_id):  # noqa: D102
@@ -452,6 +490,114 @@ class Client:  # noqa: D101
 
     async def refresh_vehicle_status(self, vehicle_id):  # noqa: D102
         await self.controller.refresh_vehicle_status(vehicle_id)
+
+    async def get_health_report(self, vehicle_id):  # noqa: D102
+        response = await self.controller.get_health_report(vehicle_id)
+        remote_info = response.get("remoteInfos", [{}])[0]
+        warnings = remote_info.get("Warnings", {})
+        return {
+            "warnings": {
+                "oilAmountExceed": bool(warnings.get("WngOilAmountExceed")),
+                "oilShortage": bool(warnings.get("WngOilShortage")),
+                "headLamp": bool(warnings.get("WngHeadLamp")),
+                "smallLamp": bool(warnings.get("WngSmallLamp")),
+                "turnLamp": bool(warnings.get("WngTurnLamp")),
+                "tailLamp": bool(warnings.get("WngTailLamp")),
+                "brakeLamp": bool(warnings.get("WngBreakLamp")),
+                "rearFogLamp": bool(warnings.get("WngRearFogLamp")),
+                "backLamp": bool(warnings.get("WngBackLamp")),
+                "tyrePressureLow": bool(warnings.get("WngTyrePressureLow")),
+                "tpmsStatus": bool(warnings.get("WngTpmsStatus")),
+            }
+        }
+
+    async def get_inbox_list(
+        self,
+        internal_vin_list,
+        actiontype="001,021,031,033",
+        status=0,
+        limit=100,
+        offset=0,
+    ):  # noqa: D102
+        return await self.controller.get_inbox_list(
+            internal_vin_list, actiontype, status, limit, offset
+        )
+
+    async def poll_remote_service_result(  # noqa: D102
+        self, vehicle_id: int, command_utc: datetime.datetime
+    ) -> dict | None:
+        """Poll inbox for the result of a remote command.
+
+        Checks at 6 s, 18 s, 23 s, 28s, and 40 s after command_utc (typ. 2-4 API calls).
+        Returns a result dict on match, or None if no result found within 40 s.
+        """
+        # Allow 5 s clock-skew buffer; resultId embeds the server-side request timestamp
+        cutoff = command_utc - datetime.timedelta(seconds=5)
+
+        loop_start = datetime.datetime.now(datetime.timezone.utc)
+
+        for delay, elapsed in (
+            (6, 6),
+            (12, 18),
+            (5, 23),
+            (5, 28),
+            (12, 40),
+        ):  # cumulative waits
+            await asyncio.sleep(delay)
+            try:
+                response = await self.controller.get_inbox_list(
+                    [vehicle_id], actiontype="001,019,021", status=0, limit=10
+                )
+                # Collect entries whose resultId timestamp >= cutoff (oldest-first match)
+                # resultId format: "001YYYYMMDDHHMMSS_01" — prefix(3) + timestamp(14) + suffix(3)
+                matching = []
+                for entry in response.get("InboxInfos", []):
+                    result_id = entry.get("resultId", "")
+                    if len(result_id) >= 17:
+                        try:
+                            result_dt = datetime.datetime.strptime(
+                                result_id[3:17], "%Y%m%d%H%M%S"
+                            ).replace(tzinfo=datetime.timezone.utc)
+                            if result_dt >= cutoff:
+                                matching.append(entry)
+                        except ValueError:
+                            pass
+                if matching:
+                    # List is newest-first; take the oldest (last) to match our command
+                    entry = matching[-1]
+                    # Re-derive result_dt from the matched entry (loop variable may be stale)
+                    # matched_result_id = entry.get("resultId", "")
+                    # matched_result_dt = datetime.datetime.strptime(
+                    #     matched_result_id[3:17], "%Y%m%d%H%M%S"
+                    # ).replace(tzinfo=datetime.timezone.utc)
+                    # result_id_delta = (matched_result_dt - loop_start).total_seconds()
+                    # push_date_str = entry.get("pushDate", "")
+                    # try:
+                    #     push_dt = datetime.datetime.strptime(
+                    #         push_date_str, "%Y%m%d%H%M%S"
+                    #     ).replace(tzinfo=datetime.timezone.utc)
+                    #     push_delta = (push_dt - loop_start).total_seconds()
+                    #     push_delta_str = f"{push_delta:+.1f}s"
+                    # except ValueError:
+                    #     push_delta_str = "n/a"
+                    # _LOGGER.warning(
+                    #     "poll_remote_service_result: match at %ds mark — result_id: %+.1fs from loop start, pushDate: %s from loop start",
+                    #     elapsed,
+                    #     result_id_delta,
+                    #     push_delta_str,
+                    # )
+                    return {
+                        "success": entry.get("messageContents") == "Success",
+                        "title": entry.get("messageTitle", ""),
+                        "message": entry.get("messageContents", ""),
+                        "details": entry.get("messageDetails", ""),
+                    }
+            except Exception:  # noqa: BLE001
+                _LOGGER.debug(
+                    "poll_remote_service_result: inbox fetch failed (will retry)"
+                )
+
+        return None
 
     async def update_vehicle_nickname(self, vin, new_nickname):  # noqa: D102
         await self.controller.update_nickname(vin, new_nickname)

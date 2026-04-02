@@ -49,10 +49,10 @@
                 "name": "Kofferraum"
             },
             "fuel_lid": {
-                "name": "δ | Tankdeckel"
+                "name": "Tankdeckel"
             },
             "hazard_lights": {
-                "name": "Warnblinklicht"
+                "name": "Warnblinklicht aktiv"
             },
             "scr_maintenance_warning": {
                 "name": "SCR-Wartungswarnung"
@@ -88,7 +88,10 @@
                 "name": "Reifendruckwarnung hinten rechts"
             },
             "tpms_battery_warning": {
-                "name": "β | Reifendruckbatterie"
+                "name": "Reifendruckbatterie"
+            },
+            "tpms_system_fault": {
+                "name": "TPMS-Systemfehler"
             },
             "mnt_tyre_at_flg": {
                 "name": "δ | MntTyreAtFlg"
@@ -106,7 +109,13 @@
                 "name": "Ölqualitäts-Warnung"
             },
             "tns_lamp": {
-                "name": "β | Außenlicht-Warnung"
+                "name": "Außenlicht-an-Warnung"
+            },
+            "pw_sav_mode": {
+                "name": "Energiesparmodus"
+            },
+            "health_lights_problem": {
+                "name": "Leuchtmittelfehler-Warnung"
             }
         },
         "button": {
@@ -166,6 +175,9 @@
             "fuel_distance_remaining": {
                 "name": "Reichweite benzin"
             },
+            "vehicle_status_timestamp": {
+                "name": "Fahrzeugstatus zuletzt aktualisiert"
+            },
             "fuel_remaining_percentage": {
                 "name": "Tank Füllstand in %"
             },
@@ -194,7 +206,7 @@
                 "name": "Fahrt 1 Kraftstoffverbrauch"
             },
             "dr_oil_deteriorate_level": {
-                "name": "δ | DROilDeteriorateLevel"
+                "name": "Ölzustand"
             },
             "next_maintenance_distance": {
                 "name": "Strecke bis nächster Inspektion"
@@ -229,11 +241,8 @@
             "power_control_status": {
                 "name": "δ | PowerControlStatus"
             },
-            "pw_sav_mode": {
-                "name": "δ | Energiesparmodus"
-            },
             "soc_ecm_a_est": {
-                "name": "δ | 12V-Batterie SoC"
+                "name": "12V-Batterie Ladezustand"
             }
         },
         "switch": {
@@ -245,6 +254,9 @@
             },
             "enable_dev_sensors": {
                 "name": "δ | Entwicklungssensoren"
+            },
+            "enable_button_result_polling": {
+                "name": "ο | Fernbedienungsereignisse (siehe ReadMe)"
             }
         }
     }

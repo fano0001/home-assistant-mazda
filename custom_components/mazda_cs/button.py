@@ -1,8 +1,10 @@
 """Platform for Mazda button integration."""
+
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
@@ -13,6 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import (
+    EVENT_REMOTE_SERVICE_RESULT,
     MazdaAPI as MazdaAPIClient,
     MazdaAPIEncryptionException,
     MazdaEntity,
@@ -65,31 +68,34 @@ class MazdaButtonEntityDescription(ButtonEntityDescription):
         [MazdaAPIClient, str, int, DataUpdateCoordinator], Awaitable
     ] = handle_button_press
 
+    # Set to False for buttons that don't send a remote command to the vehicle
+    track_result: bool = field(default=True)
+
 
 BUTTON_ENTITIES = [
     MazdaButtonEntityDescription(
         key="start_engine",
         translation_key="start_engine",
         icon="mdi:engine",
-        is_supported=lambda data: not data["isElectric"] and data["hasRemoteStart"],
+        is_supported=lambda data: data["hasRemoteStart"],
     ),
     MazdaButtonEntityDescription(
         key="stop_engine",
         translation_key="stop_engine",
         icon="mdi:engine-off",
-        is_supported=lambda data: not data["isElectric"] and data["hasRemoteStart"],
+        is_supported=lambda data: data["hasRemoteStart"],
     ),
     MazdaButtonEntityDescription(
         key="turn_on_hazard_lights",
         translation_key="turn_on_hazard_lights",
         icon="mdi:hazard-lights",
-        is_supported=lambda data: not data["isElectric"],
+        is_supported=lambda data: data["hasFlashLight"],
     ),
     MazdaButtonEntityDescription(
         key="turn_off_hazard_lights",
         translation_key="turn_off_hazard_lights",
         icon="mdi:hazard-lights",
-        is_supported=lambda data: not data["isElectric"],
+        is_supported=lambda data: data["hasFlashLight"],
     ),
     MazdaButtonEntityDescription(
         key="flash_lights",
@@ -103,6 +109,7 @@ BUTTON_ENTITIES = [
         icon="mdi:refresh",
         async_press=handle_refresh_vehicle_status,
         is_supported=lambda data: data["isElectric"],
+        track_result=False,
     ),
 ]
 
@@ -141,9 +148,18 @@ class MazdaButtonEntity(MazdaEntity, ButtonEntity):
         self.entity_description = description
 
         self._attr_unique_id = f"{self.vin}_{description.key}"
+        self._command_in_progress = False
 
     async def async_press(self) -> None:
         """Press the button."""
+        if self.entity_description.track_result and self._command_in_progress:
+            return
+        command_utc = datetime.now(timezone.utc)
         await self.entity_description.async_press(
             self.client, self.entity_description.key, self.vehicle_id, self.coordinator
         )
+        if self.entity_description.track_result:
+            self._command_in_progress = True
+            self.hass.async_create_task(
+                self._poll_and_unlock(self.entity_description.key, command_utc)
+            )

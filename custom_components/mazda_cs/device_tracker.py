@@ -1,4 +1,5 @@
 """Platform for Mazda device tracker integration."""
+
 from homeassistant.components.device_tracker import SourceType, TrackerEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

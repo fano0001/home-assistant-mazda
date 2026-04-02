@@ -70,14 +70,22 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
         data = {
             "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
             "ui_locales": self.hass.config.language,
-            **({"country": "CA", "email_domain_restrict": "mci", "international_phone_code_list": "mci"} if self._region == "MCI" else {}),
+            **(
+                {
+                    "country": "CA",
+                    "email_domain_restrict": "mci",
+                    "international_phone_code_list": "mci",
+                }
+                if self._region == "MCI"
+                else {}
+            ),
             "x-app-name": MSAL_APP_NAME,
             "x-app-ver": MSAL_APP_VER,
             "x-client-SKU": MSAL_CLIENT_SKU,
             "x-client-Ver": MSAL_CLIENT_VER,
-            "x-client-OS": "34",                    # Android SDK_INT 
-            "x-client-DM": "Pixel 9",               # Android device model
-            "x-client-CPU": "arm64-v8a",            # Android ABI
+            "x-client-OS": "34",  # Android SDK_INT
+            "x-client-DM": "Pixel 9",  # Android device model
+            "x-client-CPU": "arm64-v8a",  # Android ABI
             "haschrome": "1",
             "return-client-request-id": "true",
             "client_info": "1",

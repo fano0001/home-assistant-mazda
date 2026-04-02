@@ -1,19 +1,19 @@
 """Diagnostics support for the Mazda integration."""
+
 from __future__ import annotations
 
 from typing import Any
 
 from homeassistant.components.diagnostics.util import async_redact_data
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceEntry
 
 from .const import DATA_COORDINATOR, DOMAIN
 
-TO_REDACT_INFO = [CONF_EMAIL, CONF_PASSWORD]
-TO_REDACT_DATA = ["vin", "id", "latitude", "longitude"]
+TO_REDACT_INFO = ["access_token", "id_token", "refresh_token"]
+TO_REDACT_DATA = ["vin", "id", "latitude", "longitude", "nickname"]
 
 
 async def async_get_config_entry_diagnostics(

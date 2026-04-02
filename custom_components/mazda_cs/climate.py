@@ -1,6 +1,8 @@
 """Platform for Mazda climate integration."""
+
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.climate import (
@@ -66,7 +68,10 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
 
     _attr_translation_key = "climate"
     _attr_supported_features = (
-        ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
+        ClimateEntityFeature.TARGET_TEMPERATURE
+        | ClimateEntityFeature.PRESET_MODE
+        | ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TURN_ON
     )
     _attr_hvac_modes = [HVACMode.HEAT_COOL, HVACMode.OFF]
     _attr_preset_modes = [
@@ -104,6 +109,7 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
                 self._attr_min_temp = 15.5
                 self._attr_max_temp = 28.5
 
+        self._command_in_progress = False
         self._update_state_attributes()
 
     @callback
@@ -149,11 +155,19 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set a new HVAC mode."""
+        if self._command_in_progress:
+            return
+        command_utc = datetime.now(timezone.utc)
         if hvac_mode == HVACMode.HEAT_COOL:
             await self.client.turn_on_hvac(self.vehicle_id)
+            action = "hvacOn"
         elif hvac_mode == HVACMode.OFF:
             await self.client.turn_off_hvac(self.vehicle_id)
-
+            action = "hvacOff"
+        else:
+            return
+        self._command_in_progress = True
+        self.hass.async_create_task(self._poll_and_unlock(action, command_utc))
         self._handle_coordinator_update()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
