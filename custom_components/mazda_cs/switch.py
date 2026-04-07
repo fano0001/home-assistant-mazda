@@ -1,6 +1,5 @@
 """Platform for Mazda switch integration."""
 
-from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
@@ -12,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import MazdaAPI as MazdaAPIClient, MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN, OPTION_BUTTON_RESULT_POLLING
+from .const import CONF_ENABLE_PUSH, DATA_CLIENT, DATA_COORDINATOR, DOMAIN
 
 
 async def async_setup_entry(
@@ -34,7 +33,7 @@ async def async_setup_entry(
         for index in range(len(coordinator.data))
     ]
     entities += [
-        MazdaButtonResultPollingSwitch(hass, config_entry, coordinator, index)
+        MazdaEnablePushSwitch(hass, config_entry, coordinator, index)
         for index in range(len(coordinator.data))
     ]
     entities += [
@@ -133,12 +132,12 @@ class MazdaEnableDevSensorsSwitch(SwitchEntity):
         await self._hass.config_entries.async_reload(self._config_entry.entry_id)
 
 
-class MazdaButtonResultPollingSwitch(SwitchEntity):
-    """Diagnostic switch to enable/disable button result event polling (getInboxList)."""
+class MazdaEnablePushSwitch(SwitchEntity):
+    """Config switch to enable/disable push notification events."""
 
-    _attr_translation_key = "enable_button_result_polling"
+    _attr_translation_key = "push_notification_events"
     _attr_icon = "mdi:bell-ring-outline"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_has_entity_name = True
 
     def __init__(
@@ -148,34 +147,33 @@ class MazdaButtonResultPollingSwitch(SwitchEntity):
         coordinator: DataUpdateCoordinator,
         index: int,
     ) -> None:
-        """Initialize the button result polling switch."""
+        """Initialize the push notification events switch."""
         self._hass = hass
         self._config_entry = config_entry
-        self._coordinator = coordinator
         vin = coordinator.data[index]["vin"]
-        self._attr_unique_id = f"{vin}_enable_button_result_polling"
+        self._attr_unique_id = f"{vin}_push_notification_events"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, vin)})
 
     @property
     def is_on(self) -> bool:
-        """Return true if button result polling is enabled."""
-        return self._config_entry.options.get(OPTION_BUTTON_RESULT_POLLING, False)
+        """Return true if push notification events are enabled."""
+        return self._config_entry.options.get(CONF_ENABLE_PUSH, False)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Enable button result polling."""
+        """Enable push notification events and reload the integration."""
         self._hass.config_entries.async_update_entry(
             self._config_entry,
-            options={**self._config_entry.options, OPTION_BUTTON_RESULT_POLLING: True},
+            options={**self._config_entry.options, CONF_ENABLE_PUSH: True},
         )
-        await self._coordinator.async_request_refresh()
+        await self._hass.config_entries.async_reload(self._config_entry.entry_id)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Disable button result polling."""
+        """Disable push notification events and reload the integration."""
         self._hass.config_entries.async_update_entry(
             self._config_entry,
-            options={**self._config_entry.options, OPTION_BUTTON_RESULT_POLLING: False},
+            options={**self._config_entry.options, CONF_ENABLE_PUSH: False},
         )
-        await self._coordinator.async_request_refresh()
+        await self._hass.config_entries.async_reload(self._config_entry.entry_id)
 
 
 class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
@@ -213,18 +211,16 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
         """Start charging the vehicle."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
         await self.client.start_charging(self.vehicle_id)
         self._command_in_progress = True
-        self.hass.async_create_task(self._poll_and_unlock("chargeStart", command_utc))
+        self.hass.async_create_task(self._push_and_unlock("chargeStart"))
         await self.refresh_status_and_write_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Stop charging the vehicle."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
         await self.client.stop_charging(self.vehicle_id)
         self._command_in_progress = True
-        self.hass.async_create_task(self._poll_and_unlock("chargeStop", command_utc))
+        self.hass.async_create_task(self._push_and_unlock("chargeStop"))
         await self.refresh_status_and_write_state()

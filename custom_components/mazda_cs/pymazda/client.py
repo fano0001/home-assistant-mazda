@@ -49,6 +49,7 @@ class Client:  # noqa: D101
         self._cached_vehicle_list = None
         self._cached_state = {}
         self._session_id = None
+        self._fcm_token: str | None = None  # stored so re-attach (600100 recovery) reuses it
         self._flash_light_counts: dict[
             int, int
         ] = {}  # vehicle_id → CarFinderParameter (0/1/2)
@@ -62,10 +63,17 @@ class Client:  # noqa: D101
         "MA": ("en-AU", "AU"),
     }
 
-    async def attach(self):  # noqa: D102
-        """Register device session. Call once after authentication before other API calls."""
+    async def attach(self, fcm_token=None):  # noqa: D102
+        """Register device session. Call once after authentication before other API calls.
+
+        fcm_token: Firebase Cloud Messaging registration token. When provided it is
+        stored on the client and forwarded as deviceToken. Subsequent calls (e.g. from
+        the 600100 session-refresh path) reuse the stored token automatically.
+        """
+        if fcm_token:
+            self._fcm_token = fcm_token
         locale, country = self._REGION_ATTACH_PARAMS.get(self._region, ("en-US", "US"))
-        response = await self.controller.attach(locale, country)
+        response = await self.controller.attach(locale, country, fcm_token=self._fcm_token)
         if response and response.get("data"):
             session_id = response["data"].get("userinfo", {}).get("sessionId")
             if session_id:
@@ -83,6 +91,10 @@ class Client:  # noqa: D101
     async def get_user_info(self):  # noqa: D102
         """Fetch account user info from getUserInfo/v4 and return the raw response."""
         return await self.controller.get_user_info()
+
+    async def get_cv_user_ids(self):  # noqa: D102
+        """Fetch CV user IDs from getCvUserIds/v4 and return the raw response."""
+        return await self.controller.get_cv_user_ids()
 
     async def get_vehicles(self):  # noqa: D102
         if self._use_cached_vehicle_list and self._cached_vehicle_list is not None:
@@ -459,6 +471,12 @@ class Client:  # noqa: D101
         self.__save_api_value(vehicle_id, "hvac_setting", hvac_setting)
 
         return hvac_setting
+
+    async def get_notify_setting(self, vehicle_id):  # noqa: D102
+        return await self.controller.get_notify_setting(vehicle_id)
+
+    async def set_notify_setting(self, vehicle_id, settings_dict):  # noqa: D102
+        return await self.controller.set_notify_setting(vehicle_id, settings_dict)
 
     async def set_hvac_setting(  # noqa: D102
         self, vehicle_id, temperature, temperature_unit, front_defroster, rear_defroster

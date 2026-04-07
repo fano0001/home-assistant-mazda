@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.lock import LockEntity
@@ -10,10 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import (
-    EVENT_REMOTE_SERVICE_RESULT,
-    MazdaEntity,
-)
+from . import MazdaEntity
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
 
 
@@ -55,18 +51,16 @@ class MazdaLock(MazdaEntity, LockEntity):
         """Lock the vehicle doors."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
         await self.client.lock_doors(self.vehicle_id)
         self._command_in_progress = True
         self.async_write_ha_state()
-        self.hass.async_create_task(self._poll_and_unlock("doorLock", command_utc))
+        self.hass.async_create_task(self._push_and_unlock("doorLock"))
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the vehicle doors."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
         await self.client.unlock_doors(self.vehicle_id)
         self._command_in_progress = True
         self.async_write_ha_state()
-        self.hass.async_create_task(self._poll_and_unlock("doorUnlock", command_utc))
+        self.hass.async_create_task(self._push_and_unlock("doorUnlock"))

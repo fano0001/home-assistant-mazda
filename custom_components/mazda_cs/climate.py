@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.climate import (
@@ -157,7 +156,6 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
         """Set a new HVAC mode."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
         if hvac_mode == HVACMode.HEAT_COOL:
             await self.client.turn_on_hvac(self.vehicle_id)
             action = "hvacOn"
@@ -167,7 +165,7 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
         else:
             return
         self._command_in_progress = True
-        self.hass.async_create_task(self._poll_and_unlock(action, command_utc))
+        self.hass.async_create_task(self._push_and_unlock(action))
         self._handle_coordinator_update()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:

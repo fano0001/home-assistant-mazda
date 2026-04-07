@@ -15,6 +15,7 @@ class Controller:  # noqa: D101
         session_refresh_provider=None,
         websession=None,
     ):  # noqa: D107
+        self.region = region
         self.connection = Connection(
             user_sub,
             region,
@@ -23,13 +24,18 @@ class Controller:  # noqa: D101
             websession,
         )
 
-    async def attach(self, locale="en-US", country="US"):  # noqa: D102
-        """Register device session with Mazda backend. Must be called after login."""
+    async def attach(self, locale="en-US", country="US", fcm_token=None):  # noqa: D102
+        """Register device session with Mazda backend. Must be called after login.
+
+        fcm_token: Firebase Cloud Messaging registration token. When provided, it is
+        sent as deviceToken so Mazda's backend can push notifications to this client.
+        Falls back to the SHA1-derived device ID if not provided.
+        """
         post_body = {
             "internaluserid": "__INTERNAL_ID__",
             "serviceType": 0,  # 0=CV (Connected Vehicle services); -1=MyMazda (app features)
             "deviceInfo": {
-                "deviceToken": self.connection.base_api_device_id,
+                "deviceToken": fcm_token or self.connection.base_api_device_id,
                 "deviceType": 1,
             },
             "locale": locale,
@@ -60,7 +66,7 @@ class Controller:  # noqa: D101
         )
 
     async def get_language_pkg(self):  # noqa: D102
-        postBody = {"platformType": "ANDROID", "region": "MNAO", "version": "2.0.4"}
+        postBody = {"platformType": "ANDROID", "region": self.region, "version": "2.0.4"}
         return await self.connection.api_request(
             "POST",
             "junction/getLanguagePkg/v4",
@@ -291,6 +297,16 @@ class Controller:  # noqa: D101
         )
         return response
 
+    async def get_cv_user_ids(self):  # noqa: D102
+        response = await self.connection.api_request(
+            "POST",
+            "remoteServices/getCvUserIds/v4",
+            body_dict={"internaluserid": "__INTERNAL_ID__"},
+            needs_keys=True,
+            needs_auth=True,
+        )
+        return response
+
     async def get_nickname(self, vin):  # noqa: D102
         if len(vin) != 17:
             raise MazdaException("Invalid VIN")
@@ -422,6 +438,45 @@ class Controller:  # noqa: D101
 
         if response["resultCode"] not in _SUCCESS_CODES:
             raise MazdaException("Failed to get HVAC setting")
+
+        return response
+
+    async def get_notify_setting(self, internal_vin):  # noqa: D102
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
+
+        response = await self.connection.api_request(
+            "POST",
+            "remoteServices/getNotifySetting/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
+        )
+
+        if response["resultCode"] not in _SUCCESS_CODES:
+            raise MazdaException("Failed to get notify setting")
+
+        return response
+
+    async def set_notify_setting(self, internal_vin, settings_dict):  # noqa: D102
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+            **settings_dict,
+        }
+
+        response = await self.connection.api_request(
+            "POST",
+            "remoteServices/updateNotifySetting/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
+        )
+
+        if response["resultCode"] not in _SUCCESS_CODES:
+            raise MazdaException("Failed to set notify setting")
 
         return response
 

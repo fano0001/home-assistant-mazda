@@ -9,13 +9,72 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Region"
+                    "region": "Region",
+                    "enable_push_notifications": "Push-Benachrichtigungen aktivieren"
+                },
+                "data_description": {
+                    "enable_push_notifications": "Empfange Echtzeit-Push-Benachrichtigungen von Mazda (erfordert FCM-Registrierung). Deaktivieren, wenn keine push-basierte Bestätigung von Fernbefehlen benötigt wird."
                 },
                 "description": "Wähle deine Region, dann wirst du zur Anmeldung mit deinem Mazda-Konto weitergeleitet."
+            },
+            "reauth_region": {
+                "title": "Authentifizierungsmethode geändert",
+                "description": "Mazda Connected Services verwendet jetzt eine neue Anmeldemethode. Bitte bestätige unten deine Region.\n\nHinweis: Kanada (MCI) und Australien (MA) sind neue Optionen, die zuvor nicht vorhanden waren.",
+                "data": {
+                    "region": "Region"
+                }
             },
             "reauth_confirm": {
                 "title": "Erneut bei Mazda authentifizieren",
                 "description": "Deine Mazda-Sitzung ist abgelaufen. Bitte authentifiziere dich erneut."
+            },
+            "reconfigure": {
+                "title": "Push-Benachrichtigungseinstellungen",
+                "description": "Ändere, ob diese Integration für Mazda-Push-Benachrichtigungen registriert wird. Keine erneute Authentifizierung erforderlich.",
+                "data": {
+                    "enable_push_notifications": "Push-Benachrichtigungen aktivieren"
+                },
+                "data_description": {
+                    "enable_push_notifications": "Empfange Echtzeit-Push-Benachrichtigungen von Mazda (erfordert FCM-Registrierung). Deaktivieren, wenn keine push-basierte Bestätigung von Fernbefehlen benötigt wird."
+                }
+            }
+        }
+    },
+    "options": {
+        "abort": {
+            "no_vehicles": "Keine Fahrzeuge gefunden. Stelle sicher, dass die Integration korrekt eingerichtet ist.",
+            "cannot_connect": "Benachrichtigungseinstellungen konnten nicht von Mazda abgerufen werden. Bitte später erneut versuchen."
+        },
+        "step": {
+            "init": {
+                "title": "Benachrichtigungseinstellungen",
+                "description": "Wähle das Fahrzeug aus, für das Benachrichtigungen konfiguriert werden sollen.",
+                "data": {
+                    "vin": "Fahrzeug"
+                }
+            },
+            "notify": {
+                "title": "Benachrichtigungseinstellungen",
+                "description": "Wähle aus, welche Push-Benachrichtigungen für {vehicle_name} empfangen werden sollen.",
+                "data": {
+                    "remoteControlNotify": "Fernsteuerung",
+                    "openDoorNotify": "Tür geöffnet",
+                    "unlockDoorNotify": "Tür entsperrt",
+                    "lightHazardNotify": "Warnblinklicht",
+                    "openHoodNotify": "Motorhaube geöffnet",
+                    "forgotPlugNotify": "Stecker vergessen",
+                    "powerSaveModeNotify": "Energiesparmodus",
+                    "quickChargeNotify": "Schnellladung abgeschlossen",
+                    "timerChargeNotify": "Geplantes Laden",
+                    "fullChargeNotify": "Vollständig geladen",
+                    "aftercoolingNotify": "Kühlung abgeschlossen",
+                    "airconTemperatureNotify": "Temperatur erreicht",
+                    "praiseNotify": "Öko-Fahren",
+                    "settingSaveFlag": "Einstellungen speichern"
+                },
+                "data_description": {
+                    "settingSaveFlag": "Wenn deaktiviert, setzt Mazda deine Benachrichtigungseinstellungen nach 24 Stunden auf die vorherigen Werte zurück."
+                }
             }
         }
     },
@@ -43,37 +102,13 @@
                 "name": "Linke Hintertür"
             },
             "rear_right_door": {
-                "name": "Rechte hintertür"
+                "name": "Rechte Hintertür"
             },
             "trunk": {
                 "name": "Kofferraum"
             },
             "fuel_lid": {
                 "name": "Tankdeckel"
-            },
-            "hazard_lights": {
-                "name": "Warnblinklicht aktiv"
-            },
-            "scr_maintenance_warning": {
-                "name": "SCR-Wartungswarnung"
-            },
-            "sunroof": {
-                "name": "Schiebedach"
-            },
-            "sunroof_tilt": {
-                "name": "Schiebedach (Kippstellung)"
-            },
-            "driver_window": {
-                "name": "Fahrerfenster"
-            },
-            "passenger_window": {
-                "name": "Beifahrerfenster"
-            },
-            "rear_left_window": {
-                "name": "Fenster hinten links"
-            },
-            "rear_right_window": {
-                "name": "Fenster hinten rechts"
             },
             "front_left_tire_pressure_warning": {
                 "name": "Reifendruckwarnung vorne links"
@@ -108,6 +143,30 @@
             "oil_deteriorate_warning": {
                 "name": "Ölqualitäts-Warnung"
             },
+            "hazard_lights": {
+                "name": "Warnblinklicht aktiv"
+            },
+            "scr_maintenance_warning": {
+                "name": "SCR-Wartungswarnung"
+            },
+            "sunroof": {
+                "name": "Schiebedach"
+            },
+            "sunroof_tilt": {
+                "name": "Schiebedach (Kippstellung)"
+            },
+            "driver_window": {
+                "name": "Fahrerfenster"
+            },
+            "passenger_window": {
+                "name": "Beifahrerfenster"
+            },
+            "rear_left_window": {
+                "name": "Fenster hinten links"
+            },
+            "rear_right_window": {
+                "name": "Fenster hinten rechts"
+            },
             "tns_lamp": {
                 "name": "Außenlicht-an-Warnung"
             },
@@ -120,7 +179,7 @@
         },
         "button": {
             "refresh_vehicle_status": {
-                "name": "Status updaten"
+                "name": "Status aktualisieren"
             },
             "start_engine": {
                 "name": "Motor starten"
@@ -133,6 +192,9 @@
             },
             "turn_on_hazard_lights": {
                 "name": "Warnblinklicht einschalten"
+            },
+            "flash_lights": {
+                "name": "Lichter aufblinken lassen"
             }
         },
         "climate": {
@@ -142,7 +204,7 @@
         },
         "device_tracker": {
             "device_tracker": {
-                "name": "Auto tracker"
+                "name": "Auto-Tracker"
             }
         },
         "lock": {
@@ -150,12 +212,22 @@
                 "name": "Schlösser"
             }
         },
+        "select": {
+            "flash_light_count": {
+                "name": "Anzahl Lichtblinkvorgänge",
+                "state": {
+                    "2": "2 Blinkvorgänge",
+                    "10": "10 Blinkvorgänge",
+                    "30": "30 Blinkvorgänge"
+                }
+            }
+        },
         "sensor": {
             "ev_charge_level": {
                 "name": "Batterieladestand"
             },
             "ev_remaining_charging_time": {
-                "name" : "Verbleibende Ladezeit (AC)"
+                "name": "Verbleibende Ladezeit (AC)"
             },
             "ev_quick_charge_time": {
                 "name": "Verbleibende Schnellladezeit"
@@ -173,13 +245,13 @@
                 "name": "Reifendruck vorne rechts"
             },
             "fuel_distance_remaining": {
-                "name": "Reichweite benzin"
+                "name": "Reichweite Benzin"
             },
             "vehicle_status_timestamp": {
                 "name": "Fahrzeugstatus zuletzt aktualisiert"
             },
             "fuel_remaining_percentage": {
-                "name": "Tank Füllstand in %"
+                "name": "Tankfüllstand in %"
             },
             "odometer": {
                 "name": "Kilometerstand"
@@ -199,6 +271,9 @@
             "drive1_distance": {
                 "name": "Fahrt 1 Strecke"
             },
+            "next_maintenance_distance": {
+                "name": "Strecke bis nächster Inspektion"
+            },
             "drive1_fuel_efficiency": {
                 "name": "Fahrt 1 Kraftstoffeffizienz"
             },
@@ -208,8 +283,11 @@
             "dr_oil_deteriorate_level": {
                 "name": "Ölzustand"
             },
-            "next_maintenance_distance": {
-                "name": "Strecke bis nächster Inspektion"
+            "drive1_fuel_efficiency_mpg": {
+                "name": "Fahrt 1 Kraftstoffeffizienz (MPG)"
+            },
+            "drive1_fuel_consumption_gal100mi": {
+                "name": "Fahrt 1 Kraftstoffverbrauch (gal/100mi)"
             },
             "oil_level_status": {
                 "name": "δ | OilLevelStatusMonitor"
@@ -255,8 +333,32 @@
             "enable_dev_sensors": {
                 "name": "δ | Entwicklungssensoren"
             },
-            "enable_button_result_polling": {
-                "name": "β | Fernbedienungsereignisse (siehe ReadMe)"
+            "push_notification_events": {
+                "name": "Push-Benachrichtigungsereignisse"
+            }
+        }
+    },
+    "services": {
+        "send_poi": {
+            "name": "POI senden",
+            "description": "Sendet einen GPS-Standort als POI (Point of Interest) an das Navigationssystem des Fahrzeugs. Erfordert eine Navigations-SD-Karte im Fahrzeug.",
+            "fields": {
+                "device_id": {
+                    "name": "Fahrzeug",
+                    "description": "Das Fahrzeug, an das der GPS-Standort gesendet werden soll."
+                },
+                "latitude": {
+                    "name": "Breitengrad",
+                    "description": "Der Breitengrad des zu sendenden Standorts."
+                },
+                "longitude": {
+                    "name": "Längengrad",
+                    "description": "Der Längengrad des zu sendenden Standorts."
+                },
+                "poi_name": {
+                    "name": "POI-Name",
+                    "description": "Ein benutzerfreundlicher Name für den Standort."
+                }
             }
         }
     }

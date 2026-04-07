@@ -11,11 +11,10 @@ import aiohttp
 import jwt
 import voluptuous as vol
 
-from datetime import datetime, timezone
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_REGION, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
@@ -37,15 +36,21 @@ from homeassistant.helpers.update_coordinator import (
 
 from .api import MazdaAuth
 from .const import (
+    CONF_ENABLE_PUSH,
+    CONF_FCM_CREDENTIALS,
     DATA_CLIENT,
     DATA_COORDINATOR,
+    DATA_FCM_LISTENER,
     DATA_HEALTH_COORDINATOR,
     DATA_REGION,
     DATA_VEHICLES,
     DOMAIN,
-    OPTION_BUTTON_RESULT_POLLING,
     REMOTE_COMMAND_COOLDOWN_SECONDS,
+    REMOTE_CONTROL_EVENTS_ENABLED,
+    REMOTE_PUSH_TIMEOUT_SECONDS,
 )
+from .fcm_listener import EVENT_MAZDA_PUSH, MazdaFcmListener
+from .pymazda.push._conductor import conductor_device_id_from_user_sub
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
@@ -215,15 +220,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         }
     )
 
-    # Register device session with Mazda backend (required before any remoteServices calls)
-    try:
-        attach_result = await mazda_client.attach()
-        _LOGGER.debug("Device session attached to Mazda backend: %s", attach_result)
-    except Exception as ex:
-        _LOGGER.warning(
-            "attach failed (continuing anyway to test getVecBaseInfos): %s", ex
-        )
-
     async def async_update_data():
         """Fetch data from Mazda API."""
         try:
@@ -257,9 +253,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 vehicle["enableDevSensors"] = entry.options.get(
                     "enable_dev_sensors", False
                 )
-                vehicle["enableButtonResultPolling"] = entry.options.get(
-                    OPTION_BUTTON_RESULT_POLLING, False
-                )
+
                 vehicle["status"] = await with_timeout(
                     mazda_client.get_vehicle_status(vehicle["id"])
                 )
@@ -327,10 +321,45 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=timedelta(hours=12),
     )
 
+    # Start FCM listener — coordinator must exist first so it can be passed in.
+    # Must complete before attach so we have a token to register with Mazda's backend.
+    # Derive Conductor deviceId from the JWT sub claim — same seed as the Mazda API
+    # device-id header — so both systems see a consistent device identity.
+    conductor_device_id = conductor_device_id_from_user_sub(user_sub) if user_sub else ""
+
+    enable_push = entry.options.get(CONF_ENABLE_PUSH, False)
+    fcm_listener = MazdaFcmListener(
+        hass,
+        entry,
+        coordinator,
+        region=region,
+        conductor_device_id=conductor_device_id,
+    )
+    if enable_push:
+        fcm_token = await fcm_listener.async_start()
+        if fcm_token:
+            _LOGGER.debug("FCM listener ready, token will be passed to attach")
+        else:
+            _LOGGER.debug("FCM unavailable — attach will use fallback device ID")
+    else:
+        fcm_token = None
+        _LOGGER.debug("Push notifications disabled — FCM registration skipped")
+
+    # Register device session with Mazda backend (required before any remoteServices calls)
+    _LOGGER.debug("attach: using fcm_token=%s", fcm_token)
+    try:
+        attach_result = await mazda_client.attach(fcm_token=fcm_token)
+        _LOGGER.debug("attach response: %s", attach_result)
+    except Exception as ex:
+        _LOGGER.warning(
+            "attach failed (continuing anyway to test getVecBaseInfos): %s", ex
+        )
+
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         DATA_CLIENT: mazda_client,
         DATA_COORDINATOR: coordinator,
+        DATA_FCM_LISTENER: fcm_listener,
         DATA_HEALTH_COORDINATOR: health_coordinator,
         DATA_REGION: region,
         DATA_VEHICLES: [],
@@ -368,6 +397,19 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config_entries.async_update_entry(
             entry, data=new_data, minor_version=1, version=2
         )
+    elif entry.version == 2 and entry.minor_version == 1:
+        # minor_version 2: introduce CONF_ENABLE_PUSH option.
+        # Opt existing entries out so they can consciously enable push via Reconfigure.
+        hass.config_entries.async_update_entry(
+            entry,
+            options={**entry.options, CONF_ENABLE_PUSH: False},
+            minor_version=2,
+        )
+        _LOGGER.warning(
+            "Migration Successful: Push notification event support disabled by default. "
+            "Reconfigure the integration to enable. See the ReadMe for more information."
+        )
+
     return True
 
 
@@ -380,15 +422,50 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_remove(DOMAIN, "send_poi")
 
     if unload_ok:
-        client = hass.data[DOMAIN][entry.entry_id].get(DATA_CLIENT)
-        if client:
-            try:
-                await client.detach()
-            except Exception:
-                pass
+        entry_data = hass.data[DOMAIN][entry.entry_id]
+
+        # Detach the Mazda API session when unloading while HA is running (covers
+        # both reload and explicit removal).  Skip on HA shutdown/restart so we
+        # don't race the event loop teardown for a no-op cleanup call.
+        if not hass.is_stopping:
+            client = entry_data.get(DATA_CLIENT)
+            if client:
+                try:
+                    await client.detach()
+                except Exception:
+                    pass
+
+        listener = entry_data.get(DATA_FCM_LISTENER)
+        if listener:
+            # Deleting the FID on reload would leave a stale fid in entry.data 
+            # causing a 404 on next startup when refreshing the FIS auth token.
+            await listener.async_stop(unregister=False)
+
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Called only when the config entry is permanently deleted by the user.
+
+    async_unload_entry runs first (MCS connection closed, session detached).
+    hass.data for this entry has already been cleaned up by that point, so
+    we read cleanup state directly from entry.data.
+
+    Deletes the Firebase Installation so that Mazda's backend receives
+    INVALID_REGISTRATION on its next push delivery attempt and removes the
+    stale Conductor entry.  Skipped automatically if no FIS credentials exist
+    (legacy GCM-only path or entry never fully set up).
+    """
+    from .pymazda.push._register import fis_delete_installation  # noqa: PLC0415
+
+    creds = entry.data.get(CONF_FCM_CREDENTIALS) or {}
+    fid = creds.get("fid")
+    refresh_token = creds.get("refresh_token")
+    if fid and refresh_token:
+        async with aiohttp.ClientSession() as session:
+            await fis_delete_installation(session, fid=fid, refresh_token=refresh_token)
 
 
 class MazdaEntity(CoordinatorEntity):
@@ -410,34 +487,50 @@ class MazdaEntity(CoordinatorEntity):
             name=self.vehicle_name,
         )
 
-    async def _poll_and_unlock(self, action: str, command_utc: datetime) -> None:
-        """Poll for remote command result then reset the command-in-progress flag."""
+    async def _push_and_unlock(self, action: str) -> None:
+        """Wait for a push event confirming the remote command, then reset the command-in-progress flag."""
         try:
-            if self.data.get("enableButtonResultPolling", False):
-                result = await self.client.poll_remote_service_result(
-                    self.vehicle_id, command_utc
-                )
-                if result:
+            if REMOTE_CONTROL_EVENTS_ENABLED:
+                push_event = asyncio.Event()
+                push_data: dict = {}
+
+                @callback
+                def _on_push(event) -> None:
+                    if (
+                        event.data.get("vin") == self.vin
+                        and event.data.get("action_code") in {"001", "021"}
+                    ):
+                        push_data.update(event.data)
+                        push_event.set()
+
+                unsub = self.hass.bus.async_listen(EVENT_MAZDA_PUSH, _on_push)
+                try:
+                    async with asyncio.timeout(REMOTE_PUSH_TIMEOUT_SECONDS):
+                        await push_event.wait()
+                    result_id = push_data.get("result_id", "")
                     self.hass.bus.async_fire(
                         EVENT_REMOTE_SERVICE_RESULT,
                         {
                             "vehicle_id": self.vehicle_id,
                             "vin": self.vin,
                             "action": action,
-                            **result,
+                            "success": result_id.endswith("_01"),
+                            "title": push_data.get("title", ""),
+                            "result_id": result_id,
                         },
                     )
                     _LOGGER.debug(
-                        "Remote result for %s vin=%s: success=%s title=%s",
+                        "Push result for %s vin=%s: result_id=%s",
                         action,
                         self.vin,
-                        result["success"],
-                        result["title"],
+                        result_id,
                     )
-                else:
+                except TimeoutError:
                     _LOGGER.debug(
-                        "Remote result timed out: action=%s vin=%s", action, self.vin
+                        "Push result timed out: action=%s vin=%s", action, self.vin
                     )
+                finally:
+                    unsub()
             else:
                 await asyncio.sleep(REMOTE_COMMAND_COOLDOWN_SECONDS)
         finally:

@@ -9,7 +9,11 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Region"
+                    "region": "Region",
+                    "enable_push_notifications": "Enable push notifications"
+                },
+                "data_description": {
+                    "enable_push_notifications": "Receive real-time push notifications from Mazda (requires FCM registration). Disable if you do not need push-based remote command confirmation."
                 },
                 "description": "Select your region, then you will be redirected to sign in with your Mazda account."
             },
@@ -23,6 +27,54 @@
             "reauth_confirm": {
                 "title": "Re-authenticate with Mazda",
                 "description": "Your Mazda session has expired. Please re-authenticate."
+            },
+            "reconfigure": {
+                "title": "Push notification settings",
+                "description": "Update whether this integration registers for Mazda push notifications. No re-authentication required.",
+                "data": {
+                    "enable_push_notifications": "Enable push notifications"
+                },
+                "data_description": {
+                    "enable_push_notifications": "Receive real-time push notifications from Mazda (requires FCM registration). Disable if you do not need push-based remote command confirmation."
+                }
+            }
+        }
+    },
+    "options": {
+        "abort": {
+            "no_vehicles": "No vehicles found. Ensure the integration is set up correctly.",
+            "cannot_connect": "Unable to retrieve notification settings from Mazda. Please try again later."
+        },
+        "step": {
+            "init": {
+                "title": "Notification settings",
+                "description": "Select the vehicle to configure notifications for.",
+                "data": {
+                    "vin": "Vehicle"
+                }
+            },
+            "notify": {
+                "title": "Notification settings",
+                "description": "Choose which push notifications to receive for {vehicle_name}.",
+                "data": {
+                    "remoteControlNotify": "Remote control",
+                    "openDoorNotify": "Door opened",
+                    "unlockDoorNotify": "Door unlocked",
+                    "lightHazardNotify": "Hazard lights",
+                    "openHoodNotify": "Hood opened",
+                    "forgotPlugNotify": "Forgot to plug-in",
+                    "powerSaveModeNotify": "Power save mode",
+                    "quickChargeNotify": "Quick charge complete",
+                    "timerChargeNotify": "Timer charge",
+                    "fullChargeNotify": "Full charge",
+                    "aftercoolingNotify": "After cooling",
+                    "airconTemperatureNotify": "A/C temperature reached",
+                    "praiseNotify": "Eco driving",
+                    "settingSaveFlag": "Save notification settings"
+                },
+                "data_description": {
+                    "settingSaveFlag": "If disabled, Mazda will reset your notification settings to their previous values after 24 hours."
+                }
             }
         }
     },
@@ -281,8 +333,8 @@
             "enable_dev_sensors": {
                 "name": "δ | Development sensors"
             },
-            "enable_button_result_polling": {
-                "name": "β | Remote control events (see ReadMe)"
+            "push_notification_events": {
+                "name": "Push notification events"
             }
         }
     },

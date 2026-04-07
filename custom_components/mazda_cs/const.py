@@ -5,11 +5,19 @@ DOMAIN = "mazda_cs"
 DATA_CLIENT = "mazda_client"
 DATA_COORDINATOR = "coordinator"
 DATA_HEALTH_COORDINATOR = "health_coordinator"
+DATA_FCM_LISTENER = "fcm_listener"
 DATA_REGION = "region"
 DATA_VEHICLES = "vehicles"
 
-OPTION_BUTTON_RESULT_POLLING = "enable_button_result_polling"
+# Persisted config entry key for FCM credentials (android_id, security_token, etc.)
+CONF_FCM_CREDENTIALS = "fcm_credentials"
+
+# Option: whether push notification registration (FCM) is enabled
+CONF_ENABLE_PUSH = "enable_push_notifications"
+
+REMOTE_CONTROL_EVENTS_ENABLED = False  # hardcoded; future: drive from config/API
 REMOTE_COMMAND_COOLDOWN_SECONDS = 3
+REMOTE_PUSH_TIMEOUT_SECONDS = 30
 
 MAZDA_REGIONS = {
     "MNAO": "North America",
