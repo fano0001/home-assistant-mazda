@@ -66,16 +66,6 @@ def derive_conductor_keys(app_key: str) -> tuple[str, str]:
     )
     return enc_key, sign_key
 
-
-#def conductor_device_id_from_user_sub(user_sub: str) -> str:
-#    """Derive Conductor deviceId from JWT sub claim.
-#
-#    Uses the same seed as the Mazda API ``device-id`` header (SHA1 of sub),
-#    so that the Conductor registration and the API session are seen as the
-#    same physical device by Mazda's backend.
-#    """
-#    return _uuid_from_bytes(user_sub.encode("utf-8"))
-
 def conductor_device_id_from_user_sub(user_sub: str) -> str:
     """Derive Conductor deviceId from JWT sub claim.
 
