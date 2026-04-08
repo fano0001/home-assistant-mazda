@@ -319,8 +319,10 @@ class MazdaOptionsFlowHandler(OptionsFlow):
                 vol.Optional(camel, default=bool(self._notify_raw.get(camel, 0))): selector.BooleanSelector()
                 for camel, _ in applicable
             }
+            # Default True regardless of server value (server returns 0 = don't save).
+            # Overriding ensures settings persist beyond Mazda's 24-hour reset window.
             notify_fields[
-                vol.Optional("settingSaveFlag", default=bool(self._notify_raw.get("settingSaveFlag", 1)))
+                vol.Optional("settingSaveFlag", default=True)
             ] = selector.BooleanSelector()
             schema = vol.Schema(notify_fields)
             return self.async_show_form(
@@ -331,12 +333,18 @@ class MazdaOptionsFlowHandler(OptionsFlow):
                 },
             )
 
-        # Build full lowercase settings dict for the API
-        applicable = _applicable_notify_keys(self._notify_raw, vehicle)
+        # Seed from server state: include every non-null field the API returned.
+        # updateNotifySetting is a full-state write; omitting a field that the server
+        # returned (even if the UI gates it) may silently reset it server-side.
         settings_dict: dict[str, int] = {
-            lower: (1 if user_input.get(camel, False) else 0)
-            for camel, lower in applicable
+            lower: int(self._notify_raw[camel])
+            for camel, lower in _NOTIFY_ITEMS
+            if self._notify_raw.get(camel) is not None
         }
+        # Override with the user's choices for fields that were shown in the UI.
+        applicable = _applicable_notify_keys(self._notify_raw, vehicle)
+        for camel, lower in applicable:
+            settings_dict[lower] = 1 if user_input.get(camel, False) else 0
         settings_dict["settingsaveflag"] = 1 if user_input.get("settingSaveFlag", True) else 0
 
         try:

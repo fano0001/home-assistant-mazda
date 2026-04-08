@@ -73,7 +73,7 @@
           "settingSaveFlag": "Save notification settings"
         },
         "data_description": {
-          "settingSaveFlag": "If disabled, Mazda will reset your notification settings to their previous values after 24 hours."
+          "settingSaveFlag": "If disabled, Mazda will reset vehicle status notification settings to their previous state after 24 hours."
         }
       }
     }
