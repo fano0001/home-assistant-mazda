@@ -31,6 +31,7 @@ and place it inside your Home Assistant Core installation's `custom_components` 
 > The chrome extension is tied to the folder location on your computer and may disappear if you move the folder.
 
 Mazda Connected Services uses OAuth authentication which blocks automated logins. Authentication requires a browser-based OAuth flow using a browser extension to capture the mobile app redirect URL.
+
 ## Setup
 
    ### chrome-extension
@@ -55,13 +56,59 @@ Mazda Connected Services uses OAuth authentication which blocks automated logins
    - Build the extension again
    - The app window should indicate the extension is 'On'.
 
-# Remote Control Events v1 (Notification Automation)
+# Push Notification Events
 
-> **This is a early, beta, opt-in feature enabled via the 'Remote control events' switch in the diagnostic section of the integration.**
-> I am working on v2 with proper push support and event documentation will be changing, meaning **automations will need updating in the future**. v1 lays the groundwork for v2 and is functionally very close to proper push support, if not ideal.
+Push notification events allow the integration to receive real-time updates from Mazda — for example, confirmation that a remote lock or unlock command was completed — without waiting for the next scheduled poll.
 
-When a button is pressed (lock, hazard, climate), the integration starts a background process that polls the inbox in MyMazda 1-5 times. As soon as a success or failure is detected, an event is fired in Home Assistant and the process stops. This event can then be detected to trigger automations, including notifications. See the [examples folder](https://github.com/fano0001/home-assistant-mazda/tree/main/examples/mazda_cs_remote_control_events.md) for notification automation. 
+## How it works
 
-* **Timing:** is specifically related to the intervals of typical responses for success/failure/rejection. 
-  * This will be obviated in v2, so unlikely I'll adjust further.
-  * In an effort to reduce calls to Mazda, the integration will send null button presses until this check is complete (Mazda rejects them with a busy notification anyways).
+When enabled, the integration registers with the andoid app's notification service. Push notifications are then sent to your Home Assistant, such as:
+
+- A remote command (lock, unlock, start engine, etc.) success and failure
+- A door being opened or left unlocked
+- Charging completing or starting
+
+After push events arrive the integration triggers an immediate refresh.
+
+Events are fired as Home Assistant events under `mazda_cs_push`, which can be used as an automation trigger.
+
+## Configuration 
+
+### Enable push notification events
+
+> [!IMPORTANT]
+> Push notification events are **disabled by default** and must be opted in to.
+
+**During initial setup**, a toggle to enable appears on setup alongside the region selector. 
+
+**After setup**, you can enable or disable it at any time via **Settings → Devices & Services → Mazda Connected Services → Three Dots → Reconfigure**. No re-login is required.
+
+**"Push notification events" switch** has been added to each vehicle's device page to temporarily increase discovery for existing users. Toggling it will reload the integration.
+
+---
+
+### Notification settings
+
+Which notifications you receive can be configured per vehicle under **Settings → Devices & Services → Mazda Connected Services → Options**. Each supported notification type has its own toggle.
+
+The **Save settings** toggle at the bottom of that screen controls whether the servers persist vehicle status notification choices. If disabled off, the notification choices are reset by the server to on after 24 hours. Save settings toggle is on by default.
+
+---
+
+### Example Automations YAML
+
+Example yaml for sending Home Assistant notifications can be found in the example folder [HERE]().
+
+---
+
+## Known Issues / limitations
+
+* Enabling push notifications increases integration reload and removal times. It can take up to 90s for the integration to disappear on removal or reload. 
+* Removal can fail to cleanup and re-adding can cause a multiple-devices detected email. The integration will reconnect.
+
+### Asymmetric events between accounts
+
+If two accounts are used (primary + secondary user):
+
+- The **primary account** receives push notification events for actions triggered by the secondary account.
+- The **secondary account does not** receive push notification events for actions triggered by the primary account.
