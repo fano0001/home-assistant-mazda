@@ -6,12 +6,14 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory  # For dev switch
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo  # For dev switch
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import MazdaAPI as MazdaAPIClient, MazdaEntity
 from .const import CONF_ENABLE_PUSH, DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from .pymazda.exceptions import MazdaException
 
 
 async def async_setup_entry(
@@ -211,7 +213,10 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
         """Start charging the vehicle."""
         if self._command_in_progress:
             return
-        await self.client.start_charging(self.vehicle_id)
+        try:
+            await self.client.start_charging(self.vehicle_id)
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
         self.hass.async_create_task(self._push_and_unlock("chargeStart"))
         await self.refresh_status_and_write_state()
@@ -220,7 +225,10 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
         """Stop charging the vehicle."""
         if self._command_in_progress:
             return
-        await self.client.stop_charging(self.vehicle_id)
+        try:
+            await self.client.stop_charging(self.vehicle_id)
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
         self.hass.async_create_task(self._push_and_unlock("chargeStop"))
         await self.refresh_status_and_write_state()

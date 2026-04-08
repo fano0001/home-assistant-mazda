@@ -7,10 +7,12 @@ from typing import Any
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import MazdaEntity
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from .pymazda.exceptions import MazdaException
 
 
 async def async_setup_entry(
@@ -51,7 +53,10 @@ class MazdaLock(MazdaEntity, LockEntity):
         """Lock the vehicle doors."""
         if self._command_in_progress:
             return
-        await self.client.lock_doors(self.vehicle_id)
+        try:
+            await self.client.lock_doors(self.vehicle_id)
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
         self.async_write_ha_state()
         self.hass.async_create_task(self._push_and_unlock("doorLock"))
@@ -60,7 +65,10 @@ class MazdaLock(MazdaEntity, LockEntity):
         """Unlock the vehicle doors."""
         if self._command_in_progress:
             return
-        await self.client.unlock_doors(self.vehicle_id)
+        try:
+            await self.client.unlock_doors(self.vehicle_id)
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
         self.async_write_ha_state()
         self.hass.async_create_task(self._push_and_unlock("doorUnlock"))

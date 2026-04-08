@@ -17,12 +17,14 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from . import MazdaAPI as MazdaAPIClient, MazdaEntity
 from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_REGION, DOMAIN
+from .pymazda.exceptions import MazdaException
 
 PRESET_DEFROSTER_OFF = "Defroster Off"
 PRESET_DEFROSTER_FRONT = "Front Defroster"
@@ -156,14 +158,17 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
         """Set a new HVAC mode."""
         if self._command_in_progress:
             return
-        if hvac_mode == HVACMode.HEAT_COOL:
-            await self.client.turn_on_hvac(self.vehicle_id)
-            action = "hvacOn"
-        elif hvac_mode == HVACMode.OFF:
-            await self.client.turn_off_hvac(self.vehicle_id)
-            action = "hvacOff"
-        else:
-            return
+        try:
+            if hvac_mode == HVACMode.HEAT_COOL:
+                await self.client.turn_on_hvac(self.vehicle_id)
+                action = "hvacOn"
+            elif hvac_mode == HVACMode.OFF:
+                await self.client.turn_off_hvac(self.vehicle_id)
+                action = "hvacOff"
+            else:
+                return
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
         self.hass.async_create_task(self._push_and_unlock(action))
         self._handle_coordinator_update()
@@ -174,24 +179,30 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
             precision = self.precision
             rounded_temperature = round(temperature / precision) * precision
 
-            await self.client.set_hvac_setting(
-                self.vehicle_id,
-                rounded_temperature,
-                self.data["hvacSetting"]["temperatureUnit"],
-                _front_defroster_enabled(self._attr_preset_mode),
-                _rear_defroster_enabled(self._attr_preset_mode),
-            )
+            try:
+                await self.client.set_hvac_setting(
+                    self.vehicle_id,
+                    rounded_temperature,
+                    self.data["hvacSetting"]["temperatureUnit"],
+                    _front_defroster_enabled(self._attr_preset_mode),
+                    _rear_defroster_enabled(self._attr_preset_mode),
+                )
+            except MazdaException as ex:
+                raise HomeAssistantError(ex) from ex
 
             self._handle_coordinator_update()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Turn on/off the front/rear defrosters according to the chosen preset mode."""
-        await self.client.set_hvac_setting(
-            self.vehicle_id,
-            self._attr_target_temperature,
-            self.data["hvacSetting"]["temperatureUnit"],
-            _front_defroster_enabled(preset_mode),
-            _rear_defroster_enabled(preset_mode),
-        )
+        try:
+            await self.client.set_hvac_setting(
+                self.vehicle_id,
+                self._attr_target_temperature,
+                self.data["hvacSetting"]["temperatureUnit"],
+                _front_defroster_enabled(preset_mode),
+                _rear_defroster_enabled(preset_mode),
+            )
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
 
         self._handle_coordinator_update()
