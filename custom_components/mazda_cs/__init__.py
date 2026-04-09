@@ -287,7 +287,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         _LOGGER,
         name=DOMAIN,
         update_method=async_update_data,
-        update_interval=timedelta(minutes=4),
+        update_interval=timedelta(minutes=3),
     )
 
     async def async_update_health_data():
@@ -359,11 +359,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
 
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
-
-    # Electric vehicles benefit from a tighter poll interval (active battery/HVAC updates).
-    # Fuel-only entries stay at 4 min — Mazda only pushes new data after ignition-off anyway.
-    if any(v.get("isElectric") for v in (coordinator.data or [])):
-        coordinator.update_interval = timedelta(minutes=3)
 
     # Schedule health report fetch in the background — non-critical, must not block setup
     entry.async_create_background_task(
