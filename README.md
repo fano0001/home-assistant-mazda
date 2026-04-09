@@ -88,7 +88,7 @@ The **Save settings** toggle at the bottom of that screen controls whether the s
 
 ### Example Automations YAML
 
-Example yaml for sending Home Assistant notifications can be found in the example folder [HERE]().
+Example yaml for sending Home Assistant notifications can be found in the example folder [HERE](https://github.com/fano0001/home-assistant-mazda/blob/v2.2.0-push/examples/mazda_cs_push_events.md).
 
 
 ## Known limitations
