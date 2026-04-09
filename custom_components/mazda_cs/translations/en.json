@@ -62,7 +62,7 @@
                     "unlockDoorNotify": "Door unlocked",
                     "lightHazardNotify": "Hazard lights",
                     "openHoodNotify": "Hood opened",
-                    "forgotPlugNotify": "Forgot to plug-in",
+                    "forgotPlugNotify": "Plug Removed Before Charging",
                     "powerSaveModeNotify": "Power save mode",
                     "quickChargeNotify": "Quick charge complete",
                     "timerChargeNotify": "Timer charge",

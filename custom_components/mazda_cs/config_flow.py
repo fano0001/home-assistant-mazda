@@ -37,8 +37,10 @@ _NOTIFY_ITEMS: list[tuple[str, str]] = [
     ("praiseNotify", "praisenotify"),
 ]
 
-_EV_ONLY_KEYS = {
-    "forgotPlugNotify",
+# Present in getNotifySetting / sent in updateNotifySetting but never shown in the UI.
+# Mazda uses these server-side to gate vehicle-level monitoring; the user cannot
+# meaningfully change them from the app or this integration.
+_VEHICLE_ONLY_KEYS = {
     "quickChargeNotify",
     "timerChargeNotify",
     "fullChargeNotify",
@@ -243,13 +245,15 @@ def _applicable_notify_keys(
 
     result = []
     for camel, lower in _NOTIFY_ITEMS:
+        if camel in _VEHICLE_ONLY_KEYS:
+            continue
         if camel == "remoteControlNotify" and not has_remote:
             continue
         if camel == "openHoodNotify" and not has_bonnet:
             continue
         if camel == "powerSaveModeNotify" and not has_power_save:
             continue
-        if camel in _EV_ONLY_KEYS and not is_electric:
+        if camel == "forgotPlugNotify" and not is_electric:
             continue
         result.append((camel, lower))
     return result
