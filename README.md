@@ -2,12 +2,6 @@
 # Introduction
 This is a fork of the Mazda Connected Services integration originally written by bdr99 that has been packaged into a HACS compatible custom integration. The original code was part of the Home Assistant core integrations prior to a DMCA takedown notice issue by Mazda Motor Corporation.  It should restore all functionality previously available in the core integration.
 
-# Mazda API v2 — MJO / 日本 / Australia Region
-* Mazda has moved NA, EU, and CA, to v2 of their API with a new authentication method. However the Australian region is currently still using the v1 API. Android app changes indicate the switch is coming (has v2 information coded for AU), but Mazda is staggering release. EU was December, and NA/CA was February. The intgration should be ready for you as soon as Mazda switches your region.
-* **[PLEASE STAY ON 1.8.5](https://github.com/fano0001/home-assistant-mazda/releases/tag/v1.8.5)** for now. Use the manual installation instructions below or manually select v1.8.5 in HACS under the 'mazda_cs' HACS page -> 3 dots top right-> Download/Redownload -> 'Need Another Vesion'.
-* マツダは、北米（NA）、欧州（EU）、およびカナダ（CA）の各地域について、新しい認証方式を採用したAPIのバージョン2（v2）への移行を完了しました。しかしながら、オーストラリア地域については、現時点では依然としてv1 APIが使用されています。モバイルアプリの更新内容からは、まもなく移行が実施される兆候が見受けられます（アプリのコード内にオーストラリア向けのv2関連情報がすでに組み込まれています）が、マツダは各地域へのリリースを段階的に進めているようです。欧州地域への適用は12月に、北米・カナダ地域への適用は2月にそれぞれ行われました。マツダ側で貴殿の地域への切り替えが完了し次第、本連携機能も直ちにご利用いただけるようになる見込みです。（Google 翻訳）
-* **[当面の間は 1.8.5 に留まってください](https://github.com/fano0001/home-assistant-mazda/releases/tag/v1.8.5)** 以下の手動インストール手順を使用するか、HACS の「mazda_cs」ページから手動で v1.8.5 を選択してください。右上の 3 つのドット→ダウンロード / 再ダウンロード→別のバージョンが必要。（Google 翻訳）
-
 # Installation
 
 ## With HACS
@@ -72,6 +66,7 @@ After push events arrive the integration triggers an immediate refresh.
 
 Events are fired as Home Assistant events under `mazda_cs_push`, which can be used as an automation trigger.
 
+
 ## Configuration 
 
 ### Enable push notification events
@@ -85,26 +80,18 @@ Events are fired as Home Assistant events under `mazda_cs_push`, which can be us
 
 **"Push notification events" switch** has been added to each vehicle's device page to temporarily increase discovery for existing users. Toggling it will reload the integration.
 
----
-
 ### Notification settings
 
 Which notifications you receive can be configured per vehicle under **Settings → Devices & Services → Mazda Connected Services → Options**. Each supported notification type has its own toggle.
 
 The **Save settings** toggle at the bottom of that screen controls whether the servers persist vehicle status notification choices. If disabled off, the notification choices are reset by the server to on after 24 hours. Save settings toggle is on by default.
 
----
-
 ### Example Automations YAML
 
 Example yaml for sending Home Assistant notifications can be found in the example folder [HERE]().
 
----
 
-## Known Issues / limitations
-
-* Enabling push notifications increases integration reload and removal times. It can take up to 90s for the integration to disappear on removal or reload. 
-* Removal can fail to cleanup and re-adding can cause a multiple-devices detected email. The integration will reconnect.
+## Known limitations
 
 ### Asymmetric events between accounts
 
