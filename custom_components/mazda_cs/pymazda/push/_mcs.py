@@ -109,13 +109,17 @@ class McsClient:
     async def stop(self) -> None:
         """Stop the MCS listener and close the connection."""
         self._do_listen = False
-        await self._close_writer()
+        # Cancel tasks before closing the writer so readers unblock immediately.
+        # Awaiting _close_writer() first could block for 30-60 s if the SSL/TCP
+        # teardown stalls (no response to FIN from mtalk.google.com), which would
+        # delay task cancellation for the full OS TCP timeout.
         for task in self._tasks:
-            if not task.done():
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
+            task.cancel()
+        for task in self._tasks:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
         self._tasks = []
+        await self._close_writer()
 
     # ------------------------------------------------------------------
     # Wire protocol helpers
@@ -179,7 +183,11 @@ class McsClient:
         if writer:
             writer.close()
             with contextlib.suppress(Exception):
-                await writer.wait_closed()
+                # Cap the wait to 3 s — if the remote end (mtalk.google.com) doesn't
+                # echo back the SSL close_notify / TCP FIN-ACK promptly, the OS TCP
+                # state machine can hold the connection open for 30-60+ seconds.
+                async with asyncio.timeout(3):
+                    await writer.wait_closed()
 
     # ------------------------------------------------------------------
     # Connection / login
