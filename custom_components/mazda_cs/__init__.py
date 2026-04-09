@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, field
 from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING
@@ -38,12 +39,6 @@ from .api import MazdaAuth
 from .const import (
     CONF_ENABLE_PUSH,
     CONF_FCM_CREDENTIALS,
-    DATA_CLIENT,
-    DATA_COORDINATOR,
-    DATA_FCM_LISTENER,
-    DATA_HEALTH_COORDINATOR,
-    DATA_REGION,
-    DATA_VEHICLES,
     DOMAIN,
     REMOTE_COMMAND_COOLDOWN_SECONDS,
     REMOTE_CONTROL_EVENTS_ENABLED,
@@ -56,6 +51,21 @@ from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import MazdaTermsNotAcceptedException
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class MazdaEntryData:
+    """Runtime data stored on the config entry."""
+
+    client: MazdaAPI
+    coordinator: DataUpdateCoordinator
+    health_coordinator: DataUpdateCoordinator
+    fcm_listener: MazdaFcmListener | None
+    region: str
+    vehicles: list[dict] = field(default_factory=list)
+
+
+type MazdaConfigEntry = ConfigEntry[MazdaEntryData]
 
 EVENT_REMOTE_SERVICE_RESULT = "mazda_cs_remote_service_result"
 
@@ -77,7 +87,83 @@ async def with_timeout(task, timeout_seconds=30):
         return await task
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Mazda Connected Services domain."""
+
+    async def async_handle_service_call(service_call: ServiceCall) -> None:
+        """Handle a service call."""
+        dev_reg = dr.async_get(hass)
+        device_id = service_call.data["device_id"]
+        device_entry = dev_reg.async_get(device_id)
+        if TYPE_CHECKING:
+            # For mypy: it has already been checked in validate_mazda_device_id
+            assert device_entry
+
+        mazda_identifiers = (
+            identifier
+            for identifier in device_entry.identifiers
+            if identifier[0] == DOMAIN
+        )
+        vin_identifier = next(mazda_identifiers)
+        vin = vin_identifier[1]
+
+        vehicle_id = 0
+        api_client = None
+        for loaded_entry in hass.config_entries.async_loaded_entries(DOMAIN):
+            entry_data: MazdaEntryData = loaded_entry.runtime_data
+            for vehicle in entry_data.vehicles:
+                if vehicle["vin"] == vin:
+                    vehicle_id = vehicle["id"]
+                    api_client = entry_data.client
+                    break
+
+        if vehicle_id == 0 or api_client is None:
+            raise HomeAssistantError("Vehicle ID not found")
+
+        api_method = getattr(api_client, service_call.service)
+        try:
+            latitude = service_call.data["latitude"]
+            longitude = service_call.data["longitude"]
+            poi_name = service_call.data["poi_name"]
+            await api_method(vehicle_id, latitude, longitude, poi_name)
+        except Exception as ex:
+            raise HomeAssistantError(ex) from ex
+
+    def validate_mazda_device_id(device_id):
+        """Check that a device ID exists in the registry and has at least one 'mazda' identifier."""
+        dev_reg = dr.async_get(hass)
+
+        if (device_entry := dev_reg.async_get(device_id)) is None:
+            raise vol.Invalid("Invalid device ID")
+
+        mazda_identifiers = [
+            identifier
+            for identifier in device_entry.identifiers
+            if identifier[0] == DOMAIN
+        ]
+        if not mazda_identifiers:
+            raise vol.Invalid("Device ID is not a Mazda vehicle")
+
+        return device_id
+
+    hass.services.async_register(
+        DOMAIN,
+        "send_poi",
+        async_handle_service_call,
+        schema=vol.Schema(
+            {
+                vol.Required("device_id"): vol.All(cv.string, validate_mazda_device_id),
+                vol.Required("latitude"): cv.latitude,
+                vol.Required("longitude"): cv.longitude,
+                vol.Required("poi_name"): cv.string,
+            }
+        ),
+    )
+
+    return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> bool:
     """Set up Mazda Connected Services from a config entry."""
     region = entry.data.get(CONF_REGION, "MNAO")
 
@@ -147,97 +233,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         use_cached_vehicle_list=True,
     )
 
-    async def async_handle_service_call(service_call: ServiceCall) -> None:
-        """Handle a service call."""
-        # Get device entry from device registry
-        dev_reg = dr.async_get(hass)
-        device_id = service_call.data["device_id"]
-        device_entry = dev_reg.async_get(device_id)
-        if TYPE_CHECKING:
-            # For mypy: it has already been checked in validate_mazda_device_id
-            assert device_entry
-
-        # Get vehicle VIN from device identifiers
-        mazda_identifiers = (
-            identifier
-            for identifier in device_entry.identifiers
-            if identifier[0] == DOMAIN
-        )
-        vin_identifier = next(mazda_identifiers)
-        vin = vin_identifier[1]
-
-        # Get vehicle ID and API client from hass.data
-        vehicle_id = 0
-        api_client = None
-        for entry_data in hass.data[DOMAIN].values():
-            for vehicle in entry_data[DATA_VEHICLES]:
-                if vehicle["vin"] == vin:
-                    vehicle_id = vehicle["id"]
-                    api_client = entry_data[DATA_CLIENT]
-                    break
-
-        if vehicle_id == 0 or api_client is None:
-            raise HomeAssistantError("Vehicle ID not found")
-
-        api_method = getattr(api_client, service_call.service)
-        try:
-            latitude = service_call.data["latitude"]
-            longitude = service_call.data["longitude"]
-            poi_name = service_call.data["poi_name"]
-            await api_method(vehicle_id, latitude, longitude, poi_name)
-        except Exception as ex:
-            raise HomeAssistantError(ex) from ex
-
-    def validate_mazda_device_id(device_id):
-        """Check that a device ID exists in the registry and has at least one 'mazda' identifier."""
-        dev_reg = dr.async_get(hass)
-
-        if (device_entry := dev_reg.async_get(device_id)) is None:
-            raise vol.Invalid("Invalid device ID")
-
-        mazda_identifiers = [
-            identifier
-            for identifier in device_entry.identifiers
-            if identifier[0] == DOMAIN
-        ]
-        if not mazda_identifiers:
-            raise vol.Invalid("Device ID is not a Mazda vehicle")
-
-        return device_id
-
-    service_schema_send_poi = vol.Schema(
-        {
-            vol.Required("device_id"): vol.All(cv.string, validate_mazda_device_id),
-            vol.Required("latitude"): cv.latitude,
-            vol.Required("longitude"): cv.longitude,
-            vol.Required("poi_name"): cv.string,
-        }
-    )
-
     async def async_update_data():
         """Fetch data from Mazda API."""
         try:
             vehicles = await with_timeout(mazda_client.get_vehicles())
-
-            # -------------------------------------------------------------------------
-            # TEST: getInboxList — commented out for future analysis
-            # actiontype values include:
-            # Safety & Security tab	"004,009,014,032,034"
-            # Activity History tab	"001,021,031,033"
-            # Maintenance / Health tab	"010"
-            # Vehicle Status tab (non-EV / base EV)	"003,019,022,023,024,026,027"
-            # Vehicle Status tab (EV with Battery Care)	"003,019,022,023,024,026,027,029,030"
-            # Status 0 = all, 2 = unread
-            # Uncomment to capture raw JSON response
-            # -------------------------------------------------------------------------
-            # try:
-            #     inbox_list_raw = await with_timeout(
-            #         mazda_client.get_inbox_list([v["id"] for v in vehicles])
-            #     )
-            #     _LOGGER.warning("TEST getInboxList: %s", inbox_list_raw)
-            # except Exception as ex:  # noqa: BLE001
-            #     _LOGGER.warning("TEST getInboxList failed: %s", ex)
-            # -------------------------------------------------------------------------
 
             # The Mazda API can throw an error when multiple simultaneous requests are
             # made for the same account, so we can only make one request at a time here
@@ -261,7 +260,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         mazda_client.get_hvac_setting(vehicle["id"])
                     )
 
-            hass.data[DOMAIN][entry.entry_id][DATA_VEHICLES] = vehicles
+            entry.runtime_data.vehicles = vehicles
 
             return vehicles
         except MazdaTermsNotAcceptedException as ex:
@@ -288,7 +287,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER,
         name=DOMAIN,
         update_method=async_update_data,
-        update_interval=timedelta(seconds=180),
+        update_interval=timedelta(minutes=4),
     )
 
     async def async_update_health_data():
@@ -329,6 +328,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         region=region,
         conductor_device_id=conductor_device_id,
     )
+
+    # Set runtime_data before starting FCM so any push arriving during setup
+    # (e.g. action_code "010") can safely access entry.runtime_data.health_coordinator.
+    entry.runtime_data = MazdaEntryData(
+        client=mazda_client,
+        coordinator=coordinator,
+        health_coordinator=health_coordinator,
+        fcm_listener=fcm_listener,
+        region=region,
+    )
+
     if enable_push:
         fcm_token = await fcm_listener.async_start()
         if fcm_token:
@@ -345,22 +355,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         attach_result = await mazda_client.attach(fcm_token=fcm_token)
         _LOGGER.debug("attach response: %s", attach_result)
     except Exception as ex:
-        _LOGGER.warning(
-            "attach failed (continuing anyway to test getVecBaseInfos): %s", ex
-        )
-
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
-        DATA_CLIENT: mazda_client,
-        DATA_COORDINATOR: coordinator,
-        DATA_FCM_LISTENER: fcm_listener,
-        DATA_HEALTH_COORDINATOR: health_coordinator,
-        DATA_REGION: region,
-        DATA_VEHICLES: [],
-    }
+        _LOGGER.warning("Mazda attach failed; vehicle status will be unavailable: %s", ex)
 
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
+
+    # Electric vehicles benefit from a tighter poll interval (active battery/HVAC updates).
+    # Fuel-only entries stay at 4 min — Mazda only pushes new data after ignition-off anyway.
+    if any(v.get("isElectric") for v in (coordinator.data or [])):
+        coordinator.update_interval = timedelta(minutes=3)
 
     # Schedule health report fetch in the background — non-critical, must not block setup
     entry.async_create_background_task(
@@ -369,14 +372,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Setup components
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Register services
-    hass.services.async_register(
-        DOMAIN,
-        "send_poi",
-        async_handle_service_call,
-        schema=service_schema_send_poi,
-    )
 
     return True
 
@@ -407,35 +402,26 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    # Only remove services if it is the last config entry
-    if len(hass.data[DOMAIN]) == 1:
-        hass.services.async_remove(DOMAIN, "send_poi")
-
     if unload_ok:
-        entry_data = hass.data[DOMAIN][entry.entry_id]
+        entry_data: MazdaEntryData = entry.runtime_data
 
         # Detach the Mazda API session when unloading while HA is running (covers
         # both reload and explicit removal).  Skip on HA shutdown/restart so we
         # don't race the event loop teardown for a no-op cleanup call.
         if not hass.is_stopping:
-            client = entry_data.get(DATA_CLIENT)
-            if client:
-                try:
-                    await client.detach()
-                except Exception:
-                    pass
+            try:
+                await entry_data.client.detach()
+            except Exception:
+                pass
 
-        listener = entry_data.get(DATA_FCM_LISTENER)
-        if listener:
-            # Deleting the FID on reload would leave a stale fid in entry.data 
+        if entry_data.fcm_listener:
+            # Deleting the FID on reload would leave a stale fid in entry.data
             # causing a 404 on next startup when refreshing the FIS auth token.
-            await listener.async_stop(unregister=False)
-
-        hass.data[DOMAIN].pop(entry.entry_id)
+            await entry_data.fcm_listener.async_stop(unregister=False)
 
     return unload_ok
 

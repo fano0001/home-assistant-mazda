@@ -2,13 +2,6 @@
 
 DOMAIN = "mazda_cs"
 
-DATA_CLIENT = "mazda_client"
-DATA_COORDINATOR = "coordinator"
-DATA_HEALTH_COORDINATOR = "health_coordinator"
-DATA_FCM_LISTENER = "fcm_listener"
-DATA_REGION = "region"
-DATA_VEHICLES = "vehicles"
-
 # Persisted config entry key for FCM credentials (android_id, security_token, etc.)
 CONF_FCM_CREDENTIALS = "fcm_credentials"
 

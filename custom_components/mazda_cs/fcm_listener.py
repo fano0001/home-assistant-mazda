@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import CONF_FCM_CREDENTIALS, DATA_HEALTH_COORDINATOR, DOMAIN
+from .const import CONF_FCM_CREDENTIALS
 
 try:
     from .pymazda.push import MazdaPushClient
@@ -215,7 +215,6 @@ class MazdaFcmListener:
 
         if action_code == "010":
             _LOGGER.debug("FCM push triggers health coordinator refresh")
-            entry_data = self._hass.data.get(DOMAIN, {}).get(self._entry.entry_id, {})
-            health_coordinator = entry_data.get(DATA_HEALTH_COORDINATOR)
-            if health_coordinator:
-                self._hass.async_create_task(health_coordinator.async_request_refresh())
+            self._hass.async_create_task(
+                self._entry.runtime_data.health_coordinator.async_request_refresh()  # type: ignore[union-attr]
+            )

@@ -322,6 +322,18 @@ class Client:  # noqa: D101
                 "nextScrMaintenanceDistance": remote_info.get("MntSCRInformation", {}).get("RemainingMileage"),
             },
             "maintenanceInfo": {
+                "nextMaintenanceDate": (
+                    datetime.date(
+                        remote_info["RegularMntInformation"]["MntSetYear"],
+                        remote_info["RegularMntInformation"]["MntSetMonth"],
+                        remote_info["RegularMntInformation"]["MntSetDate"],
+                    )
+                    if all(
+                        remote_info.get("RegularMntInformation", {}).get(k) is not None
+                        for k in ("MntSetYear", "MntSetMonth", "MntSetDate")
+                    )
+                    else None
+                ),
                 "nextMaintenanceDistanceKm": remote_info.get("RegularMntInformation", {}).get("RemRegDistKm"),
             },
             "electricalInformation": {

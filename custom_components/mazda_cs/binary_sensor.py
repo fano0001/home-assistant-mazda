@@ -10,13 +10,11 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DATA_HEALTH_COORDINATOR, DOMAIN
+from . import MazdaConfigEntry, MazdaEntity
 
 
 @dataclass
@@ -318,13 +316,13 @@ HEALTH_BINARY_SENSOR_ENTITIES: list[MazdaBinarySensorEntityDescription] = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
-    health_coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_HEALTH_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
+    health_coordinator = config_entry.runtime_data.health_coordinator
 
     entities: list = [
         MazdaBinarySensorEntity(client, coordinator, index, description)

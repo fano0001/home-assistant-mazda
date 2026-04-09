@@ -2,6 +2,7 @@
     "config": {
         "abort": {
             "already_configured": "Account is already configured",
+            "cannot_connect": "Cannot connect to Mazda. Please check your network and try again.",
             "reauth_successful": "Re-authentication was successful",
             "oauth_error": "Error during OAuth authentication. Please try again.",
             "wrong_account": "Wrong account. Please authenticate with the same account."
@@ -13,6 +14,7 @@
                     "enable_push_notifications": "Enable push notifications"
                 },
                 "data_description": {
+                    "region": "Select the region where your Mazda Connected Services account is registered.",
                     "enable_push_notifications": "Receive real-time push notifications from Mazda (requires FCM registration). Disable if you do not need push-based remote command confirmation."
                 },
                 "description": "Select your region, then you will be redirected to sign in with your Mazda account."
@@ -22,6 +24,9 @@
                 "description": "Mazda Connected Services now uses a new sign-in method. Please confirm your region below.\n\nNote: Canada (MCI) and Australia (MA) are new options that did not exist previously.",
                 "data": {
                     "region": "Region"
+                },
+                "data_description": {
+                    "region": "Select the region where your Mazda Connected Services account is registered."
                 }
             },
             "reauth_confirm": {
@@ -51,6 +56,9 @@
                 "description": "Select the vehicle to configure notifications for.",
                 "data": {
                     "vin": "Vehicle"
+                },
+                "data_description": {
+                    "vin": "Select the vehicle whose push notification settings you want to configure."
                 }
             },
             "notify": {
@@ -270,6 +278,9 @@
             },
             "drive1_distance": {
                 "name": "Drive 1 distance"
+            },
+            "next_maintenance_date": {
+                "name": "Next maintenance date"
             },
             "next_maintenance_distance": {
                 "name": "Next maintenance distance"

@@ -271,6 +271,9 @@
             "drive1_distance": {
                 "name": "Fahrt 1 Strecke"
             },
+            "next_maintenance_date": {
+                "name": "Nächstes Wartungsdatum"
+            },
             "next_maintenance_distance": {
                 "name": "Strecke bis nächster Inspektion"
             },

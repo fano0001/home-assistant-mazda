@@ -7,15 +7,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from . import MazdaAPI as MazdaAPIClient, MazdaEntity
+from . import MazdaAPI as MazdaAPIClient, MazdaConfigEntry, MazdaEntity
 from .pymazda.exceptions import MazdaException
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
 
 
 async def handle_button_press(
@@ -105,12 +103,12 @@ BUTTON_ENTITIES = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the button platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     async_add_entities(
         MazdaButtonEntity(client, coordinator, index, description)

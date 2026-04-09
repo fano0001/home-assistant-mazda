@@ -3,7 +3,6 @@
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory  # For dev switch
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -11,19 +10,19 @@ from homeassistant.helpers.device_registry import DeviceInfo  # For dev switch
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from . import MazdaAPI as MazdaAPIClient, MazdaEntity
-from .const import CONF_ENABLE_PUSH, DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from . import MazdaAPI as MazdaAPIClient, MazdaConfigEntry, MazdaEntity
+from .const import CONF_ENABLE_PUSH, DOMAIN
 from .pymazda.exceptions import MazdaException
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the switch platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     entities = [
         MazdaEnableWindowsSwitch(hass, config_entry, coordinator, index)
@@ -51,7 +50,7 @@ class MazdaEnableWindowsSwitch(SwitchEntity):
 
     _attr_translation_key = "enable_windows"
     _attr_icon = "mdi:window-open"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_has_entity_name = True
 
     def __init__(
@@ -95,7 +94,7 @@ class MazdaEnableDevSensorsSwitch(SwitchEntity):
 
     _attr_translation_key = "enable_dev_sensors"
     _attr_icon = "mdi:flask-outline"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_has_entity_name = True
 
     def __init__(

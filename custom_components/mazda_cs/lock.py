@@ -5,24 +5,22 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from . import MazdaConfigEntry, MazdaEntity
 from .pymazda.exceptions import MazdaException
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the lock platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     entities = []
 

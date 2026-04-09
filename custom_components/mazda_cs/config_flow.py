@@ -12,7 +12,7 @@ from homeassistant.const import CONF_REGION
 from homeassistant.core import callback
 from homeassistant.helpers import config_entry_oauth2_flow, selector
 
-from .const import CONF_ENABLE_PUSH, DATA_CLIENT, DATA_COORDINATOR, DOMAIN, MAZDA_REGIONS
+from .const import CONF_ENABLE_PUSH, DOMAIN, MAZDA_REGIONS
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 
@@ -281,7 +281,7 @@ class MazdaOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Vehicle selector step — skipped automatically for single-vehicle accounts."""
-        coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id][DATA_COORDINATOR]
+        coordinator = self.config_entry.runtime_data.coordinator
         vehicles = coordinator.data or []
 
         if not vehicles:
@@ -309,7 +309,7 @@ class MazdaOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Notification toggles step."""
-        client = self.hass.data[DOMAIN][self.config_entry.entry_id][DATA_CLIENT]
+        client = self.config_entry.runtime_data.client
         vehicle = self._vehicle
 
         if user_input is None:

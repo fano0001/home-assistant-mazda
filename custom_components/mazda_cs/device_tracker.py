@@ -1,22 +1,20 @@
 """Platform for Mazda device tracker integration."""
 
 from homeassistant.components.device_tracker import SourceType, TrackerEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from . import MazdaConfigEntry, MazdaEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the device tracker platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     entities = []
 

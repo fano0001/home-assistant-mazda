@@ -5,22 +5,21 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.diagnostics.util import async_redact_data
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import DATA_COORDINATOR, DOMAIN
+from . import MazdaConfigEntry
 
 TO_REDACT_INFO = ["access_token", "id_token", "refresh_token"]
 TO_REDACT_DATA = ["vin", "id", "latitude", "longitude", "nickname"]
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    hass: HomeAssistant, config_entry: MazdaConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    coordinator = config_entry.runtime_data.coordinator
 
     diagnostics_data = {
         "info": async_redact_data(config_entry.data, TO_REDACT_INFO),
@@ -33,10 +32,10 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry, device: DeviceEntry
+    hass: HomeAssistant, config_entry: MazdaConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    coordinator = config_entry.runtime_data.coordinator
 
     vin = next(iter(device.identifiers))[1]
 
