@@ -221,6 +221,12 @@ class MazdaOAuth2FlowHandler(
             email = user_info.get("userInfo", {}).get("contactMailAddress", "")
             if email:
                 title = f"Mazda ({email})"
+            cust_id = user_info.get("custId", "")
+            if cust_id:
+                data["conductor_customer_id"] = cust_id
+            usher_id = user_info.get("usherId", "")
+            if usher_id:
+                data["conductor_usher_id"] = usher_id
         except Exception:  # noqa: BLE001
             _LOGGER.debug(
                 "Could not fetch account email for title; using user_id fallback"

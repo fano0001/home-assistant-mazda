@@ -81,12 +81,16 @@ class MazdaFcmListener:
         entry: ConfigEntry,
         coordinator: DataUpdateCoordinator,
         region: str = "MNAO",
+        conductor_customer_id: str = "",
+        conductor_usher_id: str = "",
         conductor_device_id: str = "",
     ) -> None:
         self._hass = hass
         self._entry = entry
         self._coordinator = coordinator
         self._region = region
+        self._conductor_customer_id = conductor_customer_id
+        self._conductor_usher_id = conductor_usher_id
         self._conductor_device_id = conductor_device_id
         self._client: MazdaPushClient | None = None
         self._fcm_token: str | None = None
@@ -137,14 +141,24 @@ class MazdaFcmListener:
 
         # Register the FCM token with StationDM Conductor so Mazda's push
         # backend delivers notifications to this client.
-        # APK-confirmed: updateuser only needs deviceId + pushToken + device metadata.
+        # APK: userId = primaryId (MNAO) or partner1Id fallback, required for
+        # push delivery after re-login clears the Conductor registration.
+        effective_primary_id = self._conductor_customer_id or None
+        effective_partner1_id = self._conductor_usher_id or None
+        effective_user_id = effective_primary_id or effective_partner1_id or None
         _LOGGER.debug(
-            "Conductor registration: region=%s deviceId=%s",
+            "Conductor registration: region=%s userId=%s primaryId=%s partner1Id=%s deviceId=%s",
             self._region,
-            self._conductor_device_id if self._conductor_device_id else "(MISSING)",
+            effective_user_id or "(MISSING)",
+            effective_primary_id or "(MISSING)",
+            effective_partner1_id or "(MISSING)",
+            self._conductor_device_id or "(MISSING)",
         )
         result = await self._client.register_with_conductor(
             self._region,
+            user_id=effective_user_id,
+            primary_id=effective_primary_id,
+            partner1_id=effective_partner1_id,
             conductor_device_id=self._conductor_device_id or None,
         )
         if result:
