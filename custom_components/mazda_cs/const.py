@@ -8,7 +8,6 @@ CONF_FCM_CREDENTIALS = "fcm_credentials"
 # Option: whether push notification registration (FCM) is enabled
 CONF_ENABLE_PUSH = "enable_push_notifications"
 
-REMOTE_CONTROL_EVENTS_ENABLED = False  # hardcoded; future: drive from config/API
 REMOTE_COMMAND_COOLDOWN_SECONDS = 3
 REMOTE_PUSH_TIMEOUT_SECONDS = 30
 

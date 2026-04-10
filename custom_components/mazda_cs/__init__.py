@@ -41,7 +41,6 @@ from .const import (
     CONF_FCM_CREDENTIALS,
     DOMAIN,
     REMOTE_COMMAND_COOLDOWN_SECONDS,
-    REMOTE_CONTROL_EVENTS_ENABLED,
     REMOTE_PUSH_TIMEOUT_SECONDS,
 )
 from .fcm_listener import EVENT_MAZDA_PUSH, MazdaFcmListener
@@ -410,6 +409,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         fcm_token = None
         _LOGGER.debug("Push notifications disabled — FCM registration skipped")
 
+    coordinator.push_enabled = bool(fcm_token)
+
     # Register device session with Mazda backend (required before any remoteServices calls)
     _LOGGER.debug("attach: using fcm_token=%s", fcm_token)
     try:
@@ -535,7 +536,7 @@ class MazdaEntity(CoordinatorEntity):
     async def _push_and_unlock(self, action: str) -> None:
         """Wait for a push event confirming the remote command, then reset the command-in-progress flag."""
         try:
-            if REMOTE_CONTROL_EVENTS_ENABLED:
+            if getattr(self.coordinator, "push_enabled", False):
                 push_event = asyncio.Event()
                 push_data: dict = {}
 
