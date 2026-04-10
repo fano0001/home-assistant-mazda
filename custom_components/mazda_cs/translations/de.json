@@ -40,44 +40,6 @@
             }
         }
     },
-    "options": {
-        "abort": {
-            "no_vehicles": "Keine Fahrzeuge gefunden. Stelle sicher, dass die Integration korrekt eingerichtet ist.",
-            "cannot_connect": "Benachrichtigungseinstellungen konnten nicht von Mazda abgerufen werden. Bitte später erneut versuchen."
-        },
-        "step": {
-            "init": {
-                "title": "Benachrichtigungseinstellungen",
-                "description": "Wähle das Fahrzeug aus, für das Benachrichtigungen konfiguriert werden sollen.",
-                "data": {
-                    "vin": "Fahrzeug"
-                }
-            },
-            "notify": {
-                "title": "Benachrichtigungseinstellungen",
-                "description": "Wähle aus, welche Push-Benachrichtigungen für {vehicle_name} empfangen werden sollen.",
-                "data": {
-                    "remoteControlNotify": "Fernsteuerung",
-                    "openDoorNotify": "Tür geöffnet",
-                    "unlockDoorNotify": "Tür entsperrt",
-                    "lightHazardNotify": "Warnblinklicht",
-                    "openHoodNotify": "Motorhaube geöffnet",
-                    "forgotPlugNotify": "Stecker vergessen",
-                    "powerSaveModeNotify": "Energiesparmodus",
-                    "quickChargeNotify": "Schnellladung abgeschlossen",
-                    "timerChargeNotify": "Geplantes Laden",
-                    "fullChargeNotify": "Vollständig geladen",
-                    "aftercoolingNotify": "Kühlung abgeschlossen",
-                    "airconTemperatureNotify": "Temperatur erreicht",
-                    "praiseNotify": "Öko-Fahren",
-                    "settingSaveFlag": "Einstellungen speichern"
-                },
-                "data_description": {
-                    "settingSaveFlag": "Wenn deaktiviert, setzt Mazda deine Benachrichtigungseinstellungen nach 24 Stunden auf die vorherigen Werte zurück."
-                }
-            }
-        }
-    },
     "entity": {
         "binary_sensor": {
             "driver_door": {

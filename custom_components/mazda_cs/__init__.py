@@ -87,6 +87,37 @@ async def with_timeout(task, timeout_seconds=30):
         return await task
 
 
+_NOTIFY_EXCLUDE = {"resultCode", "visitNo", "settingSaveFlag"}
+
+
+async def _enable_all_notify_settings(client: MazdaAPI, vehicles: list) -> None:
+    """Ensure all notification toggles are enabled for each vehicle.
+
+    Reads the current server state and skips the write if everything is already 1.
+    """
+    for vehicle in vehicles:
+        try:
+            notify_raw = await client.get_notify_setting(vehicle["id"])
+            settings = {
+                key.lower(): val
+                for key, val in notify_raw.items()
+                if key not in _NOTIFY_EXCLUDE and val is not None
+            }
+            if all(v == 1 for v in settings.values()):
+                _LOGGER.debug(
+                    "Notification settings already fully enabled for %s — skipping update",
+                    vehicle["vin"],
+                )
+                continue
+            await client.set_notify_setting(vehicle["id"], {k: 1 for k in settings} | {"settingsaveflag": 0})
+            _LOGGER.debug("Notification settings enabled for %s", vehicle["vin"])
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug(
+                "Could not configure notification settings for %s",
+                vehicle.get("vin", ""),
+            )
+
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Mazda Connected Services domain."""
 
@@ -389,6 +420,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
 
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
+
+    # Enable all notification toggles on startup; skip the API write if already all-on.
+    # Requires both push being enabled and a successfully registered FCM token.
+    if coordinator.push_enabled:
+        entry.async_create_background_task(
+            hass,
+            _enable_all_notify_settings(mazda_client, coordinator.data or []),
+            "mazda_cs_notify_settings_init",
+        )
 
     # Schedule health report fetch in the background — non-critical, must not block setup
     entry.async_create_background_task(

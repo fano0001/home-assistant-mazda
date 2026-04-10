@@ -7,9 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 import jwt
 import voluptuous as vol
-from homeassistant.config_entries import OptionsFlow, SOURCE_REAUTH, ConfigFlowResult
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.const import CONF_REGION
-from homeassistant.core import callback
 from homeassistant.helpers import config_entry_oauth2_flow, selector
 
 from .const import CONF_ENABLE_PUSH, DOMAIN, MAZDA_REGIONS
@@ -18,36 +17,6 @@ from .pymazda.client import Client as MazdaAPI
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-# (camelCase response key, lowercase API request key) — settingSaveFlag omitted
-# (always sent as 1; not user-facing)
-_NOTIFY_ITEMS: list[tuple[str, str]] = [
-    ("remoteControlNotify", "remotecontrolnotify"),
-    ("openDoorNotify", "opendoornotify"),
-    ("unlockDoorNotify", "unlockdoornotify"),
-    ("lightHazardNotify", "lighthazardnotify"),
-    ("openHoodNotify", "openhoodnotify"),
-    ("forgotPlugNotify", "forgotplugnotify"),
-    ("powerSaveModeNotify", "powersavemodenotify"),
-    ("quickChargeNotify", "quickchargenotify"),
-    ("timerChargeNotify", "timerchargenotify"),
-    ("fullChargeNotify", "fullchargenotify"),
-    ("aftercoolingNotify", "aftercoolingnotify"),
-    ("airconTemperatureNotify", "aircontemperaturenotify"),
-    ("praiseNotify", "praisenotify"),
-]
-
-# Present in getNotifySetting / sent in updateNotifySetting but never shown in the UI.
-# Mazda uses these server-side to gate vehicle-level monitoring; the user cannot
-# meaningfully change them from the app or this integration.
-_VEHICLE_ONLY_KEYS = {
-    "quickChargeNotify",
-    "timerChargeNotify",
-    "fullChargeNotify",
-    "aftercoolingNotify",
-    "airconTemperatureNotify",
-    "praiseNotify",
-}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -171,12 +140,6 @@ class MazdaOAuth2FlowHandler(
             ),
         )
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry) -> OptionsFlow:
-        """Return the options flow handler."""
-        return MazdaOptionsFlowHandler()
-
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
         """Create an entry for the flow."""
         # Extract user info from access_token JWT
@@ -239,128 +202,3 @@ class MazdaOAuth2FlowHandler(
         )
 
 
-def _applicable_notify_keys(
-    notify_raw: dict, vehicle: dict
-) -> list[tuple[str, str]]:
-    """Return (camel_key, lower_key) pairs applicable to this vehicle."""
-    # app checks isSupportRemoteControlForInvitation()
-    has_remote = notify_raw.get("remoteControlNotify") is not None
-    has_bonnet = vehicle.get("hasBonnet", False)
-    has_power_save = notify_raw.get("powerSaveModeNotify") is not None
-    is_electric = vehicle.get("isElectric", False)
-
-    result = []
-    for camel, lower in _NOTIFY_ITEMS:
-        if camel in _VEHICLE_ONLY_KEYS:
-            continue
-        if camel == "remoteControlNotify" and not has_remote:
-            continue
-        if camel == "openHoodNotify" and not has_bonnet:
-            continue
-        if camel == "powerSaveModeNotify" and not has_power_save:
-            continue
-        if camel == "forgotPlugNotify" and not is_electric:
-            continue
-        result.append((camel, lower))
-    return result
-
-
-def _vehicle_display_name(vehicle: dict) -> str:
-    """Return a human-readable vehicle label."""
-    nickname = vehicle.get("nickname", "").strip()
-    if nickname:
-        return nickname
-    year = vehicle.get("modelYear", "")
-    model = vehicle.get("carlineName", "")
-    return f"{year} {model}".strip() or vehicle.get("vin", "Unknown")
-
-
-class MazdaOptionsFlowHandler(OptionsFlow):
-    """Handle Mazda notification settings via the options flow."""
-
-    def __init__(self) -> None:
-        """Initialize."""
-        self._vehicle: dict = {}
-        self._notify_raw: dict = {}
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Vehicle selector step — skipped automatically for single-vehicle accounts."""
-        coordinator = self.config_entry.runtime_data.coordinator
-        vehicles = coordinator.data or []
-
-        if not vehicles:
-            return self.async_abort(reason="no_vehicles")
-
-        if len(vehicles) == 1:
-            self._vehicle = vehicles[0]
-            return await self.async_step_notify()
-
-        vehicle_options = {v["vin"]: _vehicle_display_name(v) for v in vehicles}
-
-        if user_input is not None:
-            vin = user_input["vin"]
-            self._vehicle = next((v for v in vehicles if v["vin"] == vin), vehicles[0])
-            return await self.async_step_notify()
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {vol.Required("vin"): vol.In(vehicle_options)}
-            ),
-        )
-
-    async def async_step_notify(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Notification toggles step."""
-        client = self.config_entry.runtime_data.client
-        vehicle = self._vehicle
-
-        if user_input is None:
-            try:
-                self._notify_raw = await client.get_notify_setting(vehicle["id"])
-            except Exception:  # noqa: BLE001
-                return self.async_abort(reason="cannot_connect")
-
-            applicable = _applicable_notify_keys(self._notify_raw, vehicle)
-            notify_fields: dict = {
-                vol.Optional(camel, default=bool(self._notify_raw.get(camel, 0))): selector.BooleanSelector()
-                for camel, _ in applicable
-            }
-            # Default True regardless of server value (server returns 0 = don't save).
-            # Overriding ensures settings persist beyond Mazda's 24-hour reset window.
-            notify_fields[
-                vol.Optional("settingSaveFlag", default=True)
-            ] = selector.BooleanSelector()
-            schema = vol.Schema(notify_fields)
-            return self.async_show_form(
-                step_id="notify",
-                data_schema=schema,
-                description_placeholders={
-                    "vehicle_name": _vehicle_display_name(vehicle)
-                },
-            )
-
-        # Seed from server state: include every non-null field the API returned.
-        # updateNotifySetting is a full-state write; omitting a field that the server
-        # returned (even if the UI gates it) may silently reset it server-side.
-        settings_dict: dict[str, int] = {
-            lower: int(self._notify_raw[camel])
-            for camel, lower in _NOTIFY_ITEMS
-            if self._notify_raw.get(camel) is not None
-        }
-        # Override with the user's choices for fields that were shown in the UI.
-        applicable = _applicable_notify_keys(self._notify_raw, vehicle)
-        for camel, lower in applicable:
-            settings_dict[lower] = 1 if user_input.get(camel, False) else 0
-        settings_dict["settingsaveflag"] = 1 if user_input.get("settingSaveFlag", True) else 0
-
-        try:
-            await client.set_notify_setting(vehicle["id"], settings_dict)
-        except Exception:  # noqa: BLE001
-            return self.async_abort(reason="cannot_connect")
-
-        # Options storage is Mazda's server — preserve existing entry.options unchanged.
-        return self.async_create_entry(data=self.config_entry.options)

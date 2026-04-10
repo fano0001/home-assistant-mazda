@@ -45,47 +45,6 @@
       }
     }
   },
-  "options": {
-    "abort": {
-      "no_vehicles": "No vehicles found. Ensure the integration is set up correctly.",
-      "cannot_connect": "Unable to retrieve notification settings from Mazda. Please try again later."
-    },
-    "step": {
-      "init": {
-        "title": "Notification settings",
-        "description": "Select the vehicle to configure notifications for.",
-        "data": {
-          "vin": "Vehicle"
-        },
-        "data_description": {
-          "vin": "Select the vehicle whose push notification settings you want to configure."
-        }
-      },
-      "notify": {
-        "title": "Notification settings",
-        "description": "Choose which push notifications to receive for {vehicle_name}.",
-        "data": {
-          "remoteControlNotify": "Remote control",
-          "openDoorNotify": "Door opened",
-          "unlockDoorNotify": "Door unlocked",
-          "lightHazardNotify": "Hazard lights",
-          "openHoodNotify": "Hood opened",
-          "forgotPlugNotify": "Plug Removed Before Charging",
-          "powerSaveModeNotify": "Power save mode",
-          "quickChargeNotify": "Quick charge complete",
-          "timerChargeNotify": "Timer charge",
-          "fullChargeNotify": "Full charge",
-          "aftercoolingNotify": "After cooling",
-          "airconTemperatureNotify": "A/C temperature reached",
-          "praiseNotify": "Eco driving",
-          "settingSaveFlag": "Save notification settings"
-        },
-        "data_description": {
-          "settingSaveFlag": "If disabled, Mazda will reset vehicle status notification settings to their previous state after 24 hours."
-        }
-      }
-    }
-  },
   "entity": {
     "binary_sensor": {
       "driver_door": {
