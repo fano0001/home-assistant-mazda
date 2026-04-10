@@ -148,6 +148,7 @@ BINARY_SENSOR_ENTITIES = [
         key="hazard_lights",
         translation_key="hazard_lights",
         icon="mdi:hazard-lights",
+        device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data["status"]["hazardLightsOn"],
     ),
