@@ -49,7 +49,7 @@ class MazdaOAuth2FlowHandler(
         """Handle the region selection step."""
         if user_input is not None:
             self._region = user_input[CONF_REGION]
-            self._enable_push = user_input.get(CONF_ENABLE_PUSH, False)
+            self._enable_push = user_input.get(CONF_ENABLE_PUSH, True)
             return await self.async_step_pick_implementation()
 
         return self.async_show_form(
@@ -57,7 +57,7 @@ class MazdaOAuth2FlowHandler(
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_REGION): vol.In(MAZDA_REGIONS),
-                    vol.Optional(CONF_ENABLE_PUSH, default=False): selector.BooleanSelector(),
+                    vol.Optional(CONF_ENABLE_PUSH, default=True): selector.BooleanSelector(),
                 }
             ),
         )

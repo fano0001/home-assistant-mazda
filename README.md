@@ -69,22 +69,16 @@ Events are fired as Home Assistant events under `mazda_cs_push`, which can be us
 
 ## Configuration 
 
-### Enable push notification events
+### Disable / enable push notification events
 
 > [!IMPORTANT]
-> Push notification events are **disabled by default** and must be opted in to.
+> Push notification events are **enabled by default** but can be disabled in the event of issues.
 
 **During initial setup**, a toggle to enable appears on setup alongside the region selector. 
 
 **After setup**, you can enable or disable it at any time via **Settings → Devices & Services → Mazda Connected Services → Three Dots → Reconfigure**. No re-login is required.
 
 **"Push notification events" switch** has been added to each vehicle's device page to temporarily increase discovery for existing users. Toggling it will reload the integration.
-
-### Notification settings
-
-Which notifications you receive can be configured per vehicle under **Settings → Devices & Services → Mazda Connected Services → Options**. Each supported notification type has its own toggle.
-
-The **Save settings** toggle at the bottom of that screen controls whether the servers persist vehicle status notification choices. If disabled off, the notification choices are reset by the server to on after 24 hours. Save settings toggle is on by default.
 
 ### Example Automations YAML
 
@@ -95,7 +89,7 @@ Example yaml for sending Home Assistant notifications can be found in the exampl
 
 ### Asymmetric events between accounts
 
-If two accounts are used (primary + secondary user):
+If two accounts are used (primary + secondary driver):
 
-- The **primary account** receives push notification events for actions triggered by the secondary account.
-- The **secondary account does not** receive push notification events for actions triggered by the primary account.
+- The **primary driver** receives push notification events for actions triggered by the secondary driver.
+- The **secondary driver does not** receive push notification events for actions triggered by the primary driver.
