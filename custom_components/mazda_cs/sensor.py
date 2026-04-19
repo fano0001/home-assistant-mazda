@@ -355,8 +355,8 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"] is not None,
-        value=lambda data: data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"],
+        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilDeteriorateLevel"] is not None,
+        value=lambda data: data["status"]["oilMaintenanceInfo"]["oilDeteriorateLevel"],
     ),
     MazdaSensorEntityDescription(
         key="next_maintenance_date",

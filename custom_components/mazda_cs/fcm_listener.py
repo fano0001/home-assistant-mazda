@@ -39,7 +39,6 @@ _REFRESH_CODES = frozenset(
         "026",   # INBOX_LOW_BATTERY - Low 12V battery
         "027",   # INBOX_EV_LOW_BATTERY
         "032",   # INBOX_GEOFENCE_ALERT
-        "034",   # INBOX_SVT_ALERT
         "D002",  # CDT_INBOX_CP_CHARGE_COMPLETED
     ]
 )
@@ -53,6 +52,7 @@ _REFRESH_CODES = frozenset(
         # "030",   # INBOX_EV_BATTERY_PRAISE - EV battery praise
         # "031",   # INBOX_GEOFENCE_SETTING - Geofence settings
         # "033",   # INBOX_SVT_SETTING - SVT (Stolen Vehicle Tracking) settings
+        # "034",   # INBOX_SVT_ALERT
         # "035",   # *(undocumented)* - Seen in push notification handler only — absent from `InboxCodeEnum`; likely a newer type
 
 
@@ -83,6 +83,7 @@ class MazdaFcmListener:
         region: str = "MNAO",
         conductor_customer_id: str = "",
         conductor_usher_id: str = "",
+        conductor_internal_id: str = "",
         conductor_device_id: str = "",
     ) -> None:
         self._hass = hass
@@ -91,6 +92,7 @@ class MazdaFcmListener:
         self._region = region
         self._conductor_customer_id = conductor_customer_id
         self._conductor_usher_id = conductor_usher_id
+        self._conductor_internal_id = conductor_internal_id
         self._conductor_device_id = conductor_device_id
         self._client: MazdaPushClient | None = None
         self._fcm_token: str | None = None
@@ -141,16 +143,19 @@ class MazdaFcmListener:
 
         # Register the FCM token with StationDM Conductor so Mazda's push
         # backend delivers notifications to this client.
-        # APK: userId = primaryId (MNAO) or partner1Id fallback, required for
-        # push delivery after re-login clears the Conductor registration.
-        effective_primary_id = self._conductor_customer_id or None
-        effective_partner1_id = self._conductor_usher_id or None
-        effective_user_id = effective_primary_id or effective_partner1_id or None
+        # APK userId priority: primaryId (MNAO) → partner2Id (non-MNAO) → partner1Id fallback.
+        # Both primaryId and partner2Id are pre-gated by region in __init__.py so only
+        # the appropriate one is non-empty here.
+        effective_primary_id = self._conductor_customer_id or None   # MNAO only
+        effective_partner2_id = self._conductor_internal_id or None  # non-MNAO only
+        effective_partner1_id = self._conductor_usher_id or None     # all regions, fallback
+        effective_user_id = effective_primary_id or effective_partner2_id or effective_partner1_id or None
         _LOGGER.debug(
-            "Conductor registration: region=%s userId=%s primaryId=%s partner1Id=%s deviceId=%s",
+            "Conductor registration: region=%s userId=%s primaryId=%s partner2Id=%s partner1Id=%s deviceId=%s",
             self._region,
             effective_user_id or "(MISSING)",
             effective_primary_id or "(MISSING)",
+            effective_partner2_id or "(MISSING)",
             effective_partner1_id or "(MISSING)",
             self._conductor_device_id or "(MISSING)",
         )
@@ -159,6 +164,7 @@ class MazdaFcmListener:
             user_id=effective_user_id,
             primary_id=effective_primary_id,
             partner1_id=effective_partner1_id,
+            partner2_id=effective_partner2_id,
             conductor_device_id=self._conductor_device_id or None,
         )
         if result:

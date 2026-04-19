@@ -89,6 +89,7 @@ def build_update_user_payload(
     user_id: str | None = None,
     primary_id: str | None = None,
     partner1_id: str | None = None,
+    partner2_id: str | None = None,
 ) -> str:
     """Return the JSON string used as 'payload' in service.setting.updateuser.
 
@@ -96,9 +97,9 @@ def build_update_user_payload(
     primaryId → partner2Id → partner1Id, cached from a prior q.q() call.
 
     ``primary_id``  → Conductor ``primaryId``  — Mazda ``custId`` (getUserInfo/v4), MNAO only.
+    ``partner2_id`` → Conductor ``partner2Id`` — Mazda ``internalUserId`` (getCvUserIds/v4), non-MNAO only.
     ``partner1_id`` → Conductor ``partner1Id`` — Mazda ``usherId`` (getUserInfo/v4), userId fallback.
-    partner2Id (internalUserId from getCvUserIds/v4) is omitted to avoid that extra API call.
-    email and partner2Id belong to q.i().q() (service.configuration) only — not sent here.
+    email belongs to q.i().q() (service.configuration) only — not sent here.
     """
     payload: dict[str, Any] = {"deviceId": device_id, "pushToken": push_token}
     if timezone:
@@ -123,6 +124,8 @@ def build_update_user_payload(
         payload["primaryId"] = primary_id
     if partner1_id:
         payload["partner1Id"] = partner1_id
+    if partner2_id:
+        payload["partner2Id"] = partner2_id
     return json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
 
 
@@ -266,6 +269,7 @@ async def send_update_user(
     user_id: str | None = None,
     primary_id: str | None = None,
     partner1_id: str | None = None,
+    partner2_id: str | None = None,
 ) -> tuple[int, str]:
     """Send service.setting.updateuser to register the FCM push token.
 
@@ -289,6 +293,7 @@ async def send_update_user(
         user_id=user_id,
         primary_id=primary_id,
         partner1_id=partner1_id,
+        partner2_id=partner2_id,
     )
     plaintext = build_update_user_envelope(payload_json)
     return await _post_conductor(

@@ -128,6 +128,7 @@ class MazdaPushClient:
         user_id: str | None = None,
         primary_id: str | None = None,
         partner1_id: str | None = None,
+        partner2_id: str | None = None,
         conductor_device_id: str | None = None,
     ) -> tuple[int, str] | None:
         """Register the FCM push token with the StationDM Conductor backend.
@@ -189,6 +190,7 @@ class MazdaPushClient:
                 user_id=user_id,
                 primary_id=primary_id,
                 partner1_id=partner1_id,
+                partner2_id=partner2_id,
             )
             _LOGGER.debug("Conductor deviceId used: %s", device_id)
             _LOGGER.debug(

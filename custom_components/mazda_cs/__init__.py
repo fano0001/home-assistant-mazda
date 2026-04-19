@@ -89,30 +89,33 @@ async def with_timeout(task, timeout_seconds=30):
 _NOTIFY_EXCLUDE = {"resultCode", "visitNo", "settingSaveFlag"}
 
 
-async def _enable_all_notify_settings(client: MazdaAPI, vehicles: list) -> None:
-    """Ensure all notification toggles are enabled for each vehicle.
+async def _enable_remote_control_notify(client: MazdaAPI, vehicles: list) -> None:
+    """Ensure remoteControlNotify is enabled for each vehicle.
 
-    Reads the current server state and skips the write if everything is already 1.
+    Fetches current state, skips write if already enabled. When writing, sends the
+    full current state to avoid resetting other notification settings.
     """
     for vehicle in vehicles:
         try:
             notify_raw = await client.get_notify_setting(vehicle["id"])
-            settings = {
-                key.lower(): val
-                for key, val in notify_raw.items()
-                if key not in _NOTIFY_EXCLUDE and val is not None
-            }
-            if all(v == 1 for v in settings.values()):
+            if notify_raw.get("remoteControlNotify") == 1:
                 _LOGGER.debug(
-                    "Notification settings already fully enabled for %s — skipping update",
+                    "remoteControlNotify already enabled for %s — skipping update",
                     vehicle["vin"],
                 )
                 continue
-            await client.set_notify_setting(vehicle["id"], {k: 1 for k in settings} | {"settingsaveflag": 0})
-            _LOGGER.debug("Notification settings enabled for %s", vehicle["vin"])
+            settings = {
+                key.lower(): int(val)
+                for key, val in notify_raw.items()
+                if key not in _NOTIFY_EXCLUDE and val is not None
+            }
+            settings["remotecontrolnotify"] = 1
+            settings["settingsaveflag"] = 1
+            await client.set_notify_setting(vehicle["id"], settings)
+            _LOGGER.debug("remoteControlNotify enabled for %s", vehicle["vin"])
         except Exception:  # noqa: BLE001
             _LOGGER.debug(
-                "Could not configure notification settings for %s",
+                "Could not enable remoteControlNotify for %s",
                 vehicle.get("vin", ""),
             )
 
@@ -317,7 +320,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         _LOGGER,
         name=DOMAIN,
         update_method=async_update_data,
-        update_interval=timedelta(minutes=3),
+        update_interval=timedelta(minutes=4),
     )
 
     async def async_update_health_data():
@@ -341,13 +344,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         _LOGGER,
         name=f"{DOMAIN}_health",
         update_method=async_update_health_data,
-        update_interval=timedelta(hours=12),
+        update_interval=timedelta(hours=24),
     )
 
     # Start FCM listener — coordinator must exist first so it can be passed in.
     # Must complete before attach so we have a token to register with Mazda's backend.
-    conductor_customer_id = entry.data.get("conductor_customer_id", "")
-    conductor_usher_id    = entry.data.get("conductor_usher_id", "")
+    conductor_customer_id  = entry.data.get("conductor_customer_id", "")
+    conductor_usher_id     = entry.data.get("conductor_usher_id", "")
+    conductor_internal_id  = entry.data.get("conductor_internal_id", "")
 
     if not conductor_customer_id or not conductor_usher_id:
         try:
@@ -371,12 +375,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         except Exception as ex:  # noqa: BLE001
             _LOGGER.warning("getUserInfo failed (Conductor IDs unavailable): %s", ex)
 
+    # non-MNAO regions use partner2Id (internalUserId) instead of primaryId for userId
+    if region != "MNAO" and not conductor_internal_id:
+        try:
+            cv_ids = await mazda_client.get_cv_user_ids()
+            internal_user_id = str(
+                cv_ids.get("data", {}).get("customerInfo", {}).get("internalUserId", "")
+            )
+            if internal_user_id:
+                conductor_internal_id = internal_user_id
+                hass.config_entries.async_update_entry(
+                    entry, data={**entry.data, "conductor_internal_id": internal_user_id}
+                )
+                _LOGGER.debug("Conductor internal ID stored")
+            else:
+                _LOGGER.warning("getCvUserIds returned no internalUserId — partner2Id will be omitted")
+        except Exception as ex:  # noqa: BLE001
+            _LOGGER.warning("getCvUserIds failed (partner2Id unavailable): %s", ex)
+
     # Derive Conductor deviceId from the JWT sub claim — same seed as the Mazda API
     # device-id header — so both systems see a consistent device identity.
     conductor_device_id = conductor_device_id_from_user_sub(user_sub) if user_sub else ""
 
-    # APK-confirmed: primaryId is only sent for MNAO (region.equals("MNAO") in SDMBaseActivity)
+    # Gate IDs to the region where each is applicable (APK: SDMBaseActivity)
     effective_customer_id = conductor_customer_id if region == "MNAO" else ""
+    effective_internal_id = conductor_internal_id if region != "MNAO" else ""
 
     enable_push = entry.options.get(CONF_ENABLE_PUSH, False)
     fcm_listener = MazdaFcmListener(
@@ -386,6 +409,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         region=region,
         conductor_customer_id=effective_customer_id,
         conductor_usher_id=conductor_usher_id,
+        conductor_internal_id=effective_internal_id,
         conductor_device_id=conductor_device_id,
     )
 
@@ -422,14 +446,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
 
-    # Enable all notification toggles on startup; skip the API write if already all-on.
-    # Requires both push being enabled and a successfully registered FCM token.
+    # Ensure remoteControlNotify is on; skip write if already enabled.
+    # Gated on push_enabled — only meaningful when FCM token was successfully registered.
     if coordinator.push_enabled:
         entry.async_create_background_task(
             hass,
-            _enable_all_notify_settings(mazda_client, coordinator.data or []),
-            "mazda_cs_notify_settings_init",
+            _enable_remote_control_notify(mazda_client, coordinator.data or []),
+            "mazda_cs_remote_control_notify_init",
         )
+
+    # Electric vehicles benefit from a tighter poll interval (active battery/HVAC updates).
+    # Fuel-only entries stay at 4 min — Mazda only pushes new data after ignition-off anyway.
+    if any(v.get("isElectric") for v in (coordinator.data or [])):
+        coordinator.update_interval = timedelta(minutes=3)
 
     # Schedule health report fetch in the background — non-critical, must not block setup
     entry.async_create_background_task(
