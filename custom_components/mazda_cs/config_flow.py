@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import jwt
 import voluptuous as vol
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult, UNDEFINED
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.const import CONF_REGION
 from homeassistant.helpers import config_entry_oauth2_flow
 
@@ -139,7 +139,7 @@ class MazdaOAuth2FlowHandler(
                 self._abort_if_unique_id_mismatch(reason="wrong_account")
             return self.async_update_reload_and_abort(
                 reauth_entry,
-                unique_id=user_id if is_v1_migration else UNDEFINED,
+                unique_id=user_id,
                 data_updates=data,
             )
         self._abort_if_unique_id_configured()
