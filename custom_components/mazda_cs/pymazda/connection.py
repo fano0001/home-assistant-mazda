@@ -473,7 +473,7 @@ class Connection:
             raise MazdaException(
                 "The engine can only be remotely started 2 consecutive times. Please drive the vehicle to reset the counter."
             )
-        elif response_json.get("errorCode") == "400C01":
+        elif response_json.get("extraCode") == "400C01":
             raise MazdaTermsNotAcceptedException(
                 "Please accept the terms of service in the MyMazda app and try again"
             )
