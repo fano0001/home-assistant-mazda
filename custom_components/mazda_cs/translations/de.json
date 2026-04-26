@@ -276,6 +276,9 @@
             "drive1_fuel_consumption": {
                 "name": "Fahrt 1 Kraftstoffverbrauch"
             },
+            "drive1_fuel_amount": {
+                "name": "δ | Fahrt 1 Kraftstoffmenge"
+            },
             "dr_oil_deteriorate_level": {
                 "name": "Ölzustand"
             },
