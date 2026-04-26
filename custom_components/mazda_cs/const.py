@@ -20,7 +20,6 @@ MAZDA_REGIONS = {
 }
 
 # Per-region Azure AD B2C OAuth2 configuration
-# Values sourced from assets/res/raw/*_mzal_config.json in com.interrait.mymazda 9.0.8 APK
 OAUTH2_POLICY = "b2c_1a_signin"
 OAUTH2_AUTH = {
     "MNAO": {
@@ -89,8 +88,8 @@ OAUTH2_HOSTS = {
 }
 
 # MSAL client identifiers (sent with authorize requests)
-# Values confirmed from com.interrait.mymazda 9.0.8 APK (msal/BuildConfig.java, AuthenticationConstants.java)
+# Values confirmed from com.interrait.mymazda APK (msal/BuildConfig.java, AuthenticationConstants.java)
 MSAL_CLIENT_SKU = "MSAL.Android"
 MSAL_CLIENT_VER = "5.4.0"
 MSAL_APP_NAME = "MyMazda"
-MSAL_APP_VER = "9.0.11"
+MSAL_APP_VER = "9.1.0"
