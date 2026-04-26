@@ -197,9 +197,13 @@ class MazdaOAuth2FlowHandler(
         data[CONF_REGION] = self._region
 
         if self.source == SOURCE_REAUTH:
-            self._abort_if_unique_id_mismatch(reason="wrong_account")
+            reauth_entry = self._get_reauth_entry()
+            is_v1_migration = not reauth_entry.data.get("token")
+            if not is_v1_migration:
+                self._abort_if_unique_id_mismatch(reason="wrong_account")
             return self.async_update_reload_and_abort(
-                self._get_reauth_entry(),
+                reauth_entry,
+                unique_id=user_id,
                 data_updates=data,
             )
         self._abort_if_unique_id_configured()
