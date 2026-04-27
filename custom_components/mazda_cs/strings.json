@@ -251,7 +251,7 @@
         "name": "Drive 1 fuel consumption"
       },
       "dr_oil_deteriorate_level": {
-        "name": "Oil health"
+        "name": "Oil life remaining"
       },
       "drive1_fuel_efficiency_mpg": {
         "name": "Drive 1 fuel efficiency (MPG)"

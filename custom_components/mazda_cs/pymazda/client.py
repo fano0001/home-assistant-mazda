@@ -310,7 +310,7 @@ class Client:  # noqa: D101
                 "nextOilChangeDistanceKm": remote_info.get("OilMntInformation", {}).get("RemOilDistK"),
                 "mntOilAtFlg": remote_info.get("OilMntInformation", {}).get("MntOilAtFlg"),
                 "oilDeteriorateWarning": remote_info.get("OilMntInformation", {}).get("OilDeteriorateWarning") == 1,
-                "oilHealthPercentage": remote_info.get("OilMntInformation", {}).get("DROilDeteriorateLevel"),
+                "oilDeteriorateLevel": remote_info.get("OilMntInformation", {}).get("DROilDeteriorateLevel"),
                 "mntOilLvlAtFlg": remote_info.get("OilMntInformation", {}).get("MntOilLvlAtFlg"),  # not yet implemented
                 "brakeOilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelSensWarnBRq") == 1,
                 "oilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelWarning") == 1,
