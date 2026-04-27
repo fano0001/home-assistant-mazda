@@ -59,7 +59,6 @@ SHA256_CERT_SIG = "C022C9EE778CF903838F8B9C4B9FF0036A5C516CEFAAD6DC710B717CF97DC
 SIGN_PACKAGE_ID = "com.interrait.mymazda"
 
 # REGION_CONFIG app_codes sourced from assets/config/*_core_config.json MC_APP_CODE fields.
-# MNAO old API app_code (APP_CODE, j.f11207d, 0cxo7m58.mazda.com): "202007270941270111799"
 # cert_sig: new MC API (j.f11208e / hgs2ivna.mazda.com) uses SHA256 path; old API uses MD5 path
 REGION_CONFIG = {
     "MNAO": {
@@ -100,9 +99,9 @@ REGION_CONFIG = {
 }
 # APP_PACKAGE_ID: Android package name, used in app-unique-id header
 APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "MyMazda/9.0.11 (Linux; Android 16)"
+USER_AGENT_BASE_API = "MyMazda/9.1.0 (Linux; Android 16)"
 APP_OS = "ANDROID"
-APP_VERSION = "9.0.11"
+APP_VERSION = "9.1.0"
 
 MAX_RETRIES = 4
 
