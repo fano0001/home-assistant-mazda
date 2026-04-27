@@ -305,6 +305,7 @@ class Client:  # noqa: D101
                 "drive1DistanceKm": remote_info.get("DriveInformation", {}).get("Drv1Distnc"),
                 "drive1FuelEfficiencyKmL": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelE"),
                 "drive1FuelConsumptionL100km": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelG"),
+                "drive1FuelAmountL": remote_info.get("DriveInformation", {}).get("Drv1AmntFuel"),
             },
             "oilMaintenanceInfo": {
                 "nextOilChangeDistanceKm": remote_info.get("OilMntInformation", {}).get("RemOilDistK"),

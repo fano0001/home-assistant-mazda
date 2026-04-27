@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfPressure, UnitOfTime
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfPressure, UnitOfTime, UnitOfVolume
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
@@ -329,6 +329,17 @@ SENSOR_ENTITIES = [
         state_class=SensorStateClass.MEASUREMENT,
         is_supported=lambda data: data["hasFuel"] and data["region"] != "MNAO" and data["status"]["driveInformation"]["drive1FuelConsumptionL100km"] is not None,
         value=lambda data: data["status"]["driveInformation"]["drive1FuelConsumptionL100km"],
+    ),
+    MazdaSensorEntityDescription(
+        key="drive1_fuel_amount",
+        translation_key="drive1_fuel_amount",
+        icon="mdi:gas-station",
+        native_unit_of_measurement=UnitOfVolume.LITERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"] and data["status"]["driveInformation"]["drive1FuelAmountL"] is not None,
+        value=lambda data: data["status"]["driveInformation"]["drive1FuelAmountL"],
     ),
     MazdaSensorEntityDescription(
         key="drive1_fuel_efficiency_mpg",
