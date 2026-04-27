@@ -195,6 +195,20 @@ class MazdaOAuth2FlowHandler(
                 "Could not fetch account email for title; using user_id fallback"
             )
 
+        # non-MNAO regions use internalUserId (partner2Id) for Conductor userId
+        if self._region != "MNAO":
+            try:
+                client = MazdaAPI(user_id, self._region, _token_provider)
+                cv_ids = await client.get_cv_user_ids()
+                await client.close()
+                internal_user_id = str(
+                    cv_ids.get("data", {}).get("customerInfo", {}).get("internalUserId", "")
+                )
+                if internal_user_id:
+                    data["conductor_internal_id"] = internal_user_id
+            except Exception:  # noqa: BLE001
+                _LOGGER.debug("Could not fetch internalUserId for non-MNAO region")
+
         return self.async_create_entry(
             title=title,
             data=data,

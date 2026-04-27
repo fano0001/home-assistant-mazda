@@ -346,8 +346,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
 
     # Start FCM listener — coordinator must exist first so it can be passed in.
     # Must complete before attach so we have a token to register with Mazda's backend.
-    conductor_customer_id = entry.data.get("conductor_customer_id", "")
-    conductor_usher_id    = entry.data.get("conductor_usher_id", "")
+    conductor_customer_id  = entry.data.get("conductor_customer_id", "")
+    conductor_usher_id     = entry.data.get("conductor_usher_id", "")
+    conductor_internal_id  = entry.data.get("conductor_internal_id", "")
 
     if not conductor_customer_id or not conductor_usher_id:
         try:
@@ -371,12 +372,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         except Exception as ex:  # noqa: BLE001
             _LOGGER.warning("getUserInfo failed (Conductor IDs unavailable): %s", ex)
 
+    # non-MNAO regions use partner2Id (internalUserId) instead of primaryId for userId
+    if region != "MNAO" and not conductor_internal_id:
+        try:
+            cv_ids = await mazda_client.get_cv_user_ids()
+            internal_user_id = str(
+                cv_ids.get("data", {}).get("customerInfo", {}).get("internalUserId", "")
+            )
+            if internal_user_id:
+                conductor_internal_id = internal_user_id
+                hass.config_entries.async_update_entry(
+                    entry, data={**entry.data, "conductor_internal_id": internal_user_id}
+                )
+                _LOGGER.debug("Conductor internal ID stored")
+            else:
+                _LOGGER.warning("getCvUserIds returned no internalUserId — partner2Id will be omitted")
+        except Exception as ex:  # noqa: BLE001
+            _LOGGER.warning("getCvUserIds failed (partner2Id unavailable): %s", ex)
+
     # Derive Conductor deviceId from the JWT sub claim — same seed as the Mazda API
     # device-id header — so both systems see a consistent device identity.
     conductor_device_id = conductor_device_id_from_user_sub(user_sub) if user_sub else ""
 
-    # APK-confirmed: primaryId is only sent for MNAO (region.equals("MNAO") in SDMBaseActivity)
+    # Gate IDs to the region where each is applicable (APK: SDMBaseActivity)
     effective_customer_id = conductor_customer_id if region == "MNAO" else ""
+    effective_internal_id = conductor_internal_id if region != "MNAO" else ""
 
     enable_push = entry.options.get(CONF_ENABLE_PUSH, False)
     fcm_listener = MazdaFcmListener(
@@ -386,6 +406,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         region=region,
         conductor_customer_id=effective_customer_id,
         conductor_usher_id=conductor_usher_id,
+        conductor_internal_id=effective_internal_id,
         conductor_device_id=conductor_device_id,
     )
 
