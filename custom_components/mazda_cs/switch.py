@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import MazdaAPI as MazdaAPIClient, MazdaConfigEntry, MazdaEntity
-from .const import CONF_ENABLE_PUSH, DOMAIN
+from .const import DOMAIN
 from .pymazda.exceptions import MazdaException
 
 
@@ -31,10 +31,6 @@ async def async_setup_entry(
     ]
     entities += [
         MazdaEnableDevSensorsSwitch(hass, config_entry, coordinator, index)
-        for index in range(len(coordinator.data))
-    ]
-    entities += [
-        MazdaEnablePushSwitch(hass, config_entry, coordinator, index)
         for index in range(len(coordinator.data))
     ]
     entities += [
@@ -129,50 +125,6 @@ class MazdaEnableDevSensorsSwitch(SwitchEntity):
         self._hass.config_entries.async_update_entry(
             self._config_entry,
             options={**self._config_entry.options, "enable_dev_sensors": False},
-        )
-        await self._hass.config_entries.async_reload(self._config_entry.entry_id)
-
-
-class MazdaEnablePushSwitch(SwitchEntity):
-    """Config switch to enable/disable push notification events."""
-
-    _attr_translation_key = "push_notification_events"
-    _attr_icon = "mdi:bell-ring-outline"
-    _attr_entity_category = EntityCategory.CONFIG
-    _attr_has_entity_name = True
-
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        coordinator: DataUpdateCoordinator,
-        index: int,
-    ) -> None:
-        """Initialize the push notification events switch."""
-        self._hass = hass
-        self._config_entry = config_entry
-        vin = coordinator.data[index]["vin"]
-        self._attr_unique_id = f"{vin}_push_notification_events"
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, vin)})
-
-    @property
-    def is_on(self) -> bool:
-        """Return true if push notification events are enabled."""
-        return self._config_entry.options.get(CONF_ENABLE_PUSH, False)
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Enable push notification events and reload the integration."""
-        self._hass.config_entries.async_update_entry(
-            self._config_entry,
-            options={**self._config_entry.options, CONF_ENABLE_PUSH: True},
-        )
-        await self._hass.config_entries.async_reload(self._config_entry.entry_id)
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Disable push notification events and reload the integration."""
-        self._hass.config_entries.async_update_entry(
-            self._config_entry,
-            options={**self._config_entry.options, CONF_ENABLE_PUSH: False},
         )
         await self._hass.config_entries.async_reload(self._config_entry.entry_id)
 

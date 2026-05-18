@@ -305,9 +305,6 @@
             },
             "enable_dev_sensors": {
                 "name": "δ | Development sensors"
-            },
-            "push_notification_events": {
-                "name": "Push notification events"
             }
         }
     },
