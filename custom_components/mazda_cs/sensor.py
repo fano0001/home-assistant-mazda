@@ -337,7 +337,6 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=UnitOfVolume.LITERS,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
         is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"] and data["status"]["driveInformation"]["drive1FuelAmountL"] is not None,
         value=lambda data: data["status"]["driveInformation"]["drive1FuelAmountL"],
     ),
