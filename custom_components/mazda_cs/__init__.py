@@ -317,7 +317,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         _LOGGER,
         name=DOMAIN,
         update_method=async_update_data,
-        update_interval=timedelta(minutes=3),
+        update_interval=timedelta(minutes=6),
     )
 
     async def async_update_health_data():
@@ -341,7 +341,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         _LOGGER,
         name=f"{DOMAIN}_health",
         update_method=async_update_health_data,
-        update_interval=timedelta(hours=12),
+        update_interval=timedelta(hours=24),
     )
 
     # Start FCM listener — coordinator must exist first so it can be passed in.
