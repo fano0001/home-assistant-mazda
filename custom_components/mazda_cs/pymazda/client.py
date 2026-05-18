@@ -1,4 +1,5 @@
 import asyncio  # noqa: D100
+import base64
 import datetime
 import json
 import logging
@@ -541,6 +542,17 @@ class Client:  # noqa: D101
                 "tpmsStatus": bool(warnings.get("WngTpmsStatus")),
             }
         }
+
+    async def get_available_service(self, vehicle_id):  # noqa: D102
+        """Fetch available services for a vehicle from getAvailableService/v4.
+
+        Returns the decoded service flags dict, e.g. {"vehicleStatus": 1, "remoteControl": 1, ...}.
+        """
+        response = await self.controller.get_available_service(vehicle_id)
+        encoded = response.get("availableService", "")
+        if encoded:
+            return json.loads(base64.b64decode(encoded))
+        return {}
 
     async def get_inbox_list(
         self,

@@ -569,6 +569,20 @@ class Controller:  # noqa: D101
 
         return response
 
+    async def get_available_service(self, internal_vin):  # noqa: D102
+        post_body = {
+            "internaluserid": "__INTERNAL_ID__",
+            "internaluseridget": "__INTERNAL_ID__",
+            "internalvin": str(internal_vin),
+        }
+        return await self.connection.api_request(
+            "POST",
+            "remoteServices/getAvailableService/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
+        )
+
     async def get_inbox_list(
         self,
         internal_vin_list,
