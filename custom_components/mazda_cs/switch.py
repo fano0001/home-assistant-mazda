@@ -46,7 +46,8 @@ class MazdaEnableWindowsSwitch(SwitchEntity):
 
     _attr_translation_key = "enable_windows"
     _attr_icon = "mdi:window-open"
-    _attr_entity_category = EntityCategory.CONFIG
+    #_attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_has_entity_name = True
 
     def __init__(
@@ -90,7 +91,9 @@ class MazdaEnableDevSensorsSwitch(SwitchEntity):
 
     _attr_translation_key = "enable_dev_sensors"
     _attr_icon = "mdi:flask-outline"
-    _attr_entity_category = EntityCategory.CONFIG
+    #_attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = True
 
     def __init__(
