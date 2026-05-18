@@ -9,11 +9,7 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Region",
-                    "enable_push_notifications": "Push-Benachrichtigungen aktivieren"
-                },
-                "data_description": {
-                    "enable_push_notifications": "Empfange Echtzeit-Push-Benachrichtigungen von Mazda (erfordert FCM-Registrierung). Deaktivieren, wenn keine push-basierte Bestätigung von Fernbefehlen benötigt wird."
+                    "region": "Region"
                 },
                 "description": "Wähle deine Region, dann wirst du zur Anmeldung mit deinem Mazda-Konto weitergeleitet."
             },

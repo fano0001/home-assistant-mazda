@@ -10,12 +10,10 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Region",
-                    "enable_push_notifications": "Enable push notifications"
+                    "region": "Region"
                 },
                 "data_description": {
-                    "region": "Select the region where your Mazda Connected Services account is registered.",
-                    "enable_push_notifications": "Receive real-time push notifications from Mazda (requires FCM registration). Disable if you do not need push-based remote command confirmation."
+                    "region": "Select the region where your Mazda Connected Services account is registered."
                 },
                 "description": "Select your region, then you will be redirected to sign in with your Mazda account."
             },
