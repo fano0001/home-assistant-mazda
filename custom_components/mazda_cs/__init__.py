@@ -317,7 +317,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         _LOGGER,
         name=DOMAIN,
         update_method=async_update_data,
-        update_interval=timedelta(minutes=6),
+        # start with 3 min interval until we verify permissions and FCM availability
+        update_interval=timedelta(minutes=3),
     )
 
     async def async_update_health_data():
@@ -341,7 +342,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         _LOGGER,
         name=f"{DOMAIN}_health",
         update_method=async_update_health_data,
-        update_interval=timedelta(hours=24),
+        update_interval=None, # set to 24h later if health report permission
     )
 
     # Start FCM listener — coordinator must exist first so it can be passed in.
@@ -443,6 +444,49 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
 
+    # Verify the account has vehicle status-alert permission for each vehicle.
+    # Missing permission keeps the coordinator at the degraded 3-min poll interval;
+    # otherwise the FCM listener is allowed to promote it to 6 min once MCS is connected.
+    status_alert_available = True
+    health_report_available = True
+    for vehicle in coordinator.data or []:
+        try:
+            available = await mazda_client.get_available_service(vehicle["id"])
+        except Exception as ex:  # noqa: BLE001
+            _LOGGER.warning(
+                "getAvailableService(%s) failed: %s", vehicle["id"], ex
+            )
+            continue
+        if available.get("vehicleStatusAlert") != 1:
+            status_alert_available = False
+            _LOGGER.warning(
+                "Mazda account lacks vehicle status-alert permission "
+                "for vehicle %s — push notifications and remote commands may "
+                "not work as expected. Available services: %s",
+                vehicle["vin"],
+                available,
+            )
+        if available.get("healthReports") != 1:
+            health_report_available = False
+            _LOGGER.warning(
+                "Mazda account lacks Health Report permission "
+                "for vehicle %s — some entities may not work as expected. "
+                "Available services: %s",
+                vehicle["vin"],
+                available,
+            )
+        if available.get("remoteControl") != 1:
+            _LOGGER.warning(
+                "Mazda account lacks remote control permission "
+                "for vehicle %s — remote commands may not work "
+                "as expected. Available services: %s",
+                vehicle["vin"],
+                available,
+            )
+
+    if status_alert_available and coordinator.push_enabled:
+        fcm_listener.enable_push_based_interval()
+
     # Enable all notification toggles on startup; skip the API write if already all-on.
     # Requires both push being enabled and a successfully registered FCM token.
     if coordinator.push_enabled:
@@ -452,10 +496,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             "mazda_cs_notify_settings_init",
         )
 
-    # Schedule health report fetch in the background — non-critical, must not block setup
-    entry.async_create_background_task(
-        hass, health_coordinator.async_refresh(), "mazda_cs_health_initial_refresh"
-    )
+    if health_report_available:
+        health_coordinator.update_interval = timedelta(hours=24)
+        entry.async_create_background_task(
+            hass, health_coordinator.async_refresh(), "mazda_cs_health_initial_refresh"
+        )
 
     # Setup components
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

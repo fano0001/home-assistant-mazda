@@ -77,6 +77,7 @@ class McsClient:
         server_heartbeat_interval: int = 10,
         client_heartbeat_interval: int = 20,
         connection_retry_count: int = 5,
+        on_connection_state: Callable[[bool], None] | None = None,
     ) -> None:
         self._android_id = android_id
         self._security_token = security_token
@@ -84,6 +85,7 @@ class McsClient:
         self._server_hb = server_heartbeat_interval
         self._client_hb = client_heartbeat_interval
         self._retry_count = connection_retry_count
+        self._on_connection_state = on_connection_state
 
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
@@ -94,6 +96,17 @@ class McsClient:
         self._last_stream_id_reported = -1
         self._last_message_time: float | None = None
         self._persistent_ids: list[str] = []
+        self._is_connected = False
+
+    def _set_connected(self, value: bool) -> None:
+        if value == self._is_connected:
+            return
+        self._is_connected = value
+        if self._on_connection_state:
+            try:
+                self._on_connection_state(value)
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("MCS: on_connection_state callback failed")
 
     def is_started(self) -> bool:
         return self._do_listen and bool(self._tasks) and not all(t.done() for t in self._tasks)
@@ -357,11 +370,18 @@ class McsClient:
     async def _listen(self) -> None:
         while self._do_listen:
             if not await self._connect_with_retry():
-                _LOGGER.error("MCS: could not connect after %d retries, giving up", self._retry_count)
-                return
+                if not self._do_listen:
+                    return
+                _LOGGER.warning(
+                    "MCS: could not connect after %d retries, retrying in 24h",
+                    self._retry_count,
+                )
+                await asyncio.sleep(86400)
+                continue
 
             try:
                 await self._login()
+                self._set_connected(True)
                 while self._do_listen:
                     msg = await self._recv()
                     if msg is not None:
@@ -381,6 +401,7 @@ class McsClient:
                     return
                 _LOGGER.exception("MCS: unexpected error, reconnecting")
             finally:
+                self._set_connected(False)
                 await self._close_writer()
 
             if self._do_listen:

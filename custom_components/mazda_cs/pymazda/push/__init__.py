@@ -101,12 +101,20 @@ class MazdaPushClient:
 
         return creds["token"]
 
-    async def start(self, on_message: MessageCallback) -> None:
+    async def start(
+        self,
+        on_message: MessageCallback,
+        on_connection_state: Callable[[bool], None] | None = None,
+    ) -> None:
         """Open the MCS connection and start receiving push notifications.
 
         ``on_message`` is called from within the event loop whenever a data
         message arrives.  Its argument is a ``dict[str, str]`` matching the
         FCM data payload (e.g. ``{"a": "001", "v": "<vin>", "title": "..."}``).
+
+        ``on_connection_state`` is called with ``True`` after a successful MCS
+        login and with ``False`` when the connection is lost (or torn down at
+        stop).  Tracking whether push notifications are being delivered.
 
         Must call ``checkin_or_register()`` first.
         """
@@ -117,6 +125,7 @@ class MazdaPushClient:
             android_id=self._credentials["android_id"],
             security_token=self._credentials["security_token"],
             on_message=on_message,
+            on_connection_state=on_connection_state,
         )
         await self._mcs.start()
 

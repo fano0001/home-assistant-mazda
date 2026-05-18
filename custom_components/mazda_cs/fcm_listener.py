@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -96,6 +97,8 @@ class MazdaFcmListener:
         self._conductor_device_id = conductor_device_id
         self._client: MazdaPushClient | None = None
         self._fcm_token: str | None = None
+        self._mcs_connected = False
+        self._push_based_interval = False
 
     @property
     def fcm_token(self) -> str | None:
@@ -135,7 +138,10 @@ class MazdaFcmListener:
         _LOGGER.debug("FCM registered, token prefix: %s...", self._fcm_token[:20])
 
         try:
-            await self._client.start(self._on_notification)
+            await self._client.start(
+                self._on_notification,
+                on_connection_state=self._on_mcs_state,
+            )
         except Exception as ex:  # noqa: BLE001
             _LOGGER.warning("FCM MCS listener failed to start: %s", ex)
             self._client = None
@@ -201,6 +207,36 @@ class MazdaFcmListener:
         _LOGGER.debug(
             "FCM credentials updated (android_id=%s), persisted to entry.data",
             credentials.get("android_id"),
+        )
+
+    def _on_mcs_state(self, connected: bool) -> None:
+        """Track MCS connection state and adjust the coordinator interval.
+
+        Only flips the interval once ``enable_push_based_interval()`` has been
+        called — i.e. once the account is confirmed eligible (push enabled and
+        the account has remote/status permissions).
+        """
+        self._mcs_connected = connected
+        if not self._push_based_interval:
+            return
+        self._coordinator.update_interval = timedelta(minutes=6 if connected else 3)
+        _LOGGER.debug(
+            "MCS %s — coordinator interval set to %d min",
+            "connected" if connected else "disconnected",
+            6 if connected else 3,
+        )
+
+    def enable_push_based_interval(self) -> None:
+        """Allow MCS connection state to flip the coordinator interval 3↔6 min.
+
+        Called from ``async_setup_entry`` once the account is confirmed to have
+        remote/status permissions and FCM registration succeeded.  If MCS is
+        already connected when this is called, the interval is promoted to 6
+        min immediately; otherwise it stays at 3 until MCS comes up.
+        """
+        self._push_based_interval = True
+        self._coordinator.update_interval = timedelta(
+            minutes=6 if self._mcs_connected else 3
         )
 
     def _on_notification(self, payload: dict[str, Any]) -> None:
