@@ -26,6 +26,10 @@ _LOGGER = logging.getLogger(__name__)
 # to observe raw payloads, or use in automations with trigger platform: event.
 EVENT_MAZDA_PUSH = "mazda_cs_push"
 
+# Deprecated: previously fired via inbox polling. Now bridged from push action codes
+# 001/021 for backwards compatibility. Migrate automations to mazda_cs_push. Removal: 2027.
+_EVENT_REMOTE_SERVICE_RESULT_DEPRECATED = "mazda_cs_remote_service_result"
+
 # Action codes that warrant an immediate coordinator refresh so HA state
 # reflects the vehicle change without waiting for the 3-minute poll interval.
 _REFRESH_CODES = frozenset(
@@ -264,6 +268,21 @@ class MazdaFcmListener:
                 "data": payload,
             },
         )
+
+        # Deprecated: fire mazda_cs_remote_service_result for automations built against
+        # the inbox-polling based integration. Migrate to mazda_cs_push. Remove in 2027.
+        if action_code in {"001", "021"}:
+            result_id = payload.get("r", "")
+            self._hass.bus.async_fire(
+                _EVENT_REMOTE_SERVICE_RESULT_DEPRECATED,
+                {
+                    "vin": payload.get("v", ""),
+                    "result_id": result_id,
+                    "success": result_id.endswith("_01"),
+                    "title": payload.get("title", ""),
+                    "body": payload.get("body", ""),
+                },
+            )
 
         if action_code in _REFRESH_CODES:
             _LOGGER.debug("FCM push triggers coordinator refresh (actionCode=%s)", action_code)
