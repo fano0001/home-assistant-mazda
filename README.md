@@ -22,14 +22,13 @@ and place it inside your Home Assistant Core installation's `custom_components` 
 
 > [!IMPORTANT]
 > A browser extension is required to successfully authenticate with Mazda. Do not skip this step!
-> The chrome extension is tied to the folder location on your computer and may disappear if you move the folder.
 
 Mazda Connected Services uses OAuth authentication which blocks automated logins. Authentication requires a browser-based OAuth flow using a browser extension to capture the mobile app redirect URL.
 
 ## Setup
 
    ### chrome-extension
-   
+   > The chrome extension is tied to the folder location on your computer and may disappear if you move the folder.
    - Download the [latest chrome-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/chrome-extension.zip) from releases (or use `./browser-extensions/chrome-extension/` from source)
    - Extract the zip file (or use source)
    - Open Google Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
@@ -56,7 +55,7 @@ Push notification events allow the integration to receive real-time updates from
 
 ## How it works
 
-When enabled, the integration registers with the andoid app's notification service. Push notifications are then sent to your Home Assistant, such as:
+When enabled, the integration registers with the andoid app's notification service via Google. Push notifications are then sent to your Home Assistant, such as:
 
 - A remote command (lock, unlock, start engine, etc.) success and failure
 - A door being opened or left unlocked
@@ -65,7 +64,6 @@ When enabled, the integration registers with the andoid app's notification servi
 After push events arrive the integration triggers an immediate refresh.
 
 Events are fired as Home Assistant events under `mazda_cs_push`, which can be used as an automation trigger.
-
 
 ## Configuration 
 
@@ -84,7 +82,6 @@ Events are fired as Home Assistant events under `mazda_cs_push`, which can be us
 
 Example yaml for sending Home Assistant notifications can be found in the example folder [HERE](https://github.com/fano0001/home-assistant-mazda/blob/v2.2.0-push/examples/mazda_cs_push_events.md).
 
-
 ## Known limitations
 
 ### Asymmetric events between accounts
@@ -93,3 +90,41 @@ If two accounts are used (primary + secondary driver):
 
 - The **primary driver** receives push notification events for actions triggered by the secondary driver.
 - The **secondary driver does not** receive push notification events for actions triggered by the primary driver.
+
+# mazda_cs_remote_service_result Event Deprecation
+The previous mazda_cs_remote_service_result events are deprecated and have been superseded by the above mazda_cs_push events. These events will continue to work until the legacy patch is removed in 2027. Please [begin migrating automations](https://github.com/fano0001/home-assistant-mazda/blob/v2.2.0-push/examples/mazda_cs_push_events.md).
+
+# FAQ
+
+## How often does the integration check for updates
+
+**Vehicle Status:** Every 6 minutes and when triggered by a push notification. If the integration fails to register for push notifactions, 3 minutes.
+**Health Report Status:** Every 24 hours or when triggered by a push notification
+
+## When does the vehicle send status updates?
+Information on when the vehicle sends updates is sourced from the [Mazda Connected Services Manual (USA)](https://www.mazda.ca/globalassets/digitalownersmanual/en_connected-vehicle-service-manual_2025/chapter4/section4.html) and validated with testing:
+
+### Vehicles Status updates
+The vehicle sends an update to Mazda when:
+
+* The engine is stopped/powered off.
+* A few minutes after the engine is stopped/powered off (door, lock, and alert status notifications).
+* When vehicle status alerts are triggered
+
+**EVs / PHEVs:** Battery and climate imformation can be updated on demand via 'Pull to Refresh' in the official app or the 'Refresh Vehicle Status' button in this integration.
+
+### Vehicle Status **does not update**
+* When the engine is on
+* **During a timed integration data refresh (6 min)**.
+    * These refreshes only pull the last information sent by the vehicle to Mazda when last turned off or a status alert was sent.
+* When in power save mode
+
+Even if you pull to refresh in mymazda, the latest timestamp for vehicle status is the last time the vehicle was switched off (excluding climate / charge). 
+
+## Does the integration drain vehicle battery?
+**No**, not under normal conditions. Only remote commands (start/stop/locks/etc) wake the vehicle, otherwise the integration talks to the servers only.
+
+**EV / PHEVS:** The "Refresh Vehicle Status" button also wakes the vehicle. Only overuse or frequent automation of this feature should be able cause a measurable impact.
+
+## Multiple Devices Detected
+Each MyMazda account can only be signed into one device at a time. To use the integration and the MyMazda app simultaneously, a secondary driver account can be created just for Home Assistant and provide access to the vehicle.
