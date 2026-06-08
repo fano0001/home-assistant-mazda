@@ -357,9 +357,9 @@ class McsClient:
         if isinstance(msg, HeartbeatPing):
             await self._handle_ping(msg)
         elif isinstance(msg, HeartbeatAck):
-            _LOGGER.debug("MCS: heartbeat ack received")
+            pass #_LOGGER.debug("MCS: heartbeat ack received")
         elif isinstance(msg, StreamAck):
-            _LOGGER.debug("MCS: stream ack received")
+            pass #_LOGGER.debug("MCS: stream ack received")
         elif isinstance(msg, IqStanza):
             pass  # SelectiveAck responses — no action needed
 
@@ -423,6 +423,6 @@ class McsClient:
                         if self._has_new_stream_id():
                             ping.last_stream_id_received = self._consume_stream_id()
                         await self._send(ping)
-                        _LOGGER.debug("MCS: sent client heartbeat ping")
+                        #_LOGGER.debug("MCS: sent client heartbeat ping")
                     except Exception as ex:  # noqa: BLE001
                         _LOGGER.debug("MCS: heartbeat send failed: %s", ex)
