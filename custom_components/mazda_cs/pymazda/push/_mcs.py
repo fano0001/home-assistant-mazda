@@ -395,7 +395,7 @@ class McsClient:
             except (OSError, EOFError, asyncio.IncompleteReadError, ConnectionResetError, ssl.SSLError) as ex:
                 if not self._do_listen:
                     return
-                _LOGGER.warning("MCS: connection lost (%s), reconnecting", ex)
+                _LOGGER.debug("MCS: connection lost (%s), reconnecting", ex)
             except Exception:
                 if not self._do_listen:
                     return
