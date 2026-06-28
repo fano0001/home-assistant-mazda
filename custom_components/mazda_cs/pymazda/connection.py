@@ -59,40 +59,49 @@ SHA256_CERT_SIG = "C022C9EE778CF903838F8B9C4B9FF0036A5C516CEFAAD6DC710B717CF97DC
 SIGN_PACKAGE_ID = "com.interrait.mymazda"
 
 # REGION_CONFIG app_codes sourced from assets/config/*_core_config.json MC_APP_CODE fields.
-# MNAO old API app_code (APP_CODE, j.f11207d, 0cxo7m58.mazda.com): "202007270941270111799"
 # cert_sig: new MC API (j.f11208e / hgs2ivna.mazda.com) uses SHA256 path; old API uses MD5 path
 REGION_CONFIG = {
     "MNAO": {
         "app_code": "498345786246797888995",  # MC_APP_CODE from MNAO_core_config.json
         "base_url": "https://hgs2ivna.mazda.com/",
         "region_header": "us",
+        "locale": "en-US",
+        "language": "en",
     },
     "MCI": {
         "app_code": "498345786246797888995",  # MC_APP_CODE from MCI_core_config.json (same as MNAO)
         "base_url": "https://hgs2ivna.mazda.com/",  # Canada shares MNAO infrastructure
         "region_header": "ca",
+        "locale": "en-CA",
+        "language": "en",
     },
     "MME": {
         "app_code": "365747628595648782737",  # MC_APP_CODE from MME_core_config.json
         "base_url": "https://hgs2iveu.mazda.com/",
         "region_header": "eu",
+        "locale": "en-GB",
+        "language": "en",
     },
     "MJO": {
         "app_code": "438849393836584965983",  # MC_APP_CODE from MJO_core_config.json
         "base_url": "https://hgs2ivap.mazda.com/",
         "region_header": "jp",
+        "locale": "ja-JP",
+        "language": "ja",
     },
     "MA": {
         "app_code": "438849393836584965983",  # MC_APP_CODE from MA_core_config.json (same as MJO)
         "base_url": "https://hgs2ivap.mazda.com/",  # Australia shares MJO API infrastructure
         "region_header": "au",
+        "locale": "en-AU",
+        "language": "en",
     },
 }
 # APP_PACKAGE_ID: Android package name, used in app-unique-id header
 APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "MyMazda/9.0.11 (Linux; Android 16)"
+USER_AGENT_BASE_API = "MyMazda/9.1.0 (Linux; Android 16)"
 APP_OS = "ANDROID"
-APP_VERSION = "9.0.11"
+APP_VERSION = "9.1.0"
 
 MAX_RETRIES = 4
 
@@ -138,6 +147,8 @@ class Connection:
             self.app_code = region_config["app_code"]
             self.base_url = region_config["base_url"]
             self.region_header = region_config["region_header"]
+            self.locale = region_config["locale"]
+            self.language = region_config["language"]
             self.cert_sig = SHA256_CERT_SIG
         else:
             raise MazdaConfigException("Invalid region")
@@ -392,8 +403,8 @@ class Connection:
             "req-id": str(uuid.uuid4()).upper(),
             "timestamp": timestamp,
             "region": self.region_header,
-            "locale": "en-US",
-            "language": "en",
+            "locale": self.locale,
+            "language": self.language,
             "Accept": "*/*",
         }
 
@@ -437,7 +448,8 @@ class Connection:
 
         response_json = await response.json()
         # saving body logger for future debug purposes, but typically just noise
-        self.logger.debug("Response status: %s, body: %s", response.status, response_json)
+        # self.logger.debug("Response status: %s, body: %s", response.status, response_json)
+        self.logger.debug("Response status: %s", response.status)
 
         if response_json.get("state") == "S":
             if "checkVersion" in uri:
@@ -515,8 +527,8 @@ class Connection:
             "req-id": str(uuid.uuid4()).upper(),
             "timestamp": timestamp,
             "region": self.region_header,
-            "locale": "en-US",
-            "language": "en",
+            "locale": self.locale,
+            "language": self.language,
             "Accept": "*/*",
             "Content-Type": "text/plain",
             "sign": self.__get_sign_from_timestamp(timestamp, self.app_code),

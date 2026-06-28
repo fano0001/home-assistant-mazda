@@ -2,14 +2,14 @@
 
 DOMAIN = "mazda_cs"
 
-DATA_CLIENT = "mazda_client"
-DATA_COORDINATOR = "coordinator"
-DATA_HEALTH_COORDINATOR = "health_coordinator"
-DATA_REGION = "region"
-DATA_VEHICLES = "vehicles"
+# Persisted config entry key for FCM credentials (android_id, security_token, etc.)
+CONF_FCM_CREDENTIALS = "fcm_credentials"
 
-OPTION_BUTTON_RESULT_POLLING = "enable_button_result_polling"
+# Option: whether push notification registration (FCM) is enabled
+CONF_ENABLE_PUSH = "enable_push_notifications"
+
 REMOTE_COMMAND_COOLDOWN_SECONDS = 3
+REMOTE_PUSH_TIMEOUT_SECONDS = 30
 
 MAZDA_REGIONS = {
     "MNAO": "North America",
@@ -20,7 +20,6 @@ MAZDA_REGIONS = {
 }
 
 # Per-region Azure AD B2C OAuth2 configuration
-# Values sourced from assets/res/raw/*_mzal_config.json in com.interrait.mymazda 9.0.8 APK
 OAUTH2_POLICY = "b2c_1a_signin"
 OAUTH2_AUTH = {
     "MNAO": {
@@ -89,8 +88,8 @@ OAUTH2_HOSTS = {
 }
 
 # MSAL client identifiers (sent with authorize requests)
-# Values confirmed from com.interrait.mymazda 9.0.8 APK (msal/BuildConfig.java, AuthenticationConstants.java)
+# Values confirmed from com.interrait.mymazda APK (msal/BuildConfig.java, AuthenticationConstants.java)
 MSAL_CLIENT_SKU = "MSAL.Android"
 MSAL_CLIENT_VER = "5.4.0"
 MSAL_APP_NAME = "MyMazda"
-MSAL_APP_VER = "9.0.11"
+MSAL_APP_VER = "9.1.0"

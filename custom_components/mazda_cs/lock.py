@@ -2,29 +2,25 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import (
-    EVENT_REMOTE_SERVICE_RESULT,
-    MazdaEntity,
-)
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from . import MazdaConfigEntry, MazdaEntity
+from .pymazda.exceptions import MazdaException
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the lock platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     entities = []
 
@@ -55,18 +51,22 @@ class MazdaLock(MazdaEntity, LockEntity):
         """Lock the vehicle doors."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
-        await self.client.lock_doors(self.vehicle_id)
+        try:
+            await self.client.lock_doors(self.vehicle_id)
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
         self.async_write_ha_state()
-        self.hass.async_create_task(self._poll_and_unlock("doorLock", command_utc))
+        self.hass.async_create_task(self._push_and_unlock("doorLock"))
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the vehicle doors."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
-        await self.client.unlock_doors(self.vehicle_id)
+        try:
+            await self.client.unlock_doors(self.vehicle_id)
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
         self.async_write_ha_state()
-        self.hass.async_create_task(self._poll_and_unlock("doorUnlock", command_utc))
+        self.hass.async_create_task(self._push_and_unlock("doorUnlock"))

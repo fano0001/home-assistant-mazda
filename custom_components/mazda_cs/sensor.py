@@ -11,15 +11,13 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfPressure, UnitOfTime
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfPressure, UnitOfTime, UnitOfVolume
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util import dt as dt_util
 
-from . import MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from . import MazdaConfigEntry, MazdaEntity
 
 
 @dataclass
@@ -333,6 +331,16 @@ SENSOR_ENTITIES = [
         value=lambda data: data["status"]["driveInformation"]["drive1FuelConsumptionL100km"],
     ),
     MazdaSensorEntityDescription(
+        key="drive1_fuel_amount",
+        translation_key="drive1_fuel_amount",
+        icon="mdi:gas-station",
+        native_unit_of_measurement=UnitOfVolume.LITERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["enableDevSensors"] and data["hasFuel"] and data["status"]["driveInformation"]["drive1FuelAmountL"] is not None,
+        value=lambda data: data["status"]["driveInformation"]["drive1FuelAmountL"],
+    ),
+    MazdaSensorEntityDescription(
         key="drive1_fuel_efficiency_mpg",
         translation_key="drive1_fuel_efficiency_mpg",
         icon="mdi:gas-station",
@@ -357,8 +365,17 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"] is not None,
-        value=lambda data: data["status"]["oilMaintenanceInfo"]["oilHealthPercentage"],
+        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["oilDeteriorateLevel"] is not None,
+        value=lambda data: data["status"]["oilMaintenanceInfo"]["oilDeteriorateLevel"],
+    ),
+    MazdaSensorEntityDescription(
+        key="next_maintenance_date",
+        translation_key="next_maintenance_date",
+        icon="mdi:calendar-outline",
+        device_class=SensorDeviceClass.DATE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_supported=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDate"] is not None,
+        value=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDate"],
     ),
     MazdaSensorEntityDescription(
         key="next_maintenance_distance",
@@ -461,12 +478,12 @@ SENSOR_ENTITIES = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     entities: list[SensorEntity] = []
 

@@ -1,4 +1,5 @@
 import asyncio  # noqa: D100
+import base64
 import datetime
 import json
 import logging
@@ -49,6 +50,7 @@ class Client:  # noqa: D101
         self._cached_vehicle_list = None
         self._cached_state = {}
         self._session_id = None
+        self._fcm_token: str | None = None  # stored so re-attach (600100 recovery) reuses it
         self._flash_light_counts: dict[
             int, int
         ] = {}  # vehicle_id → CarFinderParameter (0/1/2)
@@ -62,10 +64,17 @@ class Client:  # noqa: D101
         "MA": ("en-AU", "AU"),
     }
 
-    async def attach(self):  # noqa: D102
-        """Register device session. Call once after authentication before other API calls."""
+    async def attach(self, fcm_token=None):  # noqa: D102
+        """Register device session. Call once after authentication before other API calls.
+
+        fcm_token: Firebase Cloud Messaging registration token. When provided it is
+        stored on the client and forwarded as deviceToken. Subsequent calls (e.g. from
+        the 600100 session-refresh path) reuse the stored token automatically.
+        """
+        if fcm_token:
+            self._fcm_token = fcm_token
         locale, country = self._REGION_ATTACH_PARAMS.get(self._region, ("en-US", "US"))
-        response = await self.controller.attach(locale, country)
+        response = await self.controller.attach(locale, country, fcm_token=self._fcm_token)
         if response and response.get("data"):
             session_id = response["data"].get("userinfo", {}).get("sessionId")
             if session_id:
@@ -83,6 +92,10 @@ class Client:  # noqa: D101
     async def get_user_info(self):  # noqa: D102
         """Fetch account user info from getUserInfo/v4 and return the raw response."""
         return await self.controller.get_user_info()
+
+    async def get_cv_user_ids(self):  # noqa: D102
+        """Fetch CV user IDs from getCvUserIds/v4 and return the raw response."""
+        return await self.controller.get_cv_user_ids()
 
     async def get_vehicles(self):  # noqa: D102
         if self._use_cached_vehicle_list and self._cached_vehicle_list is not None:
@@ -166,8 +179,8 @@ class Client:  # noqa: D101
     async def get_vehicle_status(self, vehicle_id):  # noqa: D102
         vehicle_status_response = await self.controller.get_vehicle_status(vehicle_id)
 
-        alert_info = vehicle_status_response.get("alertInfos")[0]
-        remote_info = vehicle_status_response.get("remoteInfos")[0]
+        alert_info = (vehicle_status_response.get("alertInfos") or [{}])[0]
+        remote_info = (vehicle_status_response.get("remoteInfos") or [{}])[0]
 
         latitude = remote_info.get("PositionInfo", {}).get("Latitude")
         if latitude is not None:
@@ -293,12 +306,13 @@ class Client:  # noqa: D101
                 "drive1DistanceKm": remote_info.get("DriveInformation", {}).get("Drv1Distnc"),
                 "drive1FuelEfficiencyKmL": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelE"),
                 "drive1FuelConsumptionL100km": remote_info.get("DriveInformation", {}).get("Drv1AvlFuelG"),
+                "drive1FuelAmountL": remote_info.get("DriveInformation", {}).get("Drv1AmntFuel"),
             },
             "oilMaintenanceInfo": {
                 "nextOilChangeDistanceKm": remote_info.get("OilMntInformation", {}).get("RemOilDistK"),
                 "mntOilAtFlg": remote_info.get("OilMntInformation", {}).get("MntOilAtFlg"),
                 "oilDeteriorateWarning": remote_info.get("OilMntInformation", {}).get("OilDeteriorateWarning") == 1,
-                "oilHealthPercentage": remote_info.get("OilMntInformation", {}).get("DROilDeteriorateLevel"),
+                "oilDeteriorateLevel": remote_info.get("OilMntInformation", {}).get("DROilDeteriorateLevel"),
                 "mntOilLvlAtFlg": remote_info.get("OilMntInformation", {}).get("MntOilLvlAtFlg"),  # not yet implemented
                 "brakeOilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelSensWarnBRq") == 1,
                 "oilLevelWarning": remote_info.get("OilMntInformation", {}).get("OilLevelWarning") == 1,
@@ -310,6 +324,18 @@ class Client:  # noqa: D101
                 "nextScrMaintenanceDistance": remote_info.get("MntSCRInformation", {}).get("RemainingMileage"),
             },
             "maintenanceInfo": {
+                "nextMaintenanceDate": (
+                    datetime.date(
+                        remote_info["RegularMntInformation"]["MntSetYear"],
+                        remote_info["RegularMntInformation"]["MntSetMonth"],
+                        remote_info["RegularMntInformation"]["MntSetDate"],
+                    )
+                    if all(
+                        remote_info.get("RegularMntInformation", {}).get(k) is not None
+                        for k in ("MntSetYear", "MntSetMonth", "MntSetDate")
+                    )
+                    else None
+                ),
                 "nextMaintenanceDistanceKm": remote_info.get("RegularMntInformation", {}).get("RemRegDistKm"),
             },
             "electricalInformation": {
@@ -460,6 +486,12 @@ class Client:  # noqa: D101
 
         return hvac_setting
 
+    async def get_notify_setting(self, vehicle_id):  # noqa: D102
+        return await self.controller.get_notify_setting(vehicle_id)
+
+    async def set_notify_setting(self, vehicle_id, settings_dict):  # noqa: D102
+        return await self.controller.set_notify_setting(vehicle_id, settings_dict)
+
     async def set_hvac_setting(  # noqa: D102
         self, vehicle_id, temperature, temperature_unit, front_defroster, rear_defroster
     ):
@@ -510,6 +542,17 @@ class Client:  # noqa: D101
                 "tpmsStatus": bool(warnings.get("WngTpmsStatus")),
             }
         }
+
+    async def get_available_service(self, vehicle_id):  # noqa: D102
+        """Fetch available services for a vehicle from getAvailableService/v4.
+
+        Returns the decoded service flags dict, e.g. {"vehicleStatus": 1, "remoteControl": 1, ...}.
+        """
+        response = await self.controller.get_available_service(vehicle_id)
+        encoded = response.get("availableService", "")
+        if encoded:
+            return json.loads(base64.b64decode(encoded))
+        return {}
 
     async def get_inbox_list(
         self,

@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from . import MazdaAPI as MazdaAPIClient, MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from . import MazdaAPI as MazdaAPIClient, MazdaConfigEntry, MazdaEntity
 
 FLASH_LIGHT_OPTIONS = ["2", "10", "30"]
 DEFAULT_FLASH_LIGHT_COUNT = "10"
@@ -18,12 +16,12 @@ DEFAULT_FLASH_LIGHT_COUNT = "10"
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the select platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     async_add_entities(
         MazdaFlashLightCountSelect(client, coordinator, index)

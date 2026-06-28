@@ -4,25 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from . import (
-    EVENT_REMOTE_SERVICE_RESULT,
-    MazdaAPI as MazdaAPIClient,
-    MazdaAPIEncryptionException,
-    MazdaEntity,
-    MazdaException,
-    MazdaTokenExpiredException,
-)
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
+from . import MazdaAPI as MazdaAPIClient, MazdaConfigEntry, MazdaEntity
+from .pymazda.exceptions import MazdaException
 
 
 async def handle_button_press(
@@ -36,11 +27,7 @@ async def handle_button_press(
 
     try:
         await api_method(vehicle_id)
-    except (
-        MazdaException,
-        MazdaTokenExpiredException,
-        MazdaAPIEncryptionException,
-    ) as ex:
+    except MazdaException as ex:
         raise HomeAssistantError(ex) from ex
 
 
@@ -116,12 +103,12 @@ BUTTON_ENTITIES = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the button platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     async_add_entities(
         MazdaButtonEntity(client, coordinator, index, description)
@@ -154,12 +141,11 @@ class MazdaButtonEntity(MazdaEntity, ButtonEntity):
         """Press the button."""
         if self.entity_description.track_result and self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
         await self.entity_description.async_press(
             self.client, self.entity_description.key, self.vehicle_id, self.coordinator
         )
         if self.entity_description.track_result:
             self._command_in_progress = True
             self.hass.async_create_task(
-                self._poll_and_unlock(self.entity_description.key, command_utc)
+                self._push_and_unlock(self.entity_description.key)
             )

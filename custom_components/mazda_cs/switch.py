@@ -1,28 +1,28 @@
 """Platform for Mazda switch integration."""
 
-from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory  # For dev switch
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo  # For dev switch
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from . import MazdaAPI as MazdaAPIClient, MazdaEntity
-from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN, OPTION_BUTTON_RESULT_POLLING
+from . import MazdaAPI as MazdaAPIClient, MazdaConfigEntry, MazdaEntity
+from .const import DOMAIN
+from .pymazda.exceptions import MazdaException
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the switch platform."""
-    client = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA_COORDINATOR]
+    client = config_entry.runtime_data.client
+    coordinator = config_entry.runtime_data.coordinator
 
     entities = [
         MazdaEnableWindowsSwitch(hass, config_entry, coordinator, index)
@@ -31,10 +31,6 @@ async def async_setup_entry(
     ]
     entities += [
         MazdaEnableDevSensorsSwitch(hass, config_entry, coordinator, index)
-        for index in range(len(coordinator.data))
-    ]
-    entities += [
-        MazdaButtonResultPollingSwitch(hass, config_entry, coordinator, index)
         for index in range(len(coordinator.data))
     ]
     entities += [
@@ -50,6 +46,7 @@ class MazdaEnableWindowsSwitch(SwitchEntity):
 
     _attr_translation_key = "enable_windows"
     _attr_icon = "mdi:window-open"
+    #_attr_entity_category = EntityCategory.CONFIG
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_has_entity_name = True
 
@@ -94,7 +91,9 @@ class MazdaEnableDevSensorsSwitch(SwitchEntity):
 
     _attr_translation_key = "enable_dev_sensors"
     _attr_icon = "mdi:flask-outline"
+    #_attr_entity_category = EntityCategory.CONFIG
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = True
 
     def __init__(
@@ -133,51 +132,6 @@ class MazdaEnableDevSensorsSwitch(SwitchEntity):
         await self._hass.config_entries.async_reload(self._config_entry.entry_id)
 
 
-class MazdaButtonResultPollingSwitch(SwitchEntity):
-    """Diagnostic switch to enable/disable button result event polling (getInboxList)."""
-
-    _attr_translation_key = "enable_button_result_polling"
-    _attr_icon = "mdi:bell-ring-outline"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_has_entity_name = True
-
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        coordinator: DataUpdateCoordinator,
-        index: int,
-    ) -> None:
-        """Initialize the button result polling switch."""
-        self._hass = hass
-        self._config_entry = config_entry
-        self._coordinator = coordinator
-        vin = coordinator.data[index]["vin"]
-        self._attr_unique_id = f"{vin}_enable_button_result_polling"
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, vin)})
-
-    @property
-    def is_on(self) -> bool:
-        """Return true if button result polling is enabled."""
-        return self._config_entry.options.get(OPTION_BUTTON_RESULT_POLLING, False)
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Enable button result polling."""
-        self._hass.config_entries.async_update_entry(
-            self._config_entry,
-            options={**self._config_entry.options, OPTION_BUTTON_RESULT_POLLING: True},
-        )
-        await self._coordinator.async_request_refresh()
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Disable button result polling."""
-        self._hass.config_entries.async_update_entry(
-            self._config_entry,
-            options={**self._config_entry.options, OPTION_BUTTON_RESULT_POLLING: False},
-        )
-        await self._coordinator.async_request_refresh()
-
-
 class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
     """Class for the charging switch."""
 
@@ -213,18 +167,22 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
         """Start charging the vehicle."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
-        await self.client.start_charging(self.vehicle_id)
+        try:
+            await self.client.start_charging(self.vehicle_id)
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
-        self.hass.async_create_task(self._poll_and_unlock("chargeStart", command_utc))
+        self.hass.async_create_task(self._push_and_unlock("chargeStart"))
         await self.refresh_status_and_write_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Stop charging the vehicle."""
         if self._command_in_progress:
             return
-        command_utc = datetime.now(timezone.utc)
-        await self.client.stop_charging(self.vehicle_id)
+        try:
+            await self.client.stop_charging(self.vehicle_id)
+        except MazdaException as ex:
+            raise HomeAssistantError(ex) from ex
         self._command_in_progress = True
-        self.hass.async_create_task(self._poll_and_unlock("chargeStop", command_utc))
+        self.hass.async_create_task(self._push_and_unlock("chargeStop"))
         await self.refresh_status_and_write_state()
