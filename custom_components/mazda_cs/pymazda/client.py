@@ -179,8 +179,8 @@ class Client:  # noqa: D101
     async def get_vehicle_status(self, vehicle_id):  # noqa: D102
         vehicle_status_response = await self.controller.get_vehicle_status(vehicle_id)
 
-        alert_info = vehicle_status_response.get("alertInfos")[0]
-        remote_info = vehicle_status_response.get("remoteInfos")[0]
+        alert_info = (vehicle_status_response.get("alertInfos") or [{}])[0]
+        remote_info = (vehicle_status_response.get("remoteInfos") or [{}])[0]
 
         latitude = remote_info.get("PositionInfo", {}).get("Latitude")
         if latitude is not None:
