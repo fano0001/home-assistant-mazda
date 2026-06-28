@@ -72,11 +72,7 @@ Events are fired as Home Assistant events under `mazda_cs_push`, which can be us
 > [!IMPORTANT]
 > Push notification events are **enabled by default** but can be disabled in the event of issues.
 
-**During initial setup**, a toggle to enable appears on setup alongside the region selector. 
-
-**After setup**, you can enable or disable it at any time via **Settings → Devices & Services → Mazda Connected Services → Three Dots → Reconfigure**. No re-login is required.
-
-**"Push notification events" switch** has been added to each vehicle's device page to temporarily increase discovery for existing users. Toggling it will reload the integration.
+**After setup**, you can enable or disable it at any time via **Settings → Devices & Services → Mazda Connected Services → Three Dots → Reconfigure**.
 
 ### Example Automations YAML
 
