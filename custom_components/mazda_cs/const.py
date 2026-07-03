@@ -8,8 +8,6 @@ CONF_FCM_CREDENTIALS = "fcm_credentials"
 # Option: whether push notification registration (FCM) is enabled
 CONF_ENABLE_PUSH = "enable_push_notifications"
 
-REMOTE_COMMAND_COOLDOWN_SECONDS = 3
-REMOTE_PUSH_TIMEOUT_SECONDS = 30
 
 MAZDA_REGIONS = {
     "MNAO": "North America",

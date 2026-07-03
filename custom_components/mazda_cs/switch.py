@@ -148,7 +148,6 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
         super().__init__(client, coordinator, index)
 
         self._attr_unique_id = self.vin
-        self._command_in_progress = False
 
     @property
     def is_on(self):
@@ -165,24 +164,16 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging the vehicle."""
-        if self._command_in_progress:
-            return
         try:
             await self.client.start_charging(self.vehicle_id)
         except MazdaException as ex:
             raise HomeAssistantError(ex) from ex
-        self._command_in_progress = True
-        self.hass.async_create_task(self._push_and_unlock("chargeStart"))
         await self.refresh_status_and_write_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Stop charging the vehicle."""
-        if self._command_in_progress:
-            return
         try:
             await self.client.stop_charging(self.vehicle_id)
         except MazdaException as ex:
             raise HomeAssistantError(ex) from ex
-        self._command_in_progress = True
-        self.hass.async_create_task(self._push_and_unlock("chargeStop"))
         await self.refresh_status_and_write_state()

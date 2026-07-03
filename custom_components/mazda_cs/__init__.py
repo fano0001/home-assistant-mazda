@@ -15,7 +15,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_REGION, Platform
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
@@ -40,10 +40,8 @@ from .const import (
     CONF_ENABLE_PUSH,
     CONF_FCM_CREDENTIALS,
     DOMAIN,
-    REMOTE_COMMAND_COOLDOWN_SECONDS,
-    REMOTE_PUSH_TIMEOUT_SECONDS,
 )
-from .fcm_listener import EVENT_MAZDA_PUSH, MazdaFcmListener
+from .fcm_listener import MazdaFcmListener
 from .pymazda.push._conductor import conductor_device_id_from_user_sub
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
@@ -65,8 +63,6 @@ class MazdaEntryData:
 
 
 type MazdaConfigEntry = ConfigEntry[MazdaEntryData]
-
-EVENT_REMOTE_SERVICE_RESULT = "mazda_cs_remote_service_result"
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -598,55 +594,6 @@ class MazdaEntity(CoordinatorEntity):
             model=f"{self.data['modelYear']} {self.data['carlineName']}",
             name=self.vehicle_name,
         )
-
-    async def _push_and_unlock(self, action: str) -> None:
-        """Wait for a push event confirming the remote command, then reset the command-in-progress flag."""
-        try:
-            if getattr(self.coordinator, "push_enabled", False):
-                push_event = asyncio.Event()
-                push_data: dict = {}
-
-                @callback
-                def _on_push(event) -> None:
-                    if (
-                        event.data.get("vin") == self.vin
-                        and event.data.get("action_code") in {"001", "021"}
-                    ):
-                        push_data.update(event.data)
-                        push_event.set()
-
-                unsub = self.hass.bus.async_listen(EVENT_MAZDA_PUSH, _on_push)
-                try:
-                    async with asyncio.timeout(REMOTE_PUSH_TIMEOUT_SECONDS):
-                        await push_event.wait()
-                    result_id = push_data.get("result_id", "")
-                    self.hass.bus.async_fire(
-                        EVENT_REMOTE_SERVICE_RESULT,
-                        {
-                            "vehicle_id": self.vehicle_id,
-                            "vin": self.vin,
-                            "action": action,
-                            "success": result_id.endswith("_01"),
-                            "title": push_data.get("title", ""),
-                            "result_id": result_id,
-                        },
-                    )
-                    _LOGGER.debug(
-                        "Push result for %s vin=%s: result_id=%s",
-                        action,
-                        self.vin,
-                        result_id,
-                    )
-                except TimeoutError:
-                    _LOGGER.debug(
-                        "Push result timed out: action=%s vin=%s", action, self.vin
-                    )
-                finally:
-                    unsub()
-            else:
-                await asyncio.sleep(REMOTE_COMMAND_COOLDOWN_SECONDS)
-        finally:
-            self._command_in_progress = False
 
     @property
     def data(self):
