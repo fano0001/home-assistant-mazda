@@ -430,10 +430,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
     coordinator.push_enabled = bool(fcm_token)
 
     # Register device session with Mazda backend (required before any remoteServices calls)
-    _LOGGER.debug("attach: using fcm_token=%s", fcm_token)
+    _LOGGER.debug(
+        "attach: using fcm_token prefix=%s...",
+        fcm_token[:20] if fcm_token else None,
+    )
     try:
         attach_result = await mazda_client.attach(fcm_token=fcm_token)
-        _LOGGER.debug("attach response: %s", attach_result)
+        _LOGGER.debug(
+            "attach resultCode: %s", (attach_result or {}).get("resultCode")
+        )
     except Exception as ex:
         _LOGGER.warning("Mazda attach failed; vehicle status will be unavailable: %s", ex)
 
