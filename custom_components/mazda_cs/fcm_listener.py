@@ -54,7 +54,7 @@ _REFRESH_CODES = frozenset(
 # "031",   # INBOX_GEOFENCE_SETTING - Geofence settings
 # "033",   # INBOX_SVT_SETTING - SVT (Stolen Vehicle Tracking) settings
 # "034",   # INBOX_SVT_ALERT
-# "035",   # *(undocumented)* - Seen in push notification handler only — absent from `InboxCodeEnum`; likely a newer type
+# "035",   # INBOX_OPTIONAL_SERVICE_UPDATE - "Update Optional Service Availability"
 
 
 class MazdaFcmListener:
