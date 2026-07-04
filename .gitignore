@@ -4,3 +4,4 @@ __pycache__/
 /resources
 CLAUDE.md
 /.claude
+tests/TESTING.md
