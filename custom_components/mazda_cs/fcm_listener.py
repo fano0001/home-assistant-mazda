@@ -251,7 +251,11 @@ class MazdaFcmListener:
           cdtMessageId  — Conductor delivery tracking ID
         """
         action_code = payload.get("a", "") or payload.get("actionCode", "")
-        _LOGGER.debug("FCM push received — actionCode=%s payload=%s", action_code, payload)
+        _LOGGER.debug(
+            "FCM push received — actionCode=%s payload=%s",
+            action_code,
+            {**payload, "v": "**REDACTED**"} if "v" in payload else payload,
+        )
 
         self._hass.bus.async_fire(
             EVENT_MAZDA_PUSH,
