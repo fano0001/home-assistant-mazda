@@ -30,31 +30,31 @@ EVENT_MAZDA_PUSH = "mazda_cs_push"
 # reflects the vehicle change without waiting for the 3-minute poll interval.
 _REFRESH_CODES = frozenset(
     [
-        "001",   # INBOX_REMOTE — remote command result (lock/unlock/engine/A/C/lights)
-        "003",   # INBOX_VEHICLE_STATUS
-        "004",   # INBOX_SECURITY — Security alerts
-        "019",   # INBOX_REMOTE_AC_EXTENSION
-        "021",   # INBOX_EV_REMOTE
-        "022",   # INBOX_REAL_TIME_VEHICLE_STATUS
-        "023",   # INBOX_EV_VEHICLE_STATUS
-        "026",   # INBOX_LOW_BATTERY - Low 12V battery
-        "027",   # INBOX_EV_LOW_BATTERY
-        "032",   # INBOX_GEOFENCE_ALERT
+        "001",  # INBOX_REMOTE — remote command result (lock/unlock/engine/A/C/lights)
+        "003",  # INBOX_VEHICLE_STATUS
+        "004",  # INBOX_SECURITY — Security alerts
+        "019",  # INBOX_REMOTE_AC_EXTENSION
+        "021",  # INBOX_EV_REMOTE
+        "022",  # INBOX_REAL_TIME_VEHICLE_STATUS
+        "023",  # INBOX_EV_VEHICLE_STATUS
+        "026",  # INBOX_LOW_BATTERY - Low 12V battery
+        "027",  # INBOX_EV_LOW_BATTERY
+        "032",  # INBOX_GEOFENCE_ALERT
         "D002",  # CDT_INBOX_CP_CHARGE_COMPLETED
     ]
 )
 
 # Action codes documented but not requiring a refresh:
-        # "009",   # INBOX_BCALL_HIGH - B-Call high priority
-        # "014",   # INBOX_BCALL_LOW - B-Call low priority
-        # "017",   # INBOX_TAKEOVER_FAILED - Takeover failed
-        # "024",   # INBOX_ECONNECT_EVENT - eConnect event
-        # "029",   # INBOX_EV_BATTERY_ADVICE - EV battery advice
-        # "030",   # INBOX_EV_BATTERY_PRAISE - EV battery praise
-        # "031",   # INBOX_GEOFENCE_SETTING - Geofence settings
-        # "033",   # INBOX_SVT_SETTING - SVT (Stolen Vehicle Tracking) settings
-        # "034",   # INBOX_SVT_ALERT
-        # "035",   # *(undocumented)* - Seen in push notification handler only — absent from `InboxCodeEnum`; likely a newer type
+# "009",   # INBOX_BCALL_HIGH - B-Call high priority
+# "014",   # INBOX_BCALL_LOW - B-Call low priority
+# "017",   # INBOX_TAKEOVER_FAILED - Takeover failed
+# "024",   # INBOX_ECONNECT_EVENT - eConnect event
+# "029",   # INBOX_EV_BATTERY_ADVICE - EV battery advice
+# "030",   # INBOX_EV_BATTERY_PRAISE - EV battery praise
+# "031",   # INBOX_GEOFENCE_SETTING - Geofence settings
+# "033",   # INBOX_SVT_SETTING - SVT (Stolen Vehicle Tracking) settings
+# "034",   # INBOX_SVT_ALERT
+# "035",   # *(undocumented)* - Seen in push notification handler only — absent from `InboxCodeEnum`; likely a newer type
 
 
 class MazdaFcmListener:
@@ -116,7 +116,10 @@ class MazdaFcmListener:
 
         stored = self._entry.data.get(CONF_FCM_CREDENTIALS)
         if stored:
-            _LOGGER.debug("FCM: loaded credentials from entry.data (android_id=%s)", stored.get("android_id"))
+            _LOGGER.debug(
+                "FCM: loaded credentials from entry.data (android_id=%s)",
+                stored.get("android_id"),
+            )
 
         self._client = MazdaPushClient(
             credentials=stored,
@@ -152,10 +155,17 @@ class MazdaFcmListener:
         # APK userId priority: primaryId (MNAO) → partner2Id (non-MNAO) → partner1Id fallback.
         # Both primaryId and partner2Id are pre-gated by region in __init__.py so only
         # the appropriate one is non-empty here.
-        effective_primary_id = self._conductor_customer_id or None   # MNAO only
+        effective_primary_id = self._conductor_customer_id or None  # MNAO only
         effective_partner2_id = self._conductor_internal_id or None  # non-MNAO only
-        effective_partner1_id = self._conductor_usher_id or None     # all regions, fallback
-        effective_user_id = effective_primary_id or effective_partner2_id or effective_partner1_id or None
+        effective_partner1_id = (
+            self._conductor_usher_id or None
+        )  # all regions, fallback
+        effective_user_id = (
+            effective_primary_id
+            or effective_partner2_id
+            or effective_partner1_id
+            or None
+        )
         _LOGGER.debug(
             "Conductor registration: region=%s userId=%s primaryId=%s partner2Id=%s partner1Id=%s deviceId=%s",
             self._region,
@@ -178,7 +188,9 @@ class MazdaFcmListener:
             if status == 200:
                 _LOGGER.debug("Conductor updateuser succeeded")
             else:
-                _LOGGER.warning("Conductor updateuser returned HTTP %d: %s", status, text)
+                _LOGGER.warning(
+                    "Conductor updateuser returned HTTP %d: %s", status, text
+                )
 
         return self._fcm_token
 
@@ -270,7 +282,9 @@ class MazdaFcmListener:
         )
 
         if action_code in _REFRESH_CODES:
-            _LOGGER.debug("FCM push triggers coordinator refresh (actionCode=%s)", action_code)
+            _LOGGER.debug(
+                "FCM push triggers coordinator refresh (actionCode=%s)", action_code
+            )
             self._hass.async_create_task(self._coordinator.async_request_refresh())
 
         if action_code == "010":
