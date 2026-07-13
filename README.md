@@ -27,6 +27,25 @@ Mazda Connected Services uses OAuth authentication which blocks automated logins
 
 ## Setup
 
+   ### ha-oauth-assist (chrome and firefox extensions)
+   > The extension is tied to the folder location on your computer and may 'disappear' if you move the folder.
+   This is effectively the same as the extension below, but generic and designed for use across multiple authentication platforms. Future development will be focused on this extension moving forward.
+   - Download the Download the [latest released extension.zip](https://github.com/crash0verride11/ha-oauth-assist/releases/latest/download/extension.zip) or download source
+   - Extract the zip file (or use source)
+   - Chrome:
+       - Open Google Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
+       - Enable "Developer mode"
+       - Click "Load unpacked" and select the extracted folder
+    - Firefox:
+       - Open the extension/ folder
+       - Replace its manifest.json with manifest.firefox.json
+       - Go to about:debugging → Load Temporary Add-on
+    - Click the extension in a new tab
+    - Select `Manage providers...`
+    - Download and import the the (mazda_ha-oauth-assist.json)[https://github.com/fano0001/home-assistant-mazda/blob/main/browser-extensions/mazda_ha-oauth-assist.json] provider profile
+    - Enable the Mazda provider profile
+    - Start the authentication process in Home Assistant
+
    ### chrome-extension
    > The chrome extension is tied to the folder location on your computer and may disappear if you move the folder.
    - Download the [latest chrome-extension.zip](https://github.com/fano0001/home-assistant-mazda/releases/latest/download/chrome-extension.zip) from releases (or use `./browser-extensions/chrome-extension/` from source)
@@ -34,7 +53,7 @@ Mazda Connected Services uses OAuth authentication which blocks automated logins
    - Open Google Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select the extracted folder
-   - Try to authenticate
+   - Start the authentication process in Home Assistant
 
    ### safari-extension
 
@@ -48,6 +67,7 @@ Mazda Connected Services uses OAuth authentication which blocks automated logins
    - Open Safari and enable the extension in Safari settings
    - Build the extension again
    - The app window should indicate the extension is 'On'.
+   - Start the authentication process in Home Assistant
 
 # Push Notification Events
 
