@@ -36,7 +36,7 @@ Mazda Connected Services uses OAuth authentication which blocks automated logins
        - Open Google Chrome and navigate to `chrome://extensions/` or Edge `edge://extensions/`
        - Enable "Developer mode"
        - Click "Load unpacked" and select the extracted folder
-    - Firefox:
+   - Firefox:
        - Open the extension/ folder
        - Replace its manifest.json with manifest.firefox.json
        - Go to about:debugging → Load Temporary Add-on
