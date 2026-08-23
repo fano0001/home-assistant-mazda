@@ -28,7 +28,7 @@ class MazdaOAuth2FlowHandler(
     """Handle a config flow for Mazda Connected Services."""
 
     VERSION = 2
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     DOMAIN = DOMAIN
 

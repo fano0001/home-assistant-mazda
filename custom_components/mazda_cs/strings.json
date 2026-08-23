@@ -114,24 +114,6 @@
       "scr_maintenance_warning": {
         "name": "SCR maintenance warning"
       },
-      "sunroof": {
-        "name": "Sunroof"
-      },
-      "sunroof_tilt": {
-        "name": "Sunroof tilt"
-      },
-      "driver_window": {
-        "name": "Driver window"
-      },
-      "passenger_window": {
-        "name": "Passenger window"
-      },
-      "rear_left_window": {
-        "name": "Rear left window"
-      },
-      "rear_right_window": {
-        "name": "Rear right window"
-      },
       "tns_lamp": {
         "name": "Exterior lights-on warning"
       },
@@ -297,9 +279,6 @@
     "switch": {
       "charging": {
         "name": "Charging"
-      },
-      "enable_windows": {
-        "name": "δ | Window sensors"
       },
       "enable_dev_sensors": {
         "name": "δ | Development sensors"

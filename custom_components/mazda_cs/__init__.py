@@ -268,7 +268,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
                 vehicle["region"] = region
-                vehicle["enableWindows"] = entry.options.get("enable_windows", False)
                 vehicle["enableDevSensors"] = entry.options.get(
                     "enable_dev_sensors", False
                 )
@@ -530,6 +529,22 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.warning(
             "Migration Successful: Push notification event support disabled by default. "
             "Reconfigure the integration to enable. See the ReadMe for more information."
+        )
+
+    # Deliberately a fresh `if` so an entry coming from minor_version 1 above
+    # continues on to 3 in a single pass.
+    if entry.version == 2 and entry.minor_version == 2:
+        # minor_version 3: window sensors removed. Their raw fields (Pw.PwPos*,
+        # Door.SrSlideSignal, Door.SrTiltSignal) have never been observed as
+        # anything but 0; non-zero values are now logged as warnings instead.
+        hass.config_entries.async_update_entry(
+            entry,
+            options={
+                key: value
+                for key, value in entry.options.items()
+                if key != "enable_windows"
+            },
+            minor_version=3,
         )
 
     return True

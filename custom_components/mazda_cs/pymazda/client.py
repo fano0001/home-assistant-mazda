@@ -19,6 +19,54 @@ def _parse_occurrence_date(value):
         return None
 
 
+# Fields with no confirmed usage: every observation to date returns 0, 0.0, or the
+# key is absent.  Rather than surface them as entities nobody can interpret, we log
+# whenever a vehicle reports anything else, so a usage gate can be correlated.
+_UNDOCUMENTED_FIELDS = (
+    ("alertInfos[0].Pw", "PwPosDrv"),
+    ("alertInfos[0].Pw", "PwPosPsngr"),
+    ("alertInfos[0].Pw", "PwPosRl"),
+    ("alertInfos[0].Pw", "PwPosRr"),
+    ("alertInfos[0].Door", "SrSlideSignal"),
+    ("alertInfos[0].Door", "SrTiltSignal"),
+    ("remoteInfos[0].DriveInformation", "Drv1AmntFuel"),
+)
+
+_UNDOCUMENTED_ISSUE_URL = (
+    "https://github.com/fano0001/home-assistant-mazda/issues"
+)
+
+
+def _warn_undocumented_fields(vehicle_id, alert_info, remote_info):
+    """Log any undocumented field reporting a value other than zero or None.
+
+    Zero covers both the integer `0` of the Pw/Door flags and the float `0.0` of
+    Drv1AmntFuel; anything else -- including a non-zero float -- warns.
+    """
+    groups = {
+        "alertInfos[0].Pw": alert_info.get("Pw") or {},
+        "alertInfos[0].Door": alert_info.get("Door") or {},
+        "remoteInfos[0].DriveInformation": remote_info.get("DriveInformation") or {},
+    }
+
+    for group_path, key in _UNDOCUMENTED_FIELDS:
+        value = groups[group_path].get(key)
+        if value is None or value == 0:
+            continue
+
+        _LOGGER.warning(
+            "Vehicle %s: undocumented field %s. %s reported %r (expected 0) at %s. "
+            "This value has no known usage - please open an issue to report it, "
+            "along with relevant vehicle information, at %s",
+            vehicle_id,
+            group_path,
+            key,
+            value,
+            alert_info.get("OccurrenceDate") or remote_info.get("OccurrenceDate"),
+            _UNDOCUMENTED_ISSUE_URL,
+        )
+
+
 def _build_tpms_timestamp(tpms: dict):
     """Build a naive local datetime from TPMS display date/time fields, or None if unavailable."""
     try:
@@ -191,6 +239,8 @@ class Client:  # noqa: D101
         alert_info = (vehicle_status_response.get("alertInfos") or [{}])[0]
         remote_info = (vehicle_status_response.get("remoteInfos") or [{}])[0]
 
+        _warn_undocumented_fields(vehicle_id, alert_info, remote_info)
+
         latitude = remote_info.get("PositionInfo", {}).get("Latitude")
         if latitude is not None:
             latitude = latitude * (
@@ -256,14 +306,6 @@ class Client:  # noqa: D101
                 "rearRightDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwRr")
                 == 1,
                 "allDoorsLockedSignal": alert_info.get("Door", {}).get("AllDrSwSignal") == 1,
-            },
-            "windows": {
-                "driverWindowOpen": alert_info.get("Pw", {}).get("PwPosDrv") == 1,
-                "passengerWindowOpen": alert_info.get("Pw", {}).get("PwPosPsngr") == 1,
-                "rearLeftWindowOpen": alert_info.get("Pw", {}).get("PwPosRl") == 1,
-                "rearRightWindowOpen": alert_info.get("Pw", {}).get("PwPosRr") == 1,
-                "sunroofOpen": alert_info.get("Door", {}).get("SrSlideSignal") == 1,
-                "sunroofTilted": alert_info.get("Door", {}).get("SrTiltSignal") == 1,
             },
             # SeatBeltInformation — not yet integrated as sensors
             "seatBeltInformation": {
