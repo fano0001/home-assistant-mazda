@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+# pytest-homeassistant-custom-component ships async autouse fixtures, so
+# pytest-asyncio must run in "auto" mode (matches Home Assistant core's config).
+asyncio_mode = "auto"
+testpaths = ["tests"]
+norecursedirs = [".git", "custom_components"]
