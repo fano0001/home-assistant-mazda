@@ -10,6 +10,16 @@ from .exceptions import MazdaConfigException
 _LOGGER = logging.getLogger(__name__)
 
 
+def _parse_occurrence_date(value):
+    """Parse a Mazda OccurrenceDate ("YYYYMMDDHHMMSS") as UTC, or None if absent/malformed."""
+    try:
+        return datetime.datetime.strptime(value, "%Y%m%d%H%M%S").replace(
+            tzinfo=datetime.UTC
+        )
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_tpms_timestamp(tpms: dict):
     """Build a naive local datetime from TPMS display date/time fields, or None if unavailable."""
     try:
@@ -200,14 +210,12 @@ class Client:  # noqa: D101
         vehicle_status = {
             "lastUpdatedTimestamp": max(
                 (
-                    datetime.datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
-                        tzinfo=datetime.timezone.utc
+                    ts
+                    for ts in (
+                        _parse_occurrence_date(remote_info.get("OccurrenceDate")),
+                        _parse_occurrence_date(alert_info.get("OccurrenceDate")),
                     )
-                    for ts in [
-                        remote_info.get("OccurrenceDate"),
-                        alert_info.get("OccurrenceDate"),
-                    ]
-                    if ts
+                    if ts is not None
                 ),
                 default=None,
             ),
@@ -358,14 +366,18 @@ class Client:  # noqa: D101
             or door_lock_status["rearRightDoorUnlocked"]
         )
 
-        self.__save_api_value(
-            vehicle_id,
-            "lock_state",
-            lock_value,
-            datetime.datetime.strptime(
-                alert_info.get("OccurrenceDate"), "%Y%m%d%H%M%S"
-            ).replace(tzinfo=datetime.UTC),
-        )
+        # A vehicle that has not yet reported returns an alert frame with
+        # no OccurrenceDate — skip the cache write rather than stamp it
+        # with now().
+        alert_timestamp = _parse_occurrence_date(alert_info.get("OccurrenceDate"))
+        if alert_timestamp is not None:
+            self.__save_api_value(vehicle_id, "lock_state", lock_value, alert_timestamp)
+        else:
+            _LOGGER.debug(
+                "Vehicle %s: alert info has no usable OccurrenceDate; "
+                "leaving cached lock state untouched",
+                vehicle_id,
+            )
 
         return vehicle_status
 
@@ -400,14 +412,20 @@ class Client:  # noqa: D101
             },
         }
 
-        self.__save_api_value(
-            vehicle_id,
-            "hvac_mode",
-            ev_vehicle_status["hvacInfo"]["hvacOn"],
-            datetime.datetime.strptime(
-                ev_vehicle_status["lastUpdatedTimestamp"], "%Y%m%d%H%M%S"
-            ).replace(tzinfo=datetime.UTC),
-        )
+        ev_timestamp = _parse_occurrence_date(ev_vehicle_status["lastUpdatedTimestamp"])
+        if ev_timestamp is not None:
+            self.__save_api_value(
+                vehicle_id,
+                "hvac_mode",
+                ev_vehicle_status["hvacInfo"]["hvacOn"],
+                ev_timestamp,
+            )
+        else:
+            _LOGGER.debug(
+                "Vehicle %s: EV status has no usable OccurrenceDate; "
+                "leaving cached hvac mode untouched",
+                vehicle_id,
+            )
 
         return ev_vehicle_status
 
