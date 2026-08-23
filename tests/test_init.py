@@ -89,8 +89,30 @@ async def test_migrate_entry_v2_1_to_v2_2_disables_push(hass: HomeAssistant) -> 
 
     assert await async_migrate_entry(hass, entry) is True
 
-    assert entry.minor_version == 2
+    # The v2.2 -> v2.3 step is a fresh `if`, so a v2.1 entry lands on 3 in one pass.
+    assert entry.minor_version == 3
     assert entry.options[CONF_ENABLE_PUSH] is False
+
+
+async def test_migrate_entry_v2_2_to_v2_3_drops_enable_windows(
+    hass: HomeAssistant,
+) -> None:
+    """v2.2 -> v2.3 removes the enable_windows option left by the deleted switch."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        minor_version=2,
+        data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
+        options={CONF_ENABLE_PUSH: True, "enable_windows": True},
+    )
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is True
+
+    assert entry.minor_version == 3
+    assert "enable_windows" not in entry.options
+    # Unrelated options survive the migration.
+    assert entry.options[CONF_ENABLE_PUSH] is True
 
 
 async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> None:
@@ -98,7 +120,7 @@ async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> Non
     entry = MockConfigEntry(
         domain=DOMAIN,
         version=2,
-        minor_version=2,
+        minor_version=3,
         data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
         options={CONF_ENABLE_PUSH: True},
     )
@@ -107,7 +129,7 @@ async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> Non
     assert await async_migrate_entry(hass, entry) is True
 
     assert entry.version == 2
-    assert entry.minor_version == 2
+    assert entry.minor_version == 3
     assert entry.options[CONF_ENABLE_PUSH] is True
 
 

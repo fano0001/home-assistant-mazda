@@ -12,7 +12,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from custom_components.mazda_cs.pymazda.client import Client, _parse_occurrence_date
+from custom_components.mazda_cs.pymazda.client import (
+    Client,
+    _parse_occurrence_date,
+    _warn_undocumented_fields,
+)
 
 VEHICLE_ID = 12345
 
@@ -138,3 +142,113 @@ async def test_ev_status_without_occurrence_date_does_not_raise() -> None:
     assert ev_status["lastUpdatedTimestamp"] is None
     assert ev_status["hvacInfo"]["hvacOn"] is True
     assert client.get_assumed_hvac_mode(VEHICLE_ID) is None
+
+
+# --- Undocumented-field watch -------------------------------------------------
+#
+# Pw.PwPos*, Door.SrSlideSignal/SrTiltSignal and DriveInformation.Drv1AmntFuel have
+# never been observed as anything but 0. They are no longer exposed as entities, so a
+# warning is the only way a real value would ever surface. Deliberately NOT
+# deduplicated: a value that persists warns on every poll.
+
+
+@pytest.mark.parametrize(
+    ("alert", "remote", "expected_key"),
+    [
+        ({"Pw": {"PwPosDrv": 1}}, {}, "PwPosDrv"),
+        ({"Pw": {"PwPosPsngr": 2}}, {}, "PwPosPsngr"),
+        ({"Door": {"SrSlideSignal": 1}}, {}, "SrSlideSignal"),
+        ({"Door": {"SrTiltSignal": 1}}, {}, "SrTiltSignal"),
+        ({}, {"DriveInformation": {"Drv1AmntFuel": 12.5}}, "Drv1AmntFuel"),
+    ],
+)
+def test_warn_undocumented_fields_warns_on_non_zero(
+    caplog, alert, remote, expected_key
+) -> None:
+    """A non-zero undocumented field logs a WARNING naming the field and value."""
+    with caplog.at_level("WARNING"):
+        _warn_undocumented_fields(VEHICLE_ID, alert, remote)
+
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    assert record.levelname == "WARNING"
+    assert expected_key in record.getMessage()
+    assert str(VEHICLE_ID) in record.getMessage()
+
+
+@pytest.mark.parametrize(
+    ("alert", "remote"),
+    [
+        # All-zero: the only shape ever observed in the wild.
+        (
+            {"Pw": {"PwPosDrv": 0, "PwPosPsngr": 0, "PwPosRl": 0, "PwPosRr": 0},
+             "Door": {"SrSlideSignal": 0, "SrTiltSignal": 0}},
+            {"DriveInformation": {"Drv1AmntFuel": 0.0}},
+        ),
+        # Groups absent entirely.
+        ({}, {}),
+        # Groups present but null — Mazda does emit this.
+        ({"Pw": None, "Door": None}, {"DriveInformation": None}),
+    ],
+)
+def test_warn_undocumented_fields_silent_on_zero_or_missing(
+    caplog, alert, remote
+) -> None:
+    """Zero, absent, and null values are the expected case and log nothing."""
+    with caplog.at_level("WARNING"):
+        _warn_undocumented_fields(VEHICLE_ID, alert, remote)
+
+    assert caplog.records == []
+
+
+@pytest.mark.parametrize("zero", [0, 0.0, -0.0])
+def test_warn_undocumented_fields_treats_int_and_float_zero_alike(caplog, zero) -> None:
+    """Drv1AmntFuel reports 0.0, the Pw/Door flags report 0 -- both are silent.
+
+    Guards the `value == 0` comparison against being tightened into an identity or
+    type check, which would make the float-valued field warn on every single poll.
+    """
+    with caplog.at_level("WARNING"):
+        _warn_undocumented_fields(
+            VEHICLE_ID,
+            {"Pw": {"PwPosDrv": zero}},
+            {"DriveInformation": {"Drv1AmntFuel": zero}},
+        )
+
+    assert caplog.records == []
+
+
+def test_warn_undocumented_fields_warns_on_small_non_zero_float(caplog) -> None:
+    """A tiny but non-zero float is still the observation we are hunting for."""
+    with caplog.at_level("WARNING"):
+        _warn_undocumented_fields(
+            VEHICLE_ID, {}, {"DriveInformation": {"Drv1AmntFuel": 0.1}}
+        )
+
+    assert len(caplog.records) == 1
+    assert "Drv1AmntFuel" in caplog.records[0].getMessage()
+
+
+def test_warn_undocumented_fields_is_not_deduplicated(caplog) -> None:
+    """A value that persists across polls warns every time, by design."""
+    alert = {"Pw": {"PwPosDrv": 1}}
+
+    with caplog.at_level("WARNING"):
+        _warn_undocumented_fields(VEHICLE_ID, alert, {})
+        _warn_undocumented_fields(VEHICLE_ID, alert, {})
+
+    assert len(caplog.records) == 2
+
+
+async def test_get_vehicle_status_warns_on_undocumented_field(caplog) -> None:
+    """The watch is wired into the real get_vehicle_status parse path."""
+    client = _make_client()
+    client.controller.get_vehicle_status.return_value = {
+        "alertInfos": [{**ALERT_INFO, "Pw": {"PwPosRl": 1}}],
+        "remoteInfos": [REMOTE_INFO],
+    }
+
+    with caplog.at_level("WARNING"):
+        await client.get_vehicle_status(VEHICLE_ID)
+
+    assert any("PwPosRl" in r.getMessage() for r in caplog.records)
