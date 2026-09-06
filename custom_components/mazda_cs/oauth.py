@@ -28,6 +28,7 @@ from .const import (
     OAUTH2_HOSTS,
     OAUTH2_POLICY,
 )
+from .locales import resolve_locale
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,16 +68,19 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
     @property
     def extra_authorize_data(self) -> dict:
         """Extra data for the authorize request."""
+        locale = resolve_locale(
+            self._region,
+            self.hass.config.language,
+            self.hass.config.country,
+        )
         data = {
             "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
-            "ui_locales": self.hass.config.language,
-            **(
-                {"country": "CA", "email_domain_restrict": "mci"}
-                if self._region == "MCI"
-                else {"email_domain_restrict": "none"}
-            ),
+            "ui_locales": locale.ui_locale,
+            "country": locale.country,
+            "default_international_phone_code": locale.country,
+            "email_domain_restrict": "mci" if self._region == "MCI" else "none",
             "international_phone_code_list": self._region.lower(),
-            "email_verify_flg" : "true",
+            "email_verify_flg": "true",
             "login_user_restrict": "true",
             "x-app-name": MSAL_APP_NAME,
             "x-app-ver": MSAL_APP_VER,
