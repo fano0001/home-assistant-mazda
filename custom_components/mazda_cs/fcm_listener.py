@@ -130,12 +130,12 @@ class MazdaFcmListener:
             self._fcm_token = await self._client.checkin_or_register()
         except Exception as ex:  # noqa: BLE001
             _LOGGER.warning("FCM check-in / registration failed: %s", ex)
-            self._client = None
+            await self._async_discard_client()
             return None
 
         if not self._fcm_token:
             _LOGGER.warning("FCM registration returned no token")
-            self._client = None
+            await self._async_discard_client()
             return None
 
         _LOGGER.debug("FCM registered, token prefix: %s...", self._fcm_token[:20])
@@ -147,7 +147,7 @@ class MazdaFcmListener:
             )
         except Exception as ex:  # noqa: BLE001
             _LOGGER.warning("FCM MCS listener failed to start: %s", ex)
-            self._client = None
+            await self._async_discard_client()
             return None
 
         # Register the FCM token with StationDM Conductor so Mazda's push
@@ -193,6 +193,21 @@ class MazdaFcmListener:
                 )
 
         return self._fcm_token
+
+    async def _async_discard_client(self) -> None:
+        """Release a push client that failed to come up.
+
+        ``MazdaPushClient`` opens its own aiohttp session for registration when
+        no websession is supplied; dropping the reference without stopping it
+        leaks that session ("Unclosed client session" in the HA log).
+        """
+        if self._client is None:
+            return
+        try:
+            await self._client.stop()
+        except Exception as ex:  # noqa: BLE001
+            _LOGGER.debug("FCM client cleanup after failure: %s", ex)
+        self._client = None
 
     async def async_stop(self, unregister: bool = False) -> None:
         """Stop the FCM listener connection.
