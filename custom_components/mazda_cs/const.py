@@ -85,6 +85,17 @@ OAUTH2_HOSTS = {
     "MA": "au.id.mazda.com",
 }
 
+# Phone-number length bounds per region, from MZALAuth.A()/B() in the MyMazda APK
+# (note: the switch-map there is not in enum order). B2C's sign-in journey validates
+# the phone factor against these.
+PHONE_NUMBER_LENGTHS = {
+    "MNAO": (10, 10),
+    "MCI": (10, 10),
+    "MME": (6, 15),
+    "MJO": (10, 11),
+    "MA": (9, 10),
+}
+
 # MSAL client identifiers (sent with authorize requests)
 # Values confirmed from com.interrait.mymazda APK (msal/BuildConfig.java, AuthenticationConstants.java)
 MSAL_CLIENT_SKU = "MSAL.Android"

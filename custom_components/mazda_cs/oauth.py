@@ -27,6 +27,7 @@ from .const import (
     OAUTH2_AUTH,
     OAUTH2_HOSTS,
     OAUTH2_POLICY,
+    PHONE_NUMBER_LENGTHS,
 )
 from .locales import resolve_locale
 
@@ -73,6 +74,7 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             self.hass.config.language,
             self.hass.config.country,
         )
+        phone_min, phone_max = PHONE_NUMBER_LENGTHS[self._region]
         data = {
             "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
             "ui_locales": locale.ui_locale,
@@ -80,6 +82,8 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             "default_international_phone_code": locale.country,
             "email_domain_restrict": "mci" if self._region == "MCI" else "none",
             "international_phone_code_list": self._region.lower(),
+            "phone_number_min_length": str(phone_min),
+            "phone_number_max_length": str(phone_max),
             "email_verify_flg": "true",
             "login_user_restrict": "true",
             "x-app-name": MSAL_APP_NAME,
