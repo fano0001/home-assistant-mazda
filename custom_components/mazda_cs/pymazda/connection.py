@@ -66,35 +66,30 @@ REGION_CONFIG = {
         "base_url": "https://hgs2ivna.mazda.com/",
         "region_header": "us",
         "locale": "en-US",
-        "language": "en",
     },
     "MCI": {
         "app_code": "498345786246797888995",  # MC_APP_CODE from MCI_core_config.json (same as MNAO)
         "base_url": "https://hgs2ivna.mazda.com/",  # Canada shares MNAO infrastructure
         "region_header": "ca",
         "locale": "en-CA",
-        "language": "en",
     },
     "MME": {
         "app_code": "365747628595648782737",  # MC_APP_CODE from MME_core_config.json
         "base_url": "https://hgs2iveu.mazda.com/",
         "region_header": "eu",
-        "locale": "en-GB",
-        "language": "en",
+        "locale": "en-IE",
     },
     "MJO": {
         "app_code": "438849393836584965983",  # MC_APP_CODE from MJO_core_config.json
         "base_url": "https://hgs2ivap.mazda.com/",
         "region_header": "jp",
         "locale": "ja-JP",
-        "language": "ja",
     },
     "MA": {
         "app_code": "438849393836584965983",  # MC_APP_CODE from MA_core_config.json (same as MJO)
         "base_url": "https://hgs2ivap.mazda.com/",  # Australia shares MJO API infrastructure
         "region_header": "au",
         "locale": "en-AU",
-        "language": "en",
     },
 }
 # APP_PACKAGE_ID: Android package name, used in app-unique-id header
@@ -148,7 +143,8 @@ class Connection:
             self.base_url = region_config["base_url"]
             self.region_header = region_config["region_header"]
             self.locale = region_config["locale"]
-            self.language = region_config["language"]
+            # Language subtag of the locale, matching the app (LocaleUtils m.e()).
+            self.language = self.locale.split("-")[0]
             self.cert_sig = SHA256_CERT_SIG
         else:
             raise MazdaConfigException("Invalid region")
