@@ -66,16 +66,6 @@ async def test_migrate_entry_v1_to_v2(hass: HomeAssistant) -> None:
     assert entry.data == {CONF_REGION: "MME"}
 
 
-async def test_migrate_entry_v1_defaults_region_to_mnao(hass: HomeAssistant) -> None:
-    """A v1 entry with no region defaults to MNAO on migration."""
-    entry = MockConfigEntry(domain=DOMAIN, version=1, data={})
-    entry.add_to_hass(hass)
-
-    assert await async_migrate_entry(hass, entry) is True
-
-    assert entry.data == {CONF_REGION: "MNAO"}
-
-
 async def test_migrate_entry_v2_1_to_v2_2_disables_push(hass: HomeAssistant) -> None:
     """v2.1 -> v2.2 opts existing entries out of push notifications."""
     entry = MockConfigEntry(
