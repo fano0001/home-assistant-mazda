@@ -118,11 +118,13 @@ def resolve_locale(
     language = _language_subtag(ha_language)
 
     if region == "MME":
-        country = (ha_country or "").upper()
-        if country not in MME_COUNTRIES:
-            country = default.split("-")[1]
         if language not in MME_ISO_LOCALES:
             language = default.split("-")[0]
+        country = (ha_country or "").upper()
+        if country not in MME_COUNTRIES:
+            # No usable country: fall back to the canonical market for the language
+            # (it -> IT, fr -> FR) rather than defaulting to IE.
+            country = MME_ISO_LOCALES[language].split("-")[1]
         locale = f"{language}-{country}"
         iso_locale = MME_ISO_OVERRIDES.get(
             (language, country), MME_ISO_LOCALES[language]

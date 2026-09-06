@@ -75,12 +75,17 @@ def test_resolve_locale(region, language, country, ui_locale, expected_country, 
 FALLBACKS = [
     # Nothing configured at all — HA can report either field as None.
     ("MME", None, None, "en-IE", "IE"),
-    ("MME", "de", None, "de-DE", "IE"),
+    ("MME", "de", None, "de-DE", "DE"),
     ("MME", None, "DE", "en-IE", "DE"),
     ("MME", "", "", "en-IE", "IE"),
+    # An unusable country falls back to the language's canonical market, not to the
+    # region default — an Italian with no HA country still gets country=IT.
+    ("MME", "it", None, "it-IT", "IT"),
+    ("MME", "fr", None, "fr-FR", "FR"),
+    ("MME", "nl", None, "nl-NL", "NL"),
     # A country Mazda does not serve from this region, and a language it does not
     # offer, each fall back independently rather than composing a bogus pair.
-    ("MME", "de", "US", "de-DE", "IE"),
+    ("MME", "de", "US", "de-DE", "DE"),
     ("MME", "ja", "DE", "en-IE", "DE"),
     ("MME", "ja", "US", "en-IE", "IE"),
     ("MCI", None, None, "en-CA", "CA"),
