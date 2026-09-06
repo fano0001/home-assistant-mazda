@@ -191,13 +191,16 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> bool:
     """Set up Mazda Connected Services from a config entry."""
-    region = entry.data.get(CONF_REGION, "MNAO")
+    region = entry.data[CONF_REGION]
 
-    # Register our OAuth implementation
+    # Build the implementation from *this* entry's region rather than reading it
+    # back out of the OAuth registry: ``impl.domain`` is always DOMAIN, so the
+    # registry holds a single slot for the whole integration.
+    implementation = MazdaOAuth2Implementation(hass, region)
     config_entry_oauth2_flow.async_register_implementation(
         hass,
         DOMAIN,
-        MazdaOAuth2Implementation(hass, region),
+        implementation,
     )
 
     # Check if this is an old entry that needs reauth (v1 with email/password)
@@ -206,11 +209,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         msg = "Authentication method has changed. Please reauthenticate."
         raise ConfigEntryAuthFailed(msg)
 
-    implementation = (
-        await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
-        )
-    )
     session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
 
     try:
@@ -514,7 +512,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Preserve region; clear old email/password credentials.
         # async_setup_entry will raise ConfigEntryAuthFailed (no "token" key),
         # triggering reauth so the user completes OAuth2.
-        new_data = {CONF_REGION: entry.data.get(CONF_REGION, "MNAO")}
+        new_data = {CONF_REGION: entry.data[CONF_REGION]}
         hass.config_entries.async_update_entry(
             entry, data=new_data, minor_version=1, version=2
         )
