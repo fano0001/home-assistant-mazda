@@ -76,6 +76,7 @@ REGION_CONFIG = {
     "MME": {
         "app_code": "365747628595648782737",  # MC_APP_CODE from MME_core_config.json
         "base_url": "https://hgs2iveu.mazda.com/",
+        #eu region_header working, but apk sends user selected countryCode
         "region_header": "eu",
         "locale": "en-IE",
     },
