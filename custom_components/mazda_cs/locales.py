@@ -102,6 +102,12 @@ class ResolvedLocale:
         """ISO country — ``country`` and ``default_international_phone_code``."""
         return self.locale.split("-")[1]
 
+    @property
+    def language(self) -> str:
+        """Language subtag — Conductor ``language`` (ConductorConfig.t() in the APK
+        derives it the same way, from the first subtag of ``locale``)."""
+        return self.locale.split("-")[0]
+
 
 def _language_subtag(ha_language: str | None) -> str | None:
     """Return the first subtag of an HA language code ("pt-BR" -> "pt")."""

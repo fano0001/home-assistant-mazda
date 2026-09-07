@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_FCM_CREDENTIALS
+from .locales import resolve_locale
 
 try:
     from .pymazda.push import MazdaPushClient
@@ -175,8 +176,15 @@ class MazdaFcmListener:
             effective_partner1_id or "(MISSING)",
             self._conductor_device_id or "(MISSING)",
         )
+        resolved = resolve_locale(
+            self._region,
+            self._hass.config.language,
+            self._hass.config.country,
+        )
         result = await self._client.register_with_conductor(
             self._region,
+            language=resolved.language,
+            locale=resolved.locale,
             user_id=effective_user_id,
             primary_id=effective_primary_id,
             partner1_id=effective_partner1_id,
