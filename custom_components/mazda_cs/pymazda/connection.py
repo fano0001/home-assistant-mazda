@@ -76,7 +76,7 @@ REGION_CONFIG = {
     "MME": {
         "app_code": "365747628595648782737",  # MC_APP_CODE from MME_core_config.json
         "base_url": "https://hgs2iveu.mazda.com/",
-        #eu region_header working, but apk sends user selected countryCode
+        # eu region_header working, but apk sends user selected countryCode
         "region_header": "eu",
         "locale": "en-IE",
     },
@@ -241,7 +241,7 @@ class Connection:
             return json.loads(decrypted)
         except ValueError as ex:
             # This key is derived deterministically from the app code and cert
-            # signature, so failure here means wrong constant, not stale key. 
+            # signature, so failure here means wrong constant, not stale key.
             # Deliberately not MazdaAPIEncryptionException, which would start
             # a refresh-and-retry loop that cannot succeed.
             raise MazdaException(
@@ -259,7 +259,7 @@ class Connection:
             return json.loads(decrypted)
         except ValueError as ex:
             # The server accepted the request (state "S") but encrypted the
-            # response under a key we do not hold - Mazda rotated keys while 
+            # response under a key we do not hold - Mazda rotated keys while
             # a request is in flight. Same underlying condition as 600001,
             # so route into the refresh-keys-and-retry path.
             raise MazdaAPIEncryptionException(
