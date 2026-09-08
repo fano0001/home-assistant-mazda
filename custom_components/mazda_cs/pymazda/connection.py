@@ -234,18 +234,37 @@ class Connection:
         )
 
     def __decrypt_payload_using_app_code(self, payload, app_code=None):
-        buf = base64.b64decode(payload)
         key = self.__get_decryption_key_from_app_code(app_code)
-        decrypted = decrypt_aes128cbc_buffer_to_str(buf, key, IV)
-        return json.loads(decrypted)
+        try:
+            buf = base64.b64decode(payload)
+            decrypted = decrypt_aes128cbc_buffer_to_str(buf, key, IV)
+            return json.loads(decrypted)
+        except ValueError as ex:
+            # This key is derived deterministically from the app code and cert
+            # signature, so failure here means wrong constant, not stale key. 
+            # Deliberately not MazdaAPIEncryptionException, which would start
+            # a refresh-and-retry loop that cannot succeed.
+            raise MazdaException(
+                "checkVersion response could not be decrypted - derived key is "
+                "wrong (check SHA256_CERT_SIG / app_code / SIGN_PACKAGE_ID)"
+            ) from ex
 
     def __decrypt_payload_using_key(self, payload):
         if self.enc_key is None or self.enc_key == "":
             raise MazdaException("Missing encryption key")
 
-        buf = base64.b64decode(payload)
-        decrypted = decrypt_aes128cbc_buffer_to_str(buf, self.enc_key, IV)
-        return json.loads(decrypted)
+        try:
+            buf = base64.b64decode(payload)
+            decrypted = decrypt_aes128cbc_buffer_to_str(buf, self.enc_key, IV)
+            return json.loads(decrypted)
+        except ValueError as ex:
+            # The server accepted the request (state "S") but encrypted the
+            # response under a key we do not hold - Mazda rotated keys while 
+            # a request is in flight. Same underlying condition as 600001,
+            # so route into the refresh-keys-and-retry path.
+            raise MazdaAPIEncryptionException(
+                "Response payload could not be decrypted with the current key"
+            ) from ex
 
     async def api_request(  # noqa: D102
         self,
@@ -289,14 +308,12 @@ class Connection:
             return await self.__send_api_request(
                 method, uri, query_dict, body_dict, needs_keys, needs_auth
             )
-        except MazdaAPIEncryptionException:
+        except MazdaAPIEncryptionException as ex:
             if "checkVersion" in uri:
                 raise MazdaException(
                     "checkVersion rejected by server (wrong SHA256_CERT_SIG or app_code). Cannot retrieve encryption keys."
                 )
-            self.logger.info(
-                "Server reports request was not encrypted properly. Retrieving new encryption keys."
-            )
+            self.logger.info("%s. Retrieving new encryption keys.", ex)
             await self.__retrieve_keys()
             return await self.__api_request_retry(
                 method,
@@ -460,7 +477,9 @@ class Connection:
                 self.logger.debug("Response payload: %s", _redact(decrypted_payload))
                 return decrypted_payload
         elif response_json.get("errorCode") == 600001:
-            raise MazdaAPIEncryptionException("Server rejected encrypted request")
+            raise MazdaAPIEncryptionException(
+                "Server reports request was not encrypted properly"
+            )
         elif response_json.get("errorCode") == 600002:
             raise MazdaTokenExpiredException("Token expired")
         elif response_json.get("errorCode") == 600100:

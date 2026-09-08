@@ -1,6 +1,6 @@
 {
   "domain": "mazda_cs",
-  "name": "Mazda Connected Services ng",
+  "name": "Mazda Connected Services",
   "codeowners": ["@fano0001"],
   "config_flow": true,
   "dependencies": ["http"],
