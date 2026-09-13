@@ -95,12 +95,21 @@
 | **sensor** | `power_control_status` | δ \| PowerControlStatus |  |
 | **binary_sensor** | `mnt_tyre_at_flg` | δ \| MntTyreAtFlg |  |
 | **binary_sensor** | `mnt_oil_at_flg` | δ \| MntOilAtFlg | `hasFuel` |
-| **switch** | `enable_windows` | δ \| Window sensors | **Window keys** are of unknown purpose with no known mobile app usage. Current hypothesis is they are related to security alerts. |
-| **binary_sensor** | `sunroof` | Sunroof | `enableWindows` |
-| **binary_sensor** | `sunroof_tilt` | Sunroof tilt | `enableWindows` |
-| **binary_sensor** | `driver_window` | Driver window | `enableWindows` |
-| **binary_sensor** | `passenger_window` | Passenger window | `enableWindows` |
-| **binary_sensor** | `rear_left_window` | Rear left window | `enableWindows` |
-| **binary_sensor** | `rear_right_window` | Rear right window | `enableWindows` |
+| **sensor** | `drive1_fuel_amount` | δ \| Drive 1 fuel amount | `hasFuel`. See **Undocumented fields** below. |
+
+## Undocumented fields
+
+These raw API fields have never been observed as anything other than zero and have no
+known MyMazda app usage. Rather than ship entities nobody can interpret, the integration
+logs a `WARNING` whenever a vehicle reports a non-zero value, naming the field, the value, and the `OccurrenceDate` it was seen at.
+
+| Raw path | Key | Zero form | Notes |
+|---|---|---|---|
+| `alertInfos[0].Pw` | `PwPosDrv`, `PwPosPsngr`, `PwPosRl`, `PwPosRr` | `0` | Integer signal flags. Previously exposed as the four window binary sensors (removed). |
+| `alertInfos[0].Door` | `SrSlideSignal`, `SrTiltSignal` | `0` | Integer signal flags. Previously exposed as the sunroof / sunroof tilt binary sensors (removed). |
+| `remoteInfos[0].DriveInformation` | `Drv1AmntFuel` | `0.0` | Always `0.0` in logs to-date. |
+
+The six window binary sensors and the `enable_windows` switch that gated them were removed. If a
+warning fires for any field above, please open an issue with the log line and any relevant information.
 
 

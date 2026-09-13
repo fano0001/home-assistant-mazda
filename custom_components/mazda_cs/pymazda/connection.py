@@ -18,6 +18,7 @@ from .exceptions import (
     MazdaAPIEncryptionException,
     MazdaConfigException,
     MazdaException,
+    MazdaRateLimitException,
     MazdaRequestInProgressException,
     MazdaSessionExpiredException,
     MazdaTermsNotAcceptedException,
@@ -66,42 +67,38 @@ REGION_CONFIG = {
         "base_url": "https://hgs2ivna.mazda.com/",
         "region_header": "us",
         "locale": "en-US",
-        "language": "en",
     },
     "MCI": {
         "app_code": "498345786246797888995",  # MC_APP_CODE from MCI_core_config.json (same as MNAO)
         "base_url": "https://hgs2ivna.mazda.com/",  # Canada shares MNAO infrastructure
         "region_header": "ca",
         "locale": "en-CA",
-        "language": "en",
     },
     "MME": {
         "app_code": "365747628595648782737",  # MC_APP_CODE from MME_core_config.json
         "base_url": "https://hgs2iveu.mazda.com/",
+        # eu region_header working, but apk sends user selected countryCode
         "region_header": "eu",
-        "locale": "en-GB",
-        "language": "en",
+        "locale": "en-IE",
     },
     "MJO": {
         "app_code": "438849393836584965983",  # MC_APP_CODE from MJO_core_config.json
         "base_url": "https://hgs2ivap.mazda.com/",
         "region_header": "jp",
         "locale": "ja-JP",
-        "language": "ja",
     },
     "MA": {
         "app_code": "438849393836584965983",  # MC_APP_CODE from MA_core_config.json (same as MJO)
         "base_url": "https://hgs2ivap.mazda.com/",  # Australia shares MJO API infrastructure
         "region_header": "au",
         "locale": "en-AU",
-        "language": "en",
     },
 }
 # APP_PACKAGE_ID: Android package name, used in app-unique-id header
 APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "MyMazda/9.1.0 (Linux; Android 16)"
+USER_AGENT_BASE_API = "MyMazda/9.5.0 (Linux; Android 16)"
 APP_OS = "ANDROID"
-APP_VERSION = "9.1.0"
+APP_VERSION = "9.5.0"
 
 MAX_RETRIES = 4
 
@@ -148,7 +145,8 @@ class Connection:
             self.base_url = region_config["base_url"]
             self.region_header = region_config["region_header"]
             self.locale = region_config["locale"]
-            self.language = region_config["language"]
+            # Language subtag of the locale, matching the app (LocaleUtils m.e()).
+            self.language = self.locale.split("-")[0]
             self.cert_sig = SHA256_CERT_SIG
         else:
             raise MazdaConfigException("Invalid region")
@@ -237,18 +235,37 @@ class Connection:
         )
 
     def __decrypt_payload_using_app_code(self, payload, app_code=None):
-        buf = base64.b64decode(payload)
         key = self.__get_decryption_key_from_app_code(app_code)
-        decrypted = decrypt_aes128cbc_buffer_to_str(buf, key, IV)
-        return json.loads(decrypted)
+        try:
+            buf = base64.b64decode(payload)
+            decrypted = decrypt_aes128cbc_buffer_to_str(buf, key, IV)
+            return json.loads(decrypted)
+        except ValueError as ex:
+            # This key is derived deterministically from the app code and cert
+            # signature, so failure here means wrong constant, not stale key.
+            # Deliberately not MazdaAPIEncryptionException, which would start
+            # a refresh-and-retry loop that cannot succeed.
+            raise MazdaException(
+                "checkVersion response could not be decrypted - derived key is "
+                "wrong (check SHA256_CERT_SIG / app_code / SIGN_PACKAGE_ID)"
+            ) from ex
 
     def __decrypt_payload_using_key(self, payload):
         if self.enc_key is None or self.enc_key == "":
             raise MazdaException("Missing encryption key")
 
-        buf = base64.b64decode(payload)
-        decrypted = decrypt_aes128cbc_buffer_to_str(buf, self.enc_key, IV)
-        return json.loads(decrypted)
+        try:
+            buf = base64.b64decode(payload)
+            decrypted = decrypt_aes128cbc_buffer_to_str(buf, self.enc_key, IV)
+            return json.loads(decrypted)
+        except ValueError as ex:
+            # The server accepted the request (state "S") but encrypted the
+            # response under a key we do not hold - Mazda rotated keys while
+            # a request is in flight. Same underlying condition as 600001,
+            # so route into the refresh-keys-and-retry path.
+            raise MazdaAPIEncryptionException(
+                "Response payload could not be decrypted with the current key"
+            ) from ex
 
     async def api_request(  # noqa: D102
         self,
@@ -292,14 +309,12 @@ class Connection:
             return await self.__send_api_request(
                 method, uri, query_dict, body_dict, needs_keys, needs_auth
             )
-        except MazdaAPIEncryptionException:
+        except MazdaAPIEncryptionException as ex:
             if "checkVersion" in uri:
                 raise MazdaException(
                     "checkVersion rejected by server (wrong SHA256_CERT_SIG or app_code). Cannot retrieve encryption keys."
                 )
-            self.logger.info(
-                "Server reports request was not encrypted properly. Retrieving new encryption keys."
-            )
+            self.logger.info("%s. Retrieving new encryption keys.", ex)
             await self.__retrieve_keys()
             return await self.__api_request_retry(
                 method,
@@ -442,7 +457,7 @@ class Connection:
         )
 
         if response.status == 429:
-            raise MazdaException(
+            raise MazdaRateLimitException(
                 "Rate limited by Mazda API (429) — will retry on next cycle"
             )
 
@@ -463,7 +478,9 @@ class Connection:
                 self.logger.debug("Response payload: %s", _redact(decrypted_payload))
                 return decrypted_payload
         elif response_json.get("errorCode") == 600001:
-            raise MazdaAPIEncryptionException("Server rejected encrypted request")
+            raise MazdaAPIEncryptionException(
+                "Server reports request was not encrypted properly"
+            )
         elif response_json.get("errorCode") == 600002:
             raise MazdaTokenExpiredException("Token expired")
         elif response_json.get("errorCode") == 600100:

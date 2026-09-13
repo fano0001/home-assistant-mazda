@@ -1,5 +1,4 @@
-import asyncio  # noqa: D100
-import base64
+import base64  # noqa: D100
 import datetime
 import json
 import logging
@@ -8,6 +7,64 @@ from .controller import Controller
 from .exceptions import MazdaConfigException
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _parse_occurrence_date(value):
+    """Parse a Mazda OccurrenceDate ("YYYYMMDDHHMMSS") as UTC, or None if absent/malformed."""
+    try:
+        return datetime.datetime.strptime(value, "%Y%m%d%H%M%S").replace(
+            tzinfo=datetime.UTC
+        )
+    except (TypeError, ValueError):
+        return None
+
+
+# Fields with no confirmed usage: every observation to date returns 0, 0.0, or the
+# key is absent.  Rather than surface them as entities nobody can interpret, we log
+# whenever a vehicle reports anything else, so a usage gate can be correlated.
+_UNDOCUMENTED_FIELDS = (
+    ("alertInfos[0].Pw", "PwPosDrv"),
+    ("alertInfos[0].Pw", "PwPosPsngr"),
+    ("alertInfos[0].Pw", "PwPosRl"),
+    ("alertInfos[0].Pw", "PwPosRr"),
+    ("alertInfos[0].Door", "SrSlideSignal"),
+    ("alertInfos[0].Door", "SrTiltSignal"),
+    ("remoteInfos[0].DriveInformation", "Drv1AmntFuel"),
+)
+
+_UNDOCUMENTED_ISSUE_URL = (
+    "https://github.com/fano0001/home-assistant-mazda/issues"
+)
+
+
+def _warn_undocumented_fields(vehicle_id, alert_info, remote_info):
+    """Log any undocumented field reporting a value other than zero or None.
+
+    Zero covers both the integer `0` of the Pw/Door flags and the float `0.0` of
+    Drv1AmntFuel; anything else -- including a non-zero float -- warns.
+    """
+    groups = {
+        "alertInfos[0].Pw": alert_info.get("Pw") or {},
+        "alertInfos[0].Door": alert_info.get("Door") or {},
+        "remoteInfos[0].DriveInformation": remote_info.get("DriveInformation") or {},
+    }
+
+    for group_path, key in _UNDOCUMENTED_FIELDS:
+        value = groups[group_path].get(key)
+        if value is None or value == 0:
+            continue
+
+        _LOGGER.warning(
+            "Vehicle %s: undocumented field %s. %s reported %r (expected 0) at %s. "
+            "This value has no known usage - please open an issue to report it, "
+            "along with relevant vehicle information, at %s",
+            vehicle_id,
+            group_path,
+            key,
+            value,
+            alert_info.get("OccurrenceDate") or remote_info.get("OccurrenceDate"),
+            _UNDOCUMENTED_ISSUE_URL,
+        )
 
 
 def _build_tpms_timestamp(tpms: dict):
@@ -182,6 +239,8 @@ class Client:  # noqa: D101
         alert_info = (vehicle_status_response.get("alertInfos") or [{}])[0]
         remote_info = (vehicle_status_response.get("remoteInfos") or [{}])[0]
 
+        _warn_undocumented_fields(vehicle_id, alert_info, remote_info)
+
         latitude = remote_info.get("PositionInfo", {}).get("Latitude")
         if latitude is not None:
             latitude = latitude * (
@@ -200,14 +259,12 @@ class Client:  # noqa: D101
         vehicle_status = {
             "lastUpdatedTimestamp": max(
                 (
-                    datetime.datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
-                        tzinfo=datetime.timezone.utc
+                    ts
+                    for ts in (
+                        _parse_occurrence_date(remote_info.get("OccurrenceDate")),
+                        _parse_occurrence_date(alert_info.get("OccurrenceDate")),
                     )
-                    for ts in [
-                        remote_info.get("OccurrenceDate"),
-                        alert_info.get("OccurrenceDate"),
-                    ]
-                    if ts
+                    if ts is not None
                 ),
                 default=None,
             ),
@@ -249,14 +306,6 @@ class Client:  # noqa: D101
                 "rearRightDoorUnlocked": alert_info.get("Door", {}).get("LockLinkSwRr")
                 == 1,
                 "allDoorsLockedSignal": alert_info.get("Door", {}).get("AllDrSwSignal") == 1,
-            },
-            "windows": {
-                "driverWindowOpen": alert_info.get("Pw", {}).get("PwPosDrv") == 1,
-                "passengerWindowOpen": alert_info.get("Pw", {}).get("PwPosPsngr") == 1,
-                "rearLeftWindowOpen": alert_info.get("Pw", {}).get("PwPosRl") == 1,
-                "rearRightWindowOpen": alert_info.get("Pw", {}).get("PwPosRr") == 1,
-                "sunroofOpen": alert_info.get("Door", {}).get("SrSlideSignal") == 1,
-                "sunroofTilted": alert_info.get("Door", {}).get("SrTiltSignal") == 1,
             },
             # SeatBeltInformation — not yet integrated as sensors
             "seatBeltInformation": {
@@ -358,14 +407,18 @@ class Client:  # noqa: D101
             or door_lock_status["rearRightDoorUnlocked"]
         )
 
-        self.__save_api_value(
-            vehicle_id,
-            "lock_state",
-            lock_value,
-            datetime.datetime.strptime(
-                alert_info.get("OccurrenceDate"), "%Y%m%d%H%M%S"
-            ).replace(tzinfo=datetime.UTC),
-        )
+        # A vehicle that has not yet reported returns an alert frame with
+        # no OccurrenceDate — skip the cache write rather than stamp it
+        # with now().
+        alert_timestamp = _parse_occurrence_date(alert_info.get("OccurrenceDate"))
+        if alert_timestamp is not None:
+            self.__save_api_value(vehicle_id, "lock_state", lock_value, alert_timestamp)
+        else:
+            _LOGGER.debug(
+                "Vehicle %s: alert info has no usable OccurrenceDate; "
+                "leaving cached lock state untouched",
+                vehicle_id,
+            )
 
         return vehicle_status
 
@@ -400,14 +453,20 @@ class Client:  # noqa: D101
             },
         }
 
-        self.__save_api_value(
-            vehicle_id,
-            "hvac_mode",
-            ev_vehicle_status["hvacInfo"]["hvacOn"],
-            datetime.datetime.strptime(
-                ev_vehicle_status["lastUpdatedTimestamp"], "%Y%m%d%H%M%S"
-            ).replace(tzinfo=datetime.UTC),
-        )
+        ev_timestamp = _parse_occurrence_date(ev_vehicle_status["lastUpdatedTimestamp"])
+        if ev_timestamp is not None:
+            self.__save_api_value(
+                vehicle_id,
+                "hvac_mode",
+                ev_vehicle_status["hvacInfo"]["hvacOn"],
+                ev_timestamp,
+            )
+        else:
+            _LOGGER.debug(
+                "Vehicle %s: EV status has no usable OccurrenceDate; "
+                "leaving cached hvac mode untouched",
+                vehicle_id,
+            )
 
         return ev_vehicle_status
 
@@ -554,6 +613,9 @@ class Client:  # noqa: D101
             return json.loads(base64.b64decode(encoded))
         return {}
 
+    # Currently unused: remote-command results arrive via FCM push (see
+    # fcm_listener.py), which replaced the inbox-polling path. Kept as the
+    # client-layer entry point to getInboxList for possible future use.
     async def get_inbox_list(
         self,
         internal_vin_list,
@@ -565,82 +627,6 @@ class Client:  # noqa: D101
         return await self.controller.get_inbox_list(
             internal_vin_list, actiontype, status, limit, offset
         )
-
-    async def poll_remote_service_result(  # noqa: D102
-        self, vehicle_id: int, command_utc: datetime.datetime
-    ) -> dict | None:
-        """Poll inbox for the result of a remote command.
-
-        Checks at 6 s, 18 s, 23 s, 28s, and 40 s after command_utc (typ. 2-4 API calls).
-        Returns a result dict on match, or None if no result found within 40 s.
-        """
-        # Allow 5 s clock-skew buffer; resultId embeds the server-side request timestamp
-        cutoff = command_utc - datetime.timedelta(seconds=5)
-
-        loop_start = datetime.datetime.now(datetime.timezone.utc)
-
-        for delay, elapsed in (
-            (6, 6),
-            (12, 18),
-            (5, 23),
-            (5, 28),
-            (12, 40),
-        ):  # cumulative waits
-            await asyncio.sleep(delay)
-            try:
-                response = await self.controller.get_inbox_list(
-                    [vehicle_id], actiontype="001,019,021", status=0, limit=10
-                )
-                # Collect entries whose resultId timestamp >= cutoff (oldest-first match)
-                # resultId format: "001YYYYMMDDHHMMSS_01" — prefix(3) + timestamp(14) + suffix(3)
-                matching = []
-                for entry in response.get("InboxInfos", []):
-                    result_id = entry.get("resultId", "")
-                    if len(result_id) >= 17:
-                        try:
-                            result_dt = datetime.datetime.strptime(
-                                result_id[3:17], "%Y%m%d%H%M%S"
-                            ).replace(tzinfo=datetime.timezone.utc)
-                            if result_dt >= cutoff:
-                                matching.append(entry)
-                        except ValueError:
-                            pass
-                if matching:
-                    # List is newest-first; take the oldest (last) to match our command
-                    entry = matching[-1]
-                    # Re-derive result_dt from the matched entry (loop variable may be stale)
-                    # matched_result_id = entry.get("resultId", "")
-                    # matched_result_dt = datetime.datetime.strptime(
-                    #     matched_result_id[3:17], "%Y%m%d%H%M%S"
-                    # ).replace(tzinfo=datetime.timezone.utc)
-                    # result_id_delta = (matched_result_dt - loop_start).total_seconds()
-                    # push_date_str = entry.get("pushDate", "")
-                    # try:
-                    #     push_dt = datetime.datetime.strptime(
-                    #         push_date_str, "%Y%m%d%H%M%S"
-                    #     ).replace(tzinfo=datetime.timezone.utc)
-                    #     push_delta = (push_dt - loop_start).total_seconds()
-                    #     push_delta_str = f"{push_delta:+.1f}s"
-                    # except ValueError:
-                    #     push_delta_str = "n/a"
-                    # _LOGGER.warning(
-                    #     "poll_remote_service_result: match at %ds mark — result_id: %+.1fs from loop start, pushDate: %s from loop start",
-                    #     elapsed,
-                    #     result_id_delta,
-                    #     push_delta_str,
-                    # )
-                    return {
-                        "success": entry.get("messageContents") == "Success",
-                        "title": entry.get("messageTitle", ""),
-                        "message": entry.get("messageContents", ""),
-                        "details": entry.get("messageDetails", ""),
-                    }
-            except Exception:  # noqa: BLE001
-                _LOGGER.debug(
-                    "poll_remote_service_result: inbox fetch failed (will retry)"
-                )
-
-        return None
 
     async def update_vehicle_nickname(self, vin, new_nickname):  # noqa: D102
         await self.controller.update_nickname(vin, new_nickname)

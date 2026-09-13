@@ -40,7 +40,6 @@ class MazdaLock(MazdaEntity, LockEntity):
         super().__init__(client, coordinator, index)
 
         self._attr_unique_id = self.vin
-        self._command_in_progress = False
 
     @property
     def is_locked(self) -> bool | None:
@@ -49,24 +48,16 @@ class MazdaLock(MazdaEntity, LockEntity):
 
     async def async_lock(self, **kwargs: Any) -> None:
         """Lock the vehicle doors."""
-        if self._command_in_progress:
-            return
         try:
             await self.client.lock_doors(self.vehicle_id)
         except MazdaException as ex:
             raise HomeAssistantError(ex) from ex
-        self._command_in_progress = True
         self.async_write_ha_state()
-        self.hass.async_create_task(self._push_and_unlock("doorLock"))
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the vehicle doors."""
-        if self._command_in_progress:
-            return
         try:
             await self.client.unlock_doors(self.vehicle_id)
         except MazdaException as ex:
             raise HomeAssistantError(ex) from ex
-        self._command_in_progress = True
         self.async_write_ha_state()
-        self.hass.async_create_task(self._push_and_unlock("doorUnlock"))

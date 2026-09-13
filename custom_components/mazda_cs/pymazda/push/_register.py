@@ -7,6 +7,7 @@ DataMessageStanza.app_data key-value pairs — no web-push ECDH encryption layer
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import logging
@@ -57,17 +58,28 @@ FCM_SENDER_ID = "583786267773"
 # Firebase SDK version string format used by Android clients (a:<major>.<minor>.<patch>)
 FIS_SDK_VERSION = "a:19.0.1"
 FCM_CLIENT_LIBRARY = "fcm-25.0.1"
-FCM_APP_VERSION_CODE = "617"
-FCM_APP_VERSION_NAME = "9.1.0"
+FCM_APP_VERSION_CODE = "642"
+FCM_APP_VERSION_NAME = "9.5.0"
 FCM_GMSV = "243816016"
-FCM_OSV = "35"
-FCM_TARGET_VER = "35"
+FCM_OSV = "36"
+FCM_TARGET_VER = "36"
 FCM_PLATFORM = "0"
 FIREBASE_APP_NAME = "[DEFAULT]"
 FCM_ANDROID_PACKAGE = "com.interrait.mymazda"
 FCM_ANDROID_CERT_SHA1 = "FE728CBB5FA50A3CB9F9EECE17DBDFA78785064B"
 
 _TIMEOUT = ClientTimeout(total=10)
+
+# Google rejects a registration for an android_id that has just been checked in
+# with ``Error=PHONE_REGISTRATION_ERROR`` until the ID has propagated to the
+# registration backend. Retrying without a delay fails; back off between attempts. 
+_RETRY_BASE_DELAY = 1.0
+_RETRY_MAX_DELAY = 8.0
+
+
+def _retry_delay(attempt: int) -> float:
+    """Exponential backoff delay in seconds for retry ``attempt`` (0-based)."""
+    return min(_RETRY_BASE_DELAY * (2**attempt), _RETRY_MAX_DELAY)
 
 
 def _firebase_app_name_hash() -> str:
@@ -149,32 +161,42 @@ async def _fis_generate_auth_token(
 
 
 async def fcm_get_token_via_fis(
-    session: ClientSession, existing: dict | None = None
+    session: ClientSession,
+    existing: dict | None = None,
+    device: dict[str, str] | None = None,
 ) -> dict[str, str] | None:
     """Get an FCM token using Firebase Installations (modern getToken flow).
 
+    ``device`` supplies already-checked-in ``android_id``/``security_token`` so
+    the caller can share one device identity across both registration paths;
+    without it a check-in is performed here.
+
     Returns dict: {"android_id": str, "security_token": str, "fid": str, "refresh_token": str, "token": str}
     """
-    android_id = None
-    security_token = None
-
-    if existing:
-        android_id = existing.get("android_id")
-        security_token = existing.get("security_token")
-
-    if android_id and security_token:
-        checkin_resp = await gcm_check_in(
-            session, int(android_id), int(security_token)
-        )
+    if device:
+        android_id = device["android_id"]
+        security_token = device["security_token"]
     else:
-        checkin_resp = await gcm_check_in(session)
+        android_id = None
+        security_token = None
 
-    if not checkin_resp:
-        _LOGGER.warning("FIS flow: GCM check-in failed; cannot obtain device creds")
-        return None
+        if existing:
+            android_id = existing.get("android_id")
+            security_token = existing.get("security_token")
 
-    android_id = str(checkin_resp["androidId"])
-    security_token = str(checkin_resp["securityToken"])
+        if android_id and security_token:
+            checkin_resp = await gcm_check_in(
+                session, int(android_id), int(security_token)
+            )
+        else:
+            checkin_resp = await gcm_check_in(session)
+
+        if not checkin_resp:
+            _LOGGER.warning("FIS flow: GCM check-in failed; cannot obtain device creds")
+            return None
+
+        android_id = str(checkin_resp["androidId"])
+        security_token = str(checkin_resp["securityToken"])
 
     if existing:
         fid = existing.get("fid")
@@ -327,6 +349,9 @@ async def gcm_check_in(
         if attempt == 0 and android_id:
             payload = _checkin_payload()
 
+        if attempt < retries - 1:
+            await asyncio.sleep(_retry_delay(attempt))
+
     return None
 
 
@@ -334,7 +359,7 @@ async def gcm_register(
     session: ClientSession,
     android_id: str,
     security_token: str,
-    retries: int = 3,
+    retries: int = 5,
     extra_fields: dict[str, str] | None = None,
 ) -> str | None:
     """Register the Android app identity with GCM.
@@ -390,6 +415,8 @@ async def gcm_register(
                     "GCM register attempt %d/%d failed: %s",
                     attempt + 1, retries, text,
                 )
+                if attempt < retries - 1:
+                    await asyncio.sleep(_retry_delay(attempt))
                 continue
 
             token = text.split("=", 1)[1] if "=" in text else text.strip()
@@ -398,6 +425,8 @@ async def gcm_register(
 
         except Exception as ex:  # noqa: BLE001
             _LOGGER.warning("GCM register attempt %d/%d error: %s", attempt + 1, retries, ex)
+            if attempt < retries - 1:
+                await asyncio.sleep(_retry_delay(attempt))
 
     return None
 
@@ -511,9 +540,28 @@ async def checkin_and_register(
     Returns ``{"android_id": str, "security_token": str, "token": str}`` on
     success, or None on failure.
     """
+    # Check in once and share the resulting device identity with both paths.
+    # A separate check-in per path would burn a second android_id, which Google
+    # answers with PHONE_REGISTRATION_ERROR far more often than a reused one.
+    android_id_int = None
+    security_token_int = None
+    if existing:
+        android_id_int = int(existing.get("android_id", 0)) or None
+        security_token_int = int(existing.get("security_token", 0)) or None
+
+    checkin_resp = await gcm_check_in(session, android_id_int, security_token_int)
+    if not checkin_resp:
+        _LOGGER.warning("GCM check-in failed — no FCM token available")
+        return None
+
+    device = {
+        "android_id": str(checkin_resp["androidId"]),
+        "security_token": str(checkin_resp["securityToken"]),
+    }
+
     # Primary: FIS path — token carries X-gmp_app_id so Firebase routes it as
     # an app-instance token (required for FCM HTTP v1 delivery from Conductor).
-    fis_creds = await fcm_get_token_via_fis(session, existing=existing)
+    fis_creds = await fcm_get_token_via_fis(session, existing=existing, device=device)
     if fis_creds:
         _LOGGER.info(
             "FCM token source: FIS path (android_id=%s token_prefix=%s...)",
@@ -525,19 +573,8 @@ async def checkin_and_register(
     _LOGGER.warning("FCM FIS path failed — falling back to plain GCM register3")
 
     # Fallback: plain GCM register3 (legacy sender-scoped token, no gmp_app_id)
-    android_id_int = None
-    security_token_int = None
-    if existing:
-        android_id_int = int(existing.get("android_id", 0)) or None
-        security_token_int = int(existing.get("security_token", 0)) or None
-
-    checkin_resp = await gcm_check_in(session, android_id_int, security_token_int)
-    if not checkin_resp:
-        _LOGGER.warning("GCM check-in also failed — no FCM token available")
-        return None
-
-    android_id = str(checkin_resp["androidId"])
-    security_token = str(checkin_resp["securityToken"])
+    android_id = device["android_id"]
+    security_token = device["security_token"]
     token = await gcm_register(session, android_id, security_token)
     if not token:
         _LOGGER.warning("GCM register3 fallback also failed")

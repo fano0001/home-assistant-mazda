@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "mazda",
+  "name": "Mazda (MyMazda / MazdaUSA)",
+  "description": "Captures the Azure AD B2C mobile-app redirect from Mazda's login pages (msauth:// custom schemes) and forwards the authorization code to Home Assistant.",
+  "loginOrigins": [
+    "https://*.na.id.mazda.com/*",
+    "https://*.eu.id.mazda.com/*",
+    "https://*.ap.id.mazda.com/*",
+    "https://*.au.id.mazda.com/*"
+  ],
+  "capture": [
+    {
+      "type": "redirect",
+      "redirectPrefixes": [
+        "msauth://com.interrait.mymazda",
+        "msauth.com.mazdausa.mazdaiphone://auth"
+      ]
+    }
+  ],
+  "state": { "rule": "ha-jwt" }
+}

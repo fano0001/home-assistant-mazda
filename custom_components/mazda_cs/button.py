@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
@@ -55,9 +55,6 @@ class MazdaButtonEntityDescription(ButtonEntityDescription):
         [MazdaAPIClient, str, int, DataUpdateCoordinator], Awaitable
     ] = handle_button_press
 
-    # Set to False for buttons that don't send a remote command to the vehicle
-    track_result: bool = field(default=True)
-
 
 BUTTON_ENTITIES = [
     MazdaButtonEntityDescription(
@@ -96,7 +93,6 @@ BUTTON_ENTITIES = [
         icon="mdi:refresh",
         async_press=handle_refresh_vehicle_status,
         is_supported=lambda data: data["isElectric"],
-        track_result=False,
     ),
 ]
 
@@ -135,17 +131,9 @@ class MazdaButtonEntity(MazdaEntity, ButtonEntity):
         self.entity_description = description
 
         self._attr_unique_id = f"{self.vin}_{description.key}"
-        self._command_in_progress = False
 
     async def async_press(self) -> None:
         """Press the button."""
-        if self.entity_description.track_result and self._command_in_progress:
-            return
         await self.entity_description.async_press(
             self.client, self.entity_description.key, self.vehicle_id, self.coordinator
         )
-        if self.entity_description.track_result:
-            self._command_in_progress = True
-            self.hass.async_create_task(
-                self._push_and_unlock(self.entity_description.key)
-            )

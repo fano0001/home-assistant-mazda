@@ -28,7 +28,7 @@ class MazdaOAuth2FlowHandler(
     """Handle a config flow for Mazda Connected Services."""
 
     VERSION = 2
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     DOMAIN = DOMAIN
 
@@ -95,8 +95,7 @@ class MazdaOAuth2FlowHandler(
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_REGION,
-                        default=reauth_entry.data.get(CONF_REGION, "MNAO"),
+                        CONF_REGION, default=reauth_entry.data[CONF_REGION]
                     ): vol.In(MAZDA_REGIONS),
                 }
             ),
@@ -110,7 +109,7 @@ class MazdaOAuth2FlowHandler(
             return self.async_show_form(step_id="reauth_confirm")
 
         reauth_entry = self._get_reauth_entry()
-        self._region = reauth_entry.data.get(CONF_REGION, "MNAO")
+        self._region = reauth_entry.data[CONF_REGION]
         return await self.async_step_pick_implementation()
 
     async def async_step_reconfigure(

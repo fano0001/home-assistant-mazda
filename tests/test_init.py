@@ -43,6 +43,12 @@ async def test_async_setup_registers_send_poi_service(hass: HomeAssistant) -> No
 
     assert hass.services.has_service(DOMAIN, "send_poi")
 
+from custom_components.mazda_cs import (
+    MazdaEntity,
+    _enable_all_notify_settings,
+    async_migrate_entry,
+)
+from custom_components.mazda_cs.const import CONF_ENABLE_PUSH, DOMAIN
 
 async def test_migrate_entry_v1_to_v2(hass: HomeAssistant) -> None:
     """A v1 (email/password) entry migrates to v2 keeping only the region."""
@@ -66,16 +72,6 @@ async def test_migrate_entry_v1_to_v2(hass: HomeAssistant) -> None:
     assert entry.data == {CONF_REGION: "MME"}
 
 
-async def test_migrate_entry_v1_defaults_region_to_mnao(hass: HomeAssistant) -> None:
-    """A v1 entry with no region defaults to MNAO on migration."""
-    entry = MockConfigEntry(domain=DOMAIN, version=1, data={})
-    entry.add_to_hass(hass)
-
-    assert await async_migrate_entry(hass, entry) is True
-
-    assert entry.data == {CONF_REGION: "MNAO"}
-
-
 async def test_migrate_entry_v2_1_to_v2_2_disables_push(hass: HomeAssistant) -> None:
     """v2.1 -> v2.2 opts existing entries out of push notifications."""
     entry = MockConfigEntry(
@@ -89,8 +85,30 @@ async def test_migrate_entry_v2_1_to_v2_2_disables_push(hass: HomeAssistant) -> 
 
     assert await async_migrate_entry(hass, entry) is True
 
-    assert entry.minor_version == 2
+    # The v2.2 -> v2.3 step is a fresh `if`, so a v2.1 entry lands on 3 in one pass.
+    assert entry.minor_version == 3
     assert entry.options[CONF_ENABLE_PUSH] is False
+
+
+async def test_migrate_entry_v2_2_to_v2_3_drops_enable_windows(
+    hass: HomeAssistant,
+) -> None:
+    """v2.2 -> v2.3 removes the enable_windows option left by the deleted switch."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        minor_version=2,
+        data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
+        options={CONF_ENABLE_PUSH: True, "enable_windows": True},
+    )
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is True
+
+    assert entry.minor_version == 3
+    assert "enable_windows" not in entry.options
+    # Unrelated options survive the migration.
+    assert entry.options[CONF_ENABLE_PUSH] is True
 
 
 async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> None:
@@ -98,7 +116,7 @@ async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> Non
     entry = MockConfigEntry(
         domain=DOMAIN,
         version=2,
-        minor_version=2,
+        minor_version=3,
         data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
         options={CONF_ENABLE_PUSH: True},
     )
@@ -107,7 +125,7 @@ async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> Non
     assert await async_migrate_entry(hass, entry) is True
 
     assert entry.version == 2
-    assert entry.minor_version == 2
+    assert entry.minor_version == 3
     assert entry.options[CONF_ENABLE_PUSH] is True
 
 

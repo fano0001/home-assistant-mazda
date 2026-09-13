@@ -15,7 +15,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_REGION, Platform
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
@@ -40,14 +40,15 @@ from .const import (
     CONF_ENABLE_PUSH,
     CONF_FCM_CREDENTIALS,
     DOMAIN,
-    REMOTE_COMMAND_COOLDOWN_SECONDS,
-    REMOTE_PUSH_TIMEOUT_SECONDS,
 )
-from .fcm_listener import EVENT_MAZDA_PUSH, MazdaFcmListener
+from .fcm_listener import MazdaFcmListener
 from .pymazda.push._conductor import conductor_device_id_from_user_sub
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
-from .pymazda.exceptions import MazdaTermsNotAcceptedException
+from .pymazda.exceptions import (
+    MazdaRateLimitException,
+    MazdaTermsNotAcceptedException,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,8 +66,6 @@ class MazdaEntryData:
 
 
 type MazdaConfigEntry = ConfigEntry[MazdaEntryData]
-
-EVENT_REMOTE_SERVICE_RESULT = "mazda_cs_remote_service_result"
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -195,13 +194,16 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> bool:
     """Set up Mazda Connected Services from a config entry."""
-    region = entry.data.get(CONF_REGION, "MNAO")
+    region = entry.data[CONF_REGION]
 
-    # Register our OAuth implementation
+    # Build the implementation from *this* entry's region rather than reading it
+    # back out of the OAuth registry: ``impl.domain`` is always DOMAIN, so the
+    # registry holds a single slot for the whole integration.
+    implementation = MazdaOAuth2Implementation(hass, region)
     config_entry_oauth2_flow.async_register_implementation(
         hass,
         DOMAIN,
-        MazdaOAuth2Implementation(hass, region),
+        implementation,
     )
 
     # Check if this is an old entry that needs reauth (v1 with email/password)
@@ -210,11 +212,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         msg = "Authentication method has changed. Please reauthenticate."
         raise ConfigEntryAuthFailed(msg)
 
-    implementation = (
-        await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
-        )
-    )
     session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
 
     try:
@@ -272,7 +269,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             # made for the same account, so we can only make one request at a time here
             for vehicle in vehicles:
                 vehicle["region"] = region
-                vehicle["enableWindows"] = entry.options.get("enable_windows", False)
                 vehicle["enableDevSensors"] = entry.options.get(
                     "enable_dev_sensors", False
                 )
@@ -301,6 +297,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             raise UpdateFailed(
                 "Mazda API request timed out. The server may be temporarily unavailable."
             ) from ex
+        except MazdaRateLimitException as ex:
+            _LOGGER.warning("Mazda API rate limited (429); will retry next cycle")
+            raise UpdateFailed(str(ex)) from ex
         except aiohttp.ClientConnectionError as ex:
             _LOGGER.warning("Mazda API client connection error (will retry): %s", ex)
             raise UpdateFailed(f"Cannot connect to Mazda API: {ex}") from ex
@@ -434,10 +433,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
     coordinator.push_enabled = bool(fcm_token)
 
     # Register device session with Mazda backend (required before any remoteServices calls)
-    _LOGGER.debug("attach: using fcm_token=%s", fcm_token)
+    _LOGGER.debug(
+        "attach: using fcm_token prefix=%s...",
+        fcm_token[:20] if fcm_token else None,
+    )
     try:
         attach_result = await mazda_client.attach(fcm_token=fcm_token)
-        _LOGGER.debug("attach response: %s", attach_result)
+        _LOGGER.debug(
+            "attach resultCode: %s", (attach_result or {}).get("resultCode")
+        )
     except Exception as ex:
         _LOGGER.warning("Mazda attach failed; vehicle status will be unavailable: %s", ex)
 
@@ -514,7 +518,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Preserve region; clear old email/password credentials.
         # async_setup_entry will raise ConfigEntryAuthFailed (no "token" key),
         # triggering reauth so the user completes OAuth2.
-        new_data = {CONF_REGION: entry.data.get(CONF_REGION, "MNAO")}
+        new_data = {CONF_REGION: entry.data[CONF_REGION]}
         hass.config_entries.async_update_entry(
             entry, data=new_data, minor_version=1, version=2
         )
@@ -529,6 +533,22 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.warning(
             "Migration Successful: Push notification event support disabled by default. "
             "Reconfigure the integration to enable. See the ReadMe for more information."
+        )
+
+    # Deliberately a fresh `if` so an entry coming from minor_version 1 above
+    # continues on to 3 in a single pass.
+    if entry.version == 2 and entry.minor_version == 2:
+        # minor_version 3: window sensors removed. Their raw fields (Pw.PwPos*,
+        # Door.SrSlideSignal, Door.SrTiltSignal) have never been observed as
+        # anything but 0; non-zero values are now logged as warnings instead.
+        hass.config_entries.async_update_entry(
+            entry,
+            options={
+                key: value
+                for key, value in entry.options.items()
+                if key != "enable_windows"
+            },
+            minor_version=3,
         )
 
     return True
@@ -598,55 +618,6 @@ class MazdaEntity(CoordinatorEntity):
             model=f"{self.data['modelYear']} {self.data['carlineName']}",
             name=self.vehicle_name,
         )
-
-    async def _push_and_unlock(self, action: str) -> None:
-        """Wait for a push event confirming the remote command, then reset the command-in-progress flag."""
-        try:
-            if getattr(self.coordinator, "push_enabled", False):
-                push_event = asyncio.Event()
-                push_data: dict = {}
-
-                @callback
-                def _on_push(event) -> None:
-                    if (
-                        event.data.get("vin") == self.vin
-                        and event.data.get("action_code") in {"001", "021"}
-                    ):
-                        push_data.update(event.data)
-                        push_event.set()
-
-                unsub = self.hass.bus.async_listen(EVENT_MAZDA_PUSH, _on_push)
-                try:
-                    async with asyncio.timeout(REMOTE_PUSH_TIMEOUT_SECONDS):
-                        await push_event.wait()
-                    result_id = push_data.get("result_id", "")
-                    self.hass.bus.async_fire(
-                        EVENT_REMOTE_SERVICE_RESULT,
-                        {
-                            "vehicle_id": self.vehicle_id,
-                            "vin": self.vin,
-                            "action": action,
-                            "success": result_id.endswith("_01"),
-                            "title": push_data.get("title", ""),
-                            "result_id": result_id,
-                        },
-                    )
-                    _LOGGER.debug(
-                        "Push result for %s vin=%s: result_id=%s",
-                        action,
-                        self.vin,
-                        result_id,
-                    )
-                except TimeoutError:
-                    _LOGGER.debug(
-                        "Push result timed out: action=%s vin=%s", action, self.vin
-                    )
-                finally:
-                    unsub()
-            else:
-                await asyncio.sleep(REMOTE_COMMAND_COOLDOWN_SECONDS)
-        finally:
-            self._command_in_progress = False
 
     @property
     def data(self):

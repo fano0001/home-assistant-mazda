@@ -107,7 +107,6 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
                 self._attr_min_temp = 15.5
                 self._attr_max_temp = 28.5
 
-        self._command_in_progress = False
         self._update_state_attributes()
 
     @callback
@@ -153,21 +152,15 @@ class MazdaClimateEntity(MazdaEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set a new HVAC mode."""
-        if self._command_in_progress:
-            return
         try:
             if hvac_mode == HVACMode.HEAT_COOL:
                 await self.client.turn_on_hvac(self.vehicle_id)
-                action = "hvacOn"
             elif hvac_mode == HVACMode.OFF:
                 await self.client.turn_off_hvac(self.vehicle_id)
-                action = "hvacOff"
             else:
                 return
         except MazdaException as ex:
             raise HomeAssistantError(ex) from ex
-        self._command_in_progress = True
-        self.hass.async_create_task(self._push_and_unlock(action))
         self._handle_coordinator_update()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
