@@ -89,7 +89,7 @@ If two accounts are used (primary + secondary driver):
 - The **secondary driver does not** receive push notification events for actions triggered by the primary driver.
 
 # mazda_cs_remote_service_result Event Deprecation
-The previous mazda_cs_remote_service_result events are deprecated and have been superseded by the above mazda_cs_push events. These events will continue to work until the legacy patch is removed in 2027. Please [begin migrating automations](https://github.com/fano0001/home-assistant-mazda/blob/v2.2.0-push/examples/mazda_cs_push_events.md).
+The previous mazda_cs_remote_service_result events are removed and have been superseded by the above mazda_cs_push events. Please [migrate automations](https://github.com/fano0001/home-assistant-mazda/blob/v2.2.0-push/examples/mazda_cs_push_events.md).
 
 # FAQ
 
