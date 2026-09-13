@@ -45,7 +45,10 @@ from .fcm_listener import MazdaFcmListener
 from .pymazda.push._conductor import conductor_device_id_from_user_sub
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
-from .pymazda.exceptions import MazdaTermsNotAcceptedException
+from .pymazda.exceptions import (
+    MazdaRateLimitException,
+    MazdaTermsNotAcceptedException,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -294,6 +297,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             raise UpdateFailed(
                 "Mazda API request timed out. The server may be temporarily unavailable."
             ) from ex
+        except MazdaRateLimitException as ex:
+            _LOGGER.warning("Mazda API rate limited (429); will retry next cycle")
+            raise UpdateFailed(str(ex)) from ex
         except aiohttp.ClientConnectionError as ex:
             _LOGGER.warning("Mazda API client connection error (will retry): %s", ex)
             raise UpdateFailed(f"Cannot connect to Mazda API: {ex}") from ex

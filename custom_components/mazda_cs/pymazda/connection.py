@@ -18,6 +18,7 @@ from .exceptions import (
     MazdaAPIEncryptionException,
     MazdaConfigException,
     MazdaException,
+    MazdaRateLimitException,
     MazdaRequestInProgressException,
     MazdaSessionExpiredException,
     MazdaTermsNotAcceptedException,
@@ -456,7 +457,7 @@ class Connection:
         )
 
         if response.status == 429:
-            raise MazdaException(
+            raise MazdaRateLimitException(
                 "Rate limited by Mazda API (429) — will retry on next cycle"
             )
 
