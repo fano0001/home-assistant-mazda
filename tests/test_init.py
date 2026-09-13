@@ -43,6 +43,12 @@ async def test_async_setup_registers_send_poi_service(hass: HomeAssistant) -> No
 
     assert hass.services.has_service(DOMAIN, "send_poi")
 
+from custom_components.mazda_cs import (
+    MazdaEntity,
+    _enable_all_notify_settings,
+    async_migrate_entry,
+)
+from custom_components.mazda_cs.const import CONF_ENABLE_PUSH, DOMAIN
 
 async def test_migrate_entry_v1_to_v2(hass: HomeAssistant) -> None:
     """A v1 (email/password) entry migrates to v2 keeping only the region."""
