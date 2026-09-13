@@ -8,8 +8,6 @@ CONF_FCM_CREDENTIALS = "fcm_credentials"
 # Option: whether push notification registration (FCM) is enabled
 CONF_ENABLE_PUSH = "enable_push_notifications"
 
-REMOTE_COMMAND_COOLDOWN_SECONDS = 3
-REMOTE_PUSH_TIMEOUT_SECONDS = 30
 
 MAZDA_REGIONS = {
     "MNAO": "North America",
@@ -87,9 +85,18 @@ OAUTH2_HOSTS = {
     "MA": "au.id.mazda.com",
 }
 
+# Phone-number length bounds per region, from MZALAuth.A()/B() in the MyMazda APK
+PHONE_NUMBER_LENGTHS = {
+    "MNAO": (10, 10),
+    "MCI": (10, 10),
+    "MME": (6, 15),
+    "MJO": (10, 11),
+    "MA": (9, 10),
+}
+
 # MSAL client identifiers (sent with authorize requests)
 # Values confirmed from com.interrait.mymazda APK (msal/BuildConfig.java, AuthenticationConstants.java)
 MSAL_CLIENT_SKU = "MSAL.Android"
 MSAL_CLIENT_VER = "5.4.0"
 MSAL_APP_NAME = "MyMazda"
-MSAL_APP_VER = "9.1.0"
+MSAL_APP_VER = "9.5.0"

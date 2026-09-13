@@ -34,6 +34,10 @@ class MazdaException(Exception):
         self.status = status
 
 
+class MazdaRateLimitException(MazdaException):
+    """Raised when the Mazda API responds with HTTP 429 (rate limited)."""
+
+
 class MazdaRequestInProgressException(Exception):
     """Raised when a request fails because another request is already in progress."""
 

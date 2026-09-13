@@ -107,24 +107,6 @@
             "scr_maintenance_warning": {
                 "name": "SCR-Wartungswarnung"
             },
-            "sunroof": {
-                "name": "Schiebedach"
-            },
-            "sunroof_tilt": {
-                "name": "Schiebedach (Kippstellung)"
-            },
-            "driver_window": {
-                "name": "Fahrerfenster"
-            },
-            "passenger_window": {
-                "name": "Beifahrerfenster"
-            },
-            "rear_left_window": {
-                "name": "Fenster hinten links"
-            },
-            "rear_right_window": {
-                "name": "Fenster hinten rechts"
-            },
             "tns_lamp": {
                 "name": "Außenlicht-an-Warnung"
             },
@@ -290,9 +272,6 @@
         "switch": {
             "charging": {
                 "name": "Aufladen"
-            },
-            "enable_windows": {
-                "name": "δ | Fenstersensoren aktivieren"
             },
             "enable_dev_sensors": {
                 "name": "δ | Entwicklungssensoren"

@@ -11,7 +11,17 @@ from homeassistant.helpers.device_registry import DeviceEntry
 
 from . import MazdaConfigEntry
 
-TO_REDACT_INFO = ["access_token", "id_token", "refresh_token"]
+TO_REDACT_INFO = [
+    "access_token",
+    "id_token",
+    "refresh_token",
+    # fcm_credentials contains android_id + security_token — together a full
+    # MCS login credential that would let anyone receive this user's pushes.
+    "fcm_credentials",
+    "conductor_customer_id",
+    "conductor_usher_id",
+    "conductor_internal_id",
+]
 TO_REDACT_DATA = ["vin", "id", "latitude", "longitude", "nickname"]
 
 
