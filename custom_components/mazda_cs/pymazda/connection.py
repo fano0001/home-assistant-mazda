@@ -509,7 +509,12 @@ class Connection:
         elif "error" in response_json:
             raise MazdaException("Request failed: " + response_json["error"])
         else:
-            raise MazdaException("Request failed for an unknown reason")
+            error_body = _redact(
+                {k: v for k, v in response_json.items() if k != "payload"}
+            )
+            raise MazdaException(
+                f"Request failed for an unknown reason (HTTP {response.status}, {uri}): {error_body}"
+            )
 
     async def __ensure_keys_present(self):
         if self.enc_key is None or self.sign_key is None:
