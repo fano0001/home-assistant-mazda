@@ -43,6 +43,22 @@
             }
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Options",
+                "description": "Enable or disable optional entities. Saving reloads the integration.",
+                "data": {
+                    "enable_vehicle_images": "MyMazda vehicle images",
+                    "enable_dev_sensors": "Development sensors (δ)"
+                },
+                "data_description": {
+                    "enable_vehicle_images": "Adds a Vehicle image entity and a select to choose between available vehicle images displayed in the MyMazda app.",
+                    "enable_dev_sensors": "Adds experimental sensors that read raw, undocumented vehicle status fields. Intended for development and troubleshooting. All development sensors are prefixed with 'δ |'."
+                }
+            }
+        }
+    },
     "entity": {
         "binary_sensor": {
             "driver_door": {
@@ -287,9 +303,6 @@
         "switch": {
             "charging": {
                 "name": "Charging"
-            },
-            "enable_dev_sensors": {
-                "name": "δ | Development sensors"
             }
         }
     },

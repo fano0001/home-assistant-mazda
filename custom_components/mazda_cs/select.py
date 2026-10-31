@@ -15,7 +15,7 @@ from . import (
     MazdaEntity,
     bg_image_options,
 )
-from .const import SIGNAL_BG_IMAGE_SELECTED
+from .const import CONF_ENABLE_VEHICLE_IMAGES, SIGNAL_BG_IMAGE_SELECTED
 
 FLASH_LIGHT_OPTIONS = ["2", "10", "30"]
 DEFAULT_FLASH_LIGHT_COUNT = "10"
@@ -36,10 +36,11 @@ async def async_setup_entry(
         for index, data in enumerate(coordinator.data)
         if data["hasFlashLight"]
     ]
-    entities.extend(
-        MazdaVehicleImageSelect(client, coordinator, image_coordinator, index)
-        for index in range(len(coordinator.data))
-    )
+    if config_entry.options.get(CONF_ENABLE_VEHICLE_IMAGES, False):
+        entities.extend(
+            MazdaVehicleImageSelect(client, coordinator, image_coordinator, index)
+            for index in range(len(coordinator.data))
+        )
     async_add_entities(entities)
 
 

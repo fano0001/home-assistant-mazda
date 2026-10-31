@@ -7,11 +7,23 @@ from typing import TYPE_CHECKING, Any
 
 import jwt
 import voluptuous as vol
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    ConfigEntry,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_REGION
+from homeassistant.core import callback
 from homeassistant.helpers import config_entry_oauth2_flow, selector
 
-from .const import CONF_ENABLE_PUSH, DOMAIN, MAZDA_REGIONS
+from .const import (
+    CONF_ENABLE_DEV_SENSORS,
+    CONF_ENABLE_PUSH,
+    CONF_ENABLE_VEHICLE_IMAGES,
+    DOMAIN,
+    MAZDA_REGIONS,
+)
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 
@@ -28,7 +40,7 @@ class MazdaOAuth2FlowHandler(
     """Handle a config flow for Mazda Connected Services."""
 
     VERSION = 2
-    MINOR_VERSION = 3
+    MINOR_VERSION = 4
 
     DOMAIN = DOMAIN
 
@@ -37,6 +49,12 @@ class MazdaOAuth2FlowHandler(
         super().__init__()
         self._region: str | None = None
         self._enable_push: bool = True
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> MazdaOptionsFlow:
+        """Return the options flow (gear icon) handler."""
+        return MazdaOptionsFlow()
 
     @property
     def logger(self) -> logging.Logger:
@@ -217,3 +235,37 @@ class MazdaOAuth2FlowHandler(
         )
 
 
+class MazdaOptionsFlow(OptionsFlow):
+    """Handle the options flow for Mazda Connected Services."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Toggle the optional entity groups."""
+        entry = self.config_entry
+
+        if user_input is not None:
+            options = {**entry.options, **user_input}
+            # Both flags change which entities exist, so the entry has to reload.
+            # Store the options first so the reload sees them, and skip the reload
+            # (and its re-attach) when nothing changed.
+            if options != dict(entry.options):
+                self.hass.config_entries.async_update_entry(entry, options=options)
+                self.hass.config_entries.async_schedule_reload(entry.entry_id)
+            return self.async_create_entry(data=options)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_ENABLE_VEHICLE_IMAGES,
+                        default=entry.options.get(CONF_ENABLE_VEHICLE_IMAGES, False),
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        CONF_ENABLE_DEV_SENSORS,
+                        default=entry.options.get(CONF_ENABLE_DEV_SENSORS, False),
+                    ): selector.BooleanSelector(),
+                }
+            ),
+        )

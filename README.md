@@ -68,6 +68,15 @@ Events are fired as Home Assistant events under `mazda_cs_push`, which can be us
 
 ## Configuration 
 
+### Integration options
+
+Optional entities are turned on or off via **Devices & Services → Mazda Connected Services → ⚙️ (Configure)**. Saving reloads the integration.
+
+| Option | Default | What it does |
+|---|---|---|
+| MyMazda vehicle images | Off | Adds a **Vehicle image** entity and a select for choosing between the vehicle images displayed in the mobile app for your model. |
+| Development sensors (δ) | Off | Adds experimental sensors that read raw, undocumented vehicle status fields. Intended for development and troubleshooting. All development sensors are prefixed with `δ \|`. |
+
 ### Disable / enable push notification events
 
 > [!IMPORTANT]
@@ -97,6 +106,7 @@ The previous mazda_cs_remote_service_result events are removed and have been sup
 
 **Vehicle Status:** Every 6 minutes and when triggered by a push notification. If the integration fails to register for push notifactions, 3 minutes.
 **Health Report Status:** Every 24 hours or when triggered by a push notification
+**Vehicle Images:** When the integration loads, if enabled. A failed fetch is retried hourly, up to 6 times.
 
 ## When does the vehicle send status updates?
 Information on when the vehicle sends updates is sourced from the [Mazda Connected Services Manual (USA)](https://www.mazda.ca/globalassets/digitalownersmanual/en_connected-vehicle-service-manual_2025/chapter4/section4.html) and validated with testing:

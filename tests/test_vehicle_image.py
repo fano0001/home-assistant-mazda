@@ -11,7 +11,14 @@ from homeassistant.core import HomeAssistant, State
 import pytest
 from pytest_homeassistant_custom_component.common import mock_restore_cache
 
-from custom_components.mazda_cs import bg_image_options
+from custom_components.mazda_cs import (
+    IMAGE_MAX_RETRIES,
+    IMAGE_RETRY_INTERVAL,
+    bg_image_options,
+    image_refresh_interval,
+)
+from custom_components.mazda_cs.const import CONF_ENABLE_VEHICLE_IMAGES
+from custom_components.mazda_cs.image import async_setup_entry as image_setup_entry
 from custom_components.mazda_cs.image import MazdaVehicleImage
 from custom_components.mazda_cs.pymazda.client import Client
 from custom_components.mazda_cs.pymazda.connection import (
@@ -23,7 +30,10 @@ from custom_components.mazda_cs.pymazda.connection import (
 )
 from custom_components.mazda_cs.pymazda.controller import Controller
 from custom_components.mazda_cs.pymazda.exceptions import MazdaSessionExpiredException
-from custom_components.mazda_cs.select import MazdaVehicleImageSelect
+from custom_components.mazda_cs.select import (
+    MazdaVehicleImageSelect,
+    async_setup_entry as select_setup_entry,
+)
 
 VEHICLE = {
     "vin": "JM1TESTVIN",
@@ -293,3 +303,57 @@ async def test_image_with_unknown_bytes_is_rejected(hass: HomeAssistant) -> None
     image._fetch_url = AsyncMock(return_value=response)
 
     assert await image.async_image() is None
+
+
+def _config_entry(options: dict) -> MagicMock:
+    """A config entry carrying runtime_data for one vehicle with flash lights."""
+    entry = MagicMock()
+    entry.options = options
+    entry.runtime_data.client = _make_client()
+    entry.runtime_data.coordinator = _vehicle_coordinator()
+    entry.runtime_data.coordinator.data = [{**VEHICLE, "hasFlashLight": True}]
+    entry.runtime_data.image_coordinator = _ImageCoordinator([IMAGES])
+    return entry
+
+
+@pytest.mark.parametrize(
+    ("options", "expected"), [({}, False), ({CONF_ENABLE_VEHICLE_IMAGES: True}, True)]
+)
+async def test_vehicle_image_option_gates_entities(
+    hass: HomeAssistant, options, expected
+) -> None:
+    """Images default off; turning the option on adds the image and its select."""
+    entry = _config_entry(options)
+    image_add, select_add = MagicMock(), MagicMock()
+
+    await image_setup_entry(hass, entry, image_add)
+    await select_setup_entry(hass, entry, select_add)
+
+    images = list(image_add.call_args.args[0]) if image_add.called else []
+    selects = [type(e) for e in select_add.call_args.args[0]]
+    assert (len(images) == 1) is expected
+    assert (MazdaVehicleImageSelect in selects) is expected
+    # The flash light select is unaffected by the option.
+    assert len(selects) == (2 if expected else 1)
+
+
+@pytest.mark.parametrize(
+    ("images", "retries", "expected"),
+    [
+        ([IMAGES], 0, None),  # complete: fetched once, no polling
+        ([], 0, None),  # no vehicles: nothing to retry
+        ([[]], 0, IMAGE_RETRY_INTERVAL),  # failed or empty: retry hourly
+        ([IMAGES, []], IMAGE_MAX_RETRIES - 1, IMAGE_RETRY_INTERVAL),
+        ([[]], IMAGE_MAX_RETRIES, None),  # cap reached: stop until reload
+    ],
+)
+def test_image_refresh_interval(images, retries, expected) -> None:
+    """Images load once; incomplete fetches retry hourly up to the cap."""
+    assert image_refresh_interval(images, retries) == expected
+
+
+def test_image_refresh_interval_warns_once_cap_reached(caplog) -> None:
+    """Hitting the retry cap is logged so the stop is visible."""
+    image_refresh_interval([[]], IMAGE_MAX_RETRIES)
+
+    assert "not retrying until the integration is reloaded" in caplog.text

@@ -8,6 +8,10 @@ CONF_FCM_CREDENTIALS = "fcm_credentials"
 # Option: whether push notification registration (FCM) is enabled
 CONF_ENABLE_PUSH = "enable_push_notifications"
 
+# Options flow: dev (δ) sensors and the MyMazda vehicle image entities
+CONF_ENABLE_DEV_SENSORS = "enable_dev_sensors"
+CONF_ENABLE_VEHICLE_IMAGES = "enable_vehicle_images"
+
 
 MAZDA_REGIONS = {
     "MNAO": "North America",

@@ -17,7 +17,7 @@ from . import (
     MazdaEntity,
     bg_image_options,
 )
-from .const import SIGNAL_BG_IMAGE_SELECTED
+from .const import CONF_ENABLE_VEHICLE_IMAGES, SIGNAL_BG_IMAGE_SELECTED
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +28,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the image platform."""
+    if not config_entry.options.get(CONF_ENABLE_VEHICLE_IMAGES, False):
+        return
     client = config_entry.runtime_data.client
     coordinator = config_entry.runtime_data.coordinator
     image_coordinator = config_entry.runtime_data.image_coordinator
