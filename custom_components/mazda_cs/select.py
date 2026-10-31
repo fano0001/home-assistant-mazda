@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -84,6 +85,7 @@ class MazdaVehicleImageSelect(MazdaEntity, SelectEntity, RestoreEntity):
 
     _attr_translation_key = "vehicle_image"
     _attr_icon = "mdi:image-multiple"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
         self,
