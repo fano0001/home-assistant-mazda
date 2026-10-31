@@ -154,6 +154,11 @@
                 "name": "Device tracker"
             }
         },
+        "image": {
+            "vehicle_image": {
+                "name": "Vehicle image"
+            }
+        },
         "lock": {
             "lock": {
                 "name": "Lock"
@@ -167,6 +172,9 @@
                     "10": "10 flashes",
                     "30": "30 flashes"
                 }
+            },
+            "vehicle_image": {
+                "name": "Vehicle image"
             }
         },
         "sensor": {

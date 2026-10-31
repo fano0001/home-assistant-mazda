@@ -36,6 +36,8 @@
 | **lock** | `lock` | Lock |  |
 | **device_tracker** | `device_tracker` | Device tracker |  |
 | **select** | `flash_light_count` | Flash light count | `hasFlashLight` |
+| **select** | `vehicle_image` | Vehicle image | Options are the MyMazda home-screen images for the model |
+| **image** | `vehicle_image` | Vehicle image | Shows the image picked in the select; refreshed every 24 h |
 | **switch** | `push_notification_events` | Push notification events |  |
 | **button** | `start_engine` | Start engine | `hasRemoteStart` |
 | **button** | `stop_engine` | Stop engine | `hasRemoteStart` |

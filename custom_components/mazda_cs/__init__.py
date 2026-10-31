@@ -6,6 +6,7 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import timedelta
 import logging
+import re
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -60,6 +61,7 @@ class MazdaEntryData:
     client: MazdaAPI
     coordinator: DataUpdateCoordinator
     health_coordinator: DataUpdateCoordinator
+    image_coordinator: DataUpdateCoordinator
     fcm_listener: MazdaFcmListener | None
     region: str
     vehicles: list[dict] = field(default_factory=list)
@@ -72,6 +74,7 @@ PLATFORMS = [
     Platform.BUTTON,
     Platform.CLIMATE,
     Platform.DEVICE_TRACKER,
+    Platform.IMAGE,
     Platform.LOCK,
     Platform.SELECT,
     Platform.SENSOR,
@@ -83,6 +86,26 @@ async def with_timeout(task, timeout_seconds=30):
     """Run an async task with a timeout."""
     async with asyncio.timeout(timeout_seconds):
         return await task
+
+
+def _bg_image_label(name: str | None) -> str:
+    """Turn a server filename like "MAZDA3 HB=01.jpg" into "Mazda3 HB 01"."""
+    label = re.sub(r"\.(jpe?g|png|webp)$", "", name or "", flags=re.IGNORECASE)
+    label = re.sub(r"\bMAZDA", "Mazda", label.replace("=", " "))
+    return " ".join(label.split())
+
+
+def bg_image_options(images: list[dict] | None) -> dict[str, str]:
+    """Map vehicle image option labels to URLs, preserving server order."""
+    options: dict[str, str] = {}
+    for n, image in enumerate(images or [], start=1):
+        base = label = _bg_image_label(image.get("name")) or f"Image {n}"
+        suffix = 2
+        while label in options:
+            label = f"{base} ({suffix})"
+            suffix += 1
+        options[label] = image["url"]
+    return options
 
 
 _NOTIFY_EXCLUDE = {"resultCode", "visitNo", "settingSaveFlag"}
@@ -344,6 +367,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         update_interval=None, # set to 24h later if health report permission
     )
 
+    async def async_update_image_data():
+        """Fetch vehicle background images for each vehicle. Returns a list aligned with coordinator.data."""
+        vehicles = coordinator.data or []
+        result = []
+        for vehicle in vehicles:
+            try:
+                images = await with_timeout(
+                    mazda_client.get_home_bg_images(vehicle.get("modelCode4"))
+                )
+                _LOGGER.debug("getHomeBgImages: %s", images)
+                result.append(images)
+            except Exception as ex:  # noqa: BLE001
+                _LOGGER.warning("getHomeBgImages failed: %s", ex)
+                result.append([])
+        return result
+
+    image_coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=f"{DOMAIN}_image",
+        update_method=async_update_image_data,
+        update_interval=timedelta(hours=24),
+    )
+
     # Start FCM listener — coordinator must exist first so it can be passed in.
     # Must complete before attach so we have a token to register with Mazda's backend.
     conductor_customer_id  = entry.data.get("conductor_customer_id", "")
@@ -416,6 +463,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         client=mazda_client,
         coordinator=coordinator,
         health_coordinator=health_coordinator,
+        image_coordinator=image_coordinator,
         fcm_listener=fcm_listener,
         region=region,
     )
@@ -505,6 +553,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         entry.async_create_background_task(
             hass, health_coordinator.async_refresh(), "mazda_cs_health_initial_refresh"
         )
+
+    entry.async_create_background_task(
+        hass, image_coordinator.async_refresh(), "mazda_cs_image_initial_refresh"
+    )
 
     # Setup components
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
