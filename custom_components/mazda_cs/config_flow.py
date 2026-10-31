@@ -32,6 +32,12 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Options-flow toggles and the value the integration assumes when one is not stored
+OPTION_DEFAULTS = {
+    CONF_ENABLE_VEHICLE_IMAGES: False,
+    CONF_ENABLE_DEV_SENSORS: False,
+}
+
 
 class MazdaOAuth2FlowHandler(
     config_entry_oauth2_flow.AbstractOAuth2FlowHandler,
@@ -248,8 +254,9 @@ class MazdaOptionsFlow(OptionsFlow):
             options = {**entry.options, **user_input}
             # Both flags change which entities exist, so the entry has to reload.
             # Store the options first so the reload sees them, and skip the reload
-            # (and its re-attach) when nothing changed.
-            if options != dict(entry.options):
+            # (and its re-attach) when no effective value changed. Compare with
+            # defaults filled in: a first save only writes keys that were missing.
+            if _effective_options(options) != _effective_options(entry.options):
                 self.hass.config_entries.async_update_entry(entry, options=options)
                 self.hass.config_entries.async_schedule_reload(entry.entry_id)
             return self.async_create_entry(data=options)
@@ -258,14 +265,13 @@ class MazdaOptionsFlow(OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(
-                        CONF_ENABLE_VEHICLE_IMAGES,
-                        default=entry.options.get(CONF_ENABLE_VEHICLE_IMAGES, False),
-                    ): selector.BooleanSelector(),
-                    vol.Optional(
-                        CONF_ENABLE_DEV_SENSORS,
-                        default=entry.options.get(CONF_ENABLE_DEV_SENSORS, False),
-                    ): selector.BooleanSelector(),
+                    vol.Optional(key, default=value): selector.BooleanSelector()
+                    for key, value in _effective_options(entry.options).items()
                 }
             ),
         )
+
+
+def _effective_options(options: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the options-flow toggles as the integration sees them."""
+    return {key: options.get(key, default) for key, default in OPTION_DEFAULTS.items()}

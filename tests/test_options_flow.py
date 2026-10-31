@@ -82,3 +82,24 @@ async def test_options_unchanged_skips_reload(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options == options
     reload.assert_not_called()
+
+
+async def test_first_save_with_defaults_skips_reload(hass: HomeAssistant) -> None:
+    """Saving the defaults on an entry without the keys stores them, no reload."""
+    entry = _entry({CONF_ENABLE_PUSH: True})
+    entry.add_to_hass(hass)
+
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            {CONF_ENABLE_VEHICLE_IMAGES: False, CONF_ENABLE_DEV_SENSORS: False},
+        )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {
+        CONF_ENABLE_PUSH: True,
+        CONF_ENABLE_VEHICLE_IMAGES: False,
+        CONF_ENABLE_DEV_SENSORS: False,
+    }
+    reload.assert_not_called()
