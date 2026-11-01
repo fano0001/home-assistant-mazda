@@ -103,7 +103,7 @@ PHONE_NUMBER_LENGTHS = {
 MSAL_CLIENT_SKU = "MSAL.Android"
 MSAL_CLIENT_VER = "5.4.0"
 MSAL_APP_NAME = "MyMazda"
-MSAL_APP_VER = "9.5.0"
+MSAL_APP_VER = "10.0.1"
 
 # Dispatcher signal sent when the vehicle image select changes; format with the VIN
 SIGNAL_BG_IMAGE_SELECTED = f"{DOMAIN}_bg_image_selected_{{}}"
