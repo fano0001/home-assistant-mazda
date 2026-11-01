@@ -5,7 +5,15 @@
       "cannot_connect": "[%key:common::config_flow::abort::cannot_connect%]",
       "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
       "oauth_error": "Error during OAuth authentication. Please try again.",
-      "wrong_account": "Wrong account. Please authenticate with the same account."
+      "wrong_account": "Wrong account. Please authenticate with the same account.",
+      "oauth_failed": "[%key:common::config_flow::abort::oauth2_failed%]",
+      "oauth_timeout": "[%key:common::config_flow::abort::oauth2_timeout%]",
+      "oauth_unauthorized": "[%key:common::config_flow::abort::oauth2_unauthorized%]"
+    },
+    "error": {
+      "authorize_rejected": "Mazda returned an error instead of a sign-in code, for example because the sign-in was cancelled. Open the sign-in link above and try again.",
+      "invalid_callback_url": "The pasted callback URL was not valid. Copy the entire msauth:// address from the console, including the code.",
+      "state_mismatch": "The address belongs to another sign-in attempt. Use the newest msauth:// line in the console, or open the sign-in link above again and paste the new address."
     },
     "step": {
       "user": {
@@ -39,6 +47,28 @@
         },
         "data_description": {
           "enable_push_notifications": "Receive real-time push notifications from Mazda (requires FCM registration). Disable if you do not need push-based remote command confirmation."
+        }
+      },
+      "pick_method": {
+        "title": "Sign in to Mazda",
+        "description": "Choose how to sign in.",
+        "menu_options": {
+          "auth": "Automated sign-in (browser extension)",
+          "auth_manual": "Manual sign-in (copy from the browser console)"
+        }
+      },
+      "auth": {
+        "title": "Sign in with the browser extension",
+        "description": "A new tab opens with the login page. With the OAuth Assist for HA extension (or a legacy Mazda OAuth Helper extension) installed, proceed with sign in and follow the instructions in 'Link to Home Assistant' to finish setup automatically.\nKeep this window open."
+      },
+      "auth_manual": {
+        "title": "Sign in to Mazda",
+        "description": "Mobile app sign-in ends by handing off to the official app with a url that desktop browsers cannot open. Follow the instructions below and copy the callback address from a browser's developer console instead.\n\n1. [Open the Mazda sign-in]({authorize_url}). If no sign-in page loads at all, you must clear any mazda.com cookies from your browser first.\n2. Complete the Mazda sign-in form and click LOGIN. After clicking the button, **no new page loads and the browser appears to do nothing**. That is expected.\n3. Open the browser's developer tools (Chrome or Edge: F12, or ⌥⌘I on a Mac) and open the **Console** tab.\n4. Find a line containing `Failed to launch 'msauth://com.interrait.mymazda/...'` or similar, logged because the browser cannot open `msauth://` addresses.\n5. Right-click the `msauth://` address, select **Copy link address**, and paste it below.\n\nKeep this window open until you submit. The address is a one-time sign-in credential, do not include it in issue reports or screenshots.",
+        "data": {
+          "callback_url": "Callback URL"
+        },
+        "data_description": {
+          "callback_url": "The full msauth:// address, including everything after the '?'."
         }
       }
     }

@@ -16,6 +16,7 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_REGION
 from homeassistant.core import callback
 from homeassistant.helpers import config_entry_oauth2_flow, selector
+from yarl import URL
 
 from .const import (
     CONF_ENABLE_DEV_SENSORS,
@@ -38,12 +39,47 @@ OPTION_DEFAULTS = {
     CONF_ENABLE_DEV_SENSORS: False,
 }
 
+CONF_CALLBACK_URL = "callback_url"
+
+# Translation keys under `config.error` in strings.json
+ERROR_AUTHORIZE_REJECTED = "authorize_rejected"
+ERROR_INVALID_CALLBACK_URL = "invalid_callback_url"
+ERROR_STATE_MISMATCH = "state_mismatch"
+
+STEP_AUTH_MANUAL_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_CALLBACK_URL): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
+        )
+    }
+)
+
+
+class InvalidCallbackURLError(Exception):
+    """Raised when the pasted callback URL cannot be used."""
+
+    def __init__(self, error_key: str) -> None:
+        """Initialize with the translation key describing the problem."""
+        super().__init__(error_key)
+        self.error_key = error_key
+
 
 class MazdaOAuth2FlowHandler(
     config_entry_oauth2_flow.AbstractOAuth2FlowHandler,
     domain=DOMAIN,
 ):
-    """Handle a config flow for Mazda Connected Services."""
+    """Handle a config flow for Mazda Connected Services.
+
+    Sign-in starts at a menu with two paths:
+
+    - ``auth``: the stock external step, where the browser extension forwards
+      the msauth:// redirect to HA's OAuth callback view, which resumes the flow;
+    - ``auth_manual``: the user opens the authorize URL themselves and pastes
+      back the msauth:// redirect the browser could not launch.
+
+    They must be separate steps chosen up front: an external step can only
+    transition to another external step, so it cannot fall back to a form.
+    """
 
     VERSION = 2
     MINOR_VERSION = 4
@@ -55,6 +91,8 @@ class MazdaOAuth2FlowHandler(
         super().__init__()
         self._region: str | None = None
         self._enable_push: bool = True
+        self._authorize_url: str | None = None
+        self._expected_state: str | None = None
 
     @staticmethod
     @callback
@@ -88,8 +126,81 @@ class MazdaOAuth2FlowHandler(
         self, _: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle picking implementation - directly use our implementation."""
-        self.flow_impl = MazdaOAuth2Implementation(self.hass, self._region)
-        return await self.async_step_auth()
+        # Create the implementation once per flow: it holds the PKCE verifier
+        # that the token exchange must send, so replacing it after an authorize
+        # URL was issued would fail the exchange with invalid_grant.
+        if self.flow_impl is None:
+            self.flow_impl = MazdaOAuth2Implementation(self.hass, self._region)
+        return await self.async_step_pick_method()
+
+    async def async_step_pick_method(
+        self, _: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Offer the browser extension or the manual paste sign-in."""
+        return self.async_show_menu(
+            step_id="pick_method",
+            menu_options=["auth", "auth_manual"],
+        )
+
+    async def async_step_auth_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Show the authorize URL and accept the pasted msauth:// redirect."""
+        if self._authorize_url is None:
+            self._authorize_url = await self.async_generate_authorize_url()
+            self._expected_state = URL(self._authorize_url).query.get("state")
+
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                self.external_data = self._parse_callback_url(
+                    user_input[CONF_CALLBACK_URL]
+                )
+            except InvalidCallbackURLError as err:
+                errors["base"] = err.error_key
+            else:
+                return await self.async_step_creation()
+
+        return self.async_show_form(
+            step_id="auth_manual",
+            data_schema=STEP_AUTH_MANUAL_SCHEMA,
+            description_placeholders={"authorize_url": self._authorize_url},
+            errors=errors,
+        )
+
+    def _parse_callback_url(self, raw_url: str) -> dict[str, Any]:
+        """Turn the pasted msauth:// redirect into OAuth2 external data.
+
+        Returns a mapping shaped like the one the OAuth callback view hands the
+        flow: the authorization code plus the decoded state.
+
+        Raises:
+            InvalidCallbackURLError: If the URL is unusable, carries an
+                authorization error, lacks a code, or does not match the state
+                issued for this flow.
+
+        """
+        try:
+            query = URL(raw_url.strip()).query
+        except ValueError as err:
+            raise InvalidCallbackURLError(ERROR_INVALID_CALLBACK_URL) from err
+
+        if "error" in query:
+            raise InvalidCallbackURLError(ERROR_AUTHORIZE_REJECTED)
+
+        if not (code := query.get("code")):
+            raise InvalidCallbackURLError(ERROR_INVALID_CALLBACK_URL)
+
+        if not self._expected_state or query.get("state") != self._expected_state:
+            raise InvalidCallbackURLError(ERROR_STATE_MISMATCH)
+
+        return {
+            "code": code,
+            "state": {
+                "flow_id": self.flow_id,
+                "redirect_uri": self.flow_impl.redirect_uri,
+            },
+        }
 
     # Re-enable after removing migration code — 2027 or later
     # async def async_step_reauth(self, _: Mapping[str, Any]) -> ConfigFlowResult:
