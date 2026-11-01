@@ -1,6 +1,7 @@
 {
   "domain": "mazda_cs",
   "name": "Mazda Connected Services ng",
+  "categories": ["vehicles_transport.cars_evs"],
   "codeowners": ["@fano0001"],
   "config_flow": true,
   "dependencies": ["http"],
