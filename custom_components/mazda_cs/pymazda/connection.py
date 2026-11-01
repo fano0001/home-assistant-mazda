@@ -55,6 +55,10 @@ with SSLContextConfigurator(
 IV = "0102030405060708"
 # SHA256_CERT_SIG: SHA256 of same APK signing cert — used in new MC API (j.f11208e) sign derivation
 SHA256_CERT_SIG = "C022C9EE778CF903838F8B9C4B9FF0036A5C516CEFAAD6DC710B717CF97DCFCA"
+# SIGNATURE_MD5: MD5 of the APK signing cert — used by the legacy Kintaro API (MD5 sign type).
+# Confirmed by live checkVersion test 2026-10-30 for all LEGACY_REGION_CONFIG entries
+# (SHA256_CERT_SIG against the same host is rejected with 400007).
+SIGNATURE_MD5 = "C383D8C4D279B78130AD52DC71D95CAA"
 # SIGN_PACKAGE_ID: Android package name used in key derivation (NOT SDMConfigDataUtil.getSignCode())
 # SDMConfigDataUtil.getSignCode() = "202406061255295340265" is used elsewhere, not here
 SIGN_PACKAGE_ID = "com.interrait.mymazda"
@@ -92,6 +96,32 @@ REGION_CONFIG = {
         "base_url": "https://hgs2ivap.mazda.com/",  # Australia shares MJO API infrastructure
         "region_header": "au",
         "locale": "en-AU",
+    },
+}
+
+# LEGACY_REGION_CONFIG: Kintaro hosts, sourced from assets/config/*_core_config.json BASE_URL /
+# APP_CODE fields (APK 10.0.0). The app routes legacyAPIEndpoints prefixes (/junction, /content,
+# /vehicle, /poi, /service, ...) here instead of the MC host.
+LEGACY_REGION_CONFIG = {
+    "MNAO": {
+        "app_code": "202007270941270111799",
+        "base_url": "https://0cxo7m58.mazda.com/prod/",
+    },
+    "MCI": {
+        "app_code": "202108180707513003276",
+        "base_url": "https://0cxo7m58.mazda.com/prod/",
+    },
+    "MME": {
+        "app_code": "202008100250281064816",
+        "base_url": "https://e9stj7g7.mazda.com/prod/",
+    },
+    "MJO": {
+        "app_code": "202009170613074283422",
+        "base_url": "https://wcs9p6wj.mazda.com/prod/",
+    },
+    "MA": {
+        "app_code": "202311290843442783708",
+        "base_url": "https://wcs9p6wj.mazda.com/prod/",
     },
 }
 # APP_PACKAGE_ID: Android package name, used in app-unique-id header
@@ -135,6 +165,7 @@ class Connection:
         access_token_provider,
         session_refresh_provider=None,
         websession=None,
+        legacy=False,
     ):  # noqa: D107
         self.access_token_provider = access_token_provider
         self.session_refresh_provider = session_refresh_provider
@@ -150,6 +181,14 @@ class Connection:
             self.cert_sig = SHA256_CERT_SIG
         else:
             raise MazdaConfigException("Invalid region")
+
+        if legacy:
+            # Kintaro client: own host, app code and keys; MD5 sign type. Never attaches,
+            # so no X-device-session-id is sent (matches the app).
+            legacy_config = LEGACY_REGION_CONFIG[region]
+            self.app_code = legacy_config["app_code"]
+            self.base_url = legacy_config["base_url"]
+            self.cert_sig = SIGNATURE_MD5
 
         self.base_api_device_id = hashlib.sha1(user_sub.encode()).hexdigest()
         self.device_session_id = None  # Set to attach sessionId after successful attach
@@ -341,16 +380,19 @@ class Connection:
                 num_retries + 1,
             )
         except MazdaSessionExpiredException as ex:
+            # Legacy (Kintaro) connections never attach, so re-attaching and
+            # retrying cannot help - surface the conflict instead.
+            if self.session_refresh_provider is None:
+                raise
             self.logger.warning(
                 "Server reports session conflict (600100). Clearing session ID and re-attaching. Details: %s",
                 ex,
             )
             self.device_session_id = None
-            if self.session_refresh_provider:
-                try:
-                    await self.session_refresh_provider()
-                except Exception as attach_ex:
-                    self.logger.warning("Re-attach after 600100 failed: %s", attach_ex)
+            try:
+                await self.session_refresh_provider()
+            except Exception as attach_ex:
+                self.logger.warning("Re-attach after 600100 failed: %s", attach_ex)
             return await self.__api_request_retry(
                 method,
                 uri,

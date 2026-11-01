@@ -28,7 +28,7 @@ def _entry(region: str) -> MockConfigEntry:
         unique_id=f"sub-{region}",
         data=data,
         version=2,
-        minor_version=3,
+        minor_version=4,
     )
 
 

@@ -8,6 +8,10 @@ CONF_FCM_CREDENTIALS = "fcm_credentials"
 # Option: whether push notification registration (FCM) is enabled
 CONF_ENABLE_PUSH = "enable_push_notifications"
 
+# Options flow: dev (δ) sensors and the MyMazda vehicle image entities
+CONF_ENABLE_DEV_SENSORS = "enable_dev_sensors"
+CONF_ENABLE_VEHICLE_IMAGES = "enable_vehicle_images"
+
 
 MAZDA_REGIONS = {
     "MNAO": "North America",
@@ -100,3 +104,6 @@ MSAL_CLIENT_SKU = "MSAL.Android"
 MSAL_CLIENT_VER = "5.4.0"
 MSAL_APP_NAME = "MyMazda"
 MSAL_APP_VER = "9.5.0"
+
+# Dispatcher signal sent when the vehicle image select changes; format with the VIN
+SIGNAL_BG_IMAGE_SELECTED = f"{DOMAIN}_bg_image_selected_{{}}"

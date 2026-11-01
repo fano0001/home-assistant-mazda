@@ -8,5 +8,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/fano0001/home-assistant-mazda/issues",
   "requirements": ["protobuf>=6.30.2"],
-  "version": "2.2.1"
+  "version": "2.2.2"
 }

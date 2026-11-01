@@ -36,6 +36,8 @@
 | **lock** | `lock` | Lock |  |
 | **device_tracker** | `device_tracker` | Device tracker |  |
 | **select** | `flash_light_count` | Flash light count | `hasFlashLight` |
+| **select** | `vehicle_image` | Vehicle image | MyMazda vehicle images option (default off); options are the MyMazda home-screen images for the model |
+| **image** | `vehicle_image` | Vehicle image | MyMazda vehicle images option (default off); shows the image picked in the select; image list fetched when the integration loads |
 | **switch** | `push_notification_events` | Push notification events |  |
 | **button** | `start_engine` | Start engine | `hasRemoteStart` |
 | **button** | `stop_engine` | Stop engine | `hasRemoteStart` |
@@ -84,11 +86,10 @@
 | **switch** | `charging` | Charging |  |
 | **button** | `refresh_vehicle_status` | Refresh status | `isElectric` |
 
-## Development Entities (enableDevSensors)
+## Development Entities (Development sensors (δ) option)
 
 | Platform | Entity (key) | Entity name | Feature gating |
 |---|---|---|---|
-| **switch** | `enable_dev_sensors` | δ \| Development sensors |  |
 | **sensor** | `oil_level_status` | δ \| OilLevelStatusMonitor | `hasFuel` |
 | **sensor** | `lght_sw_state` | δ \| LghtSwState |  |
 | **sensor** | `engine_state` | δ \| EngineState |  |

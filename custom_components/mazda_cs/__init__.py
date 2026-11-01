@@ -6,6 +6,7 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import timedelta
 import logging
+import re
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -26,6 +27,7 @@ from homeassistant.helpers import (
     config_entry_oauth2_flow,
     config_validation as cv,
     device_registry as dr,
+    entity_registry as er,
 )
 
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -37,7 +39,9 @@ from homeassistant.helpers.update_coordinator import (
 
 from .api import MazdaAuth
 from .const import (
+    CONF_ENABLE_DEV_SENSORS,
     CONF_ENABLE_PUSH,
+    CONF_ENABLE_VEHICLE_IMAGES,
     CONF_FCM_CREDENTIALS,
     DOMAIN,
 )
@@ -60,6 +64,7 @@ class MazdaEntryData:
     client: MazdaAPI
     coordinator: DataUpdateCoordinator
     health_coordinator: DataUpdateCoordinator
+    image_coordinator: DataUpdateCoordinator
     fcm_listener: MazdaFcmListener | None
     region: str
     vehicles: list[dict] = field(default_factory=list)
@@ -74,17 +79,64 @@ PLATFORMS = [
     Platform.BUTTON,
     Platform.CLIMATE,
     Platform.DEVICE_TRACKER,
+    Platform.IMAGE,
     Platform.LOCK,
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
 ]
 
+# Vehicle images change about once a year, so they are fetched once per load. A failed
+# or empty fetch is retried hourly, but only a few times, so a lasting outage or API
+# change does not turn into endless polling.
+IMAGE_RETRY_INTERVAL = timedelta(hours=1)
+IMAGE_MAX_RETRIES = 6
+
+
+def image_refresh_interval(
+    images: list[list[dict]], retries: int
+) -> timedelta | None:
+    """Return when to fetch vehicle images again, or None to stop until reload.
+
+    Any vehicle with an empty list counts as incomplete - that is also what a changed
+    response shape would look like.
+    """
+    if all(images):
+        return None
+    if retries >= IMAGE_MAX_RETRIES:
+        _LOGGER.warning(
+            "Vehicle images still unavailable after %s retries; "
+            "not retrying until the integration is reloaded",
+            retries,
+        )
+        return None
+    return IMAGE_RETRY_INTERVAL
+
 
 async def with_timeout(task, timeout_seconds=30):
     """Run an async task with a timeout."""
     async with asyncio.timeout(timeout_seconds):
         return await task
+
+
+def _bg_image_label(name: str | None) -> str:
+    """Turn a server filename like "MAZDA3 HB=01.jpg" into "Mazda3 HB 01"."""
+    label = re.sub(r"\.(jpe?g|png|webp)$", "", name or "", flags=re.IGNORECASE)
+    label = re.sub(r"\bMAZDA", "Mazda", label.replace("=", " "))
+    return " ".join(label.split())
+
+
+def bg_image_options(images: list[dict] | None) -> dict[str, str]:
+    """Map vehicle image option labels to URLs, preserving server order."""
+    options: dict[str, str] = {}
+    for n, image in enumerate(images or [], start=1):
+        base = label = _bg_image_label(image.get("name")) or f"Image {n}"
+        suffix = 2
+        while label in options:
+            label = f"{base} ({suffix})"
+            suffix += 1
+        options[label] = image["url"]
+    return options
 
 
 _NOTIFY_EXCLUDE = {"resultCode", "visitNo", "settingSaveFlag"}
@@ -272,7 +324,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             for vehicle in vehicles:
                 vehicle["region"] = region
                 vehicle["enableDevSensors"] = entry.options.get(
-                    "enable_dev_sensors", False
+                    CONF_ENABLE_DEV_SENSORS, False
                 )
 
                 vehicle["status"] = await with_timeout(
@@ -344,6 +396,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         name=f"{DOMAIN}_health",
         update_method=async_update_health_data,
         update_interval=None, # set to 24h later if health report permission
+    )
+
+    image_retries = 0
+
+    async def async_update_image_data():
+        """Fetch vehicle background images for each vehicle. Returns a list aligned with coordinator.data."""
+        nonlocal image_retries
+        vehicles = coordinator.data or []
+        result = []
+        for vehicle in vehicles:
+            try:
+                images = await with_timeout(
+                    mazda_client.get_home_bg_images(vehicle.get("modelCode4"))
+                )
+                _LOGGER.debug("getHomeBgImages: %s", images)
+                result.append(images)
+            except Exception as ex:  # noqa: BLE001
+                _LOGGER.warning("getHomeBgImages failed: %s", ex)
+                result.append([])
+
+        # The coordinator reads update_interval when scheduling the next refresh
+        interval = image_refresh_interval(result, image_retries)
+        if interval:
+            image_retries += 1
+        image_coordinator.update_interval = interval
+        return result
+
+    image_coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=f"{DOMAIN}_image",
+        update_method=async_update_image_data,
+        update_interval=None,  # fetched once at load; see IMAGE_RETRY_INTERVAL
     )
 
     # Start FCM listener — coordinator must exist first so it can be passed in.
@@ -418,6 +503,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         client=mazda_client,
         coordinator=coordinator,
         health_coordinator=health_coordinator,
+        image_coordinator=image_coordinator,
         fcm_listener=fcm_listener,
         region=region,
     )
@@ -508,6 +594,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             hass, health_coordinator.async_refresh(), "mazda_cs_health_initial_refresh"
         )
 
+    # Disabled: no image entities and no requests to the Kintaro host at all.
+    if entry.options.get(CONF_ENABLE_VEHICLE_IMAGES, False):
+        entry.async_create_background_task(
+            hass, image_coordinator.async_refresh(), "mazda_cs_image_initial_refresh"
+        )
+
     # Setup components
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -537,8 +629,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Reconfigure the integration to enable. See the ReadMe for more information."
         )
 
-    # Deliberately a fresh `if` so an entry coming from minor_version 1 above
-    # continues on to 3 in a single pass.
+    # Deliberately fresh `if`s so an entry coming from minor_version 1 above
+    # continues on to the current minor version in a single pass.
     if entry.version == 2 and entry.minor_version == 2:
         # minor_version 3: window sensors removed. Their raw fields (Pw.PwPos*,
         # Door.SrSlideSignal, Door.SrTiltSignal) have never been observed as
@@ -552,6 +644,18 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             },
             minor_version=3,
         )
+
+    if entry.version == 2 and entry.minor_version == 3:
+        # minor_version 4: the per-vehicle "Development sensors" switch was replaced
+        # by the options flow. The enable_dev_sensors option itself is kept; only the
+        # orphaned switch entities are removed from the registry.
+        ent_reg = er.async_get(hass)
+        for reg_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+            if reg_entry.domain == "switch" and reg_entry.unique_id.endswith(
+                "_enable_dev_sensors"
+            ):
+                ent_reg.async_remove(reg_entry.entity_id)
+        hass.config_entries.async_update_entry(entry, minor_version=4)
 
     return True
 
