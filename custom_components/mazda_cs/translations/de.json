@@ -272,9 +272,6 @@
         "switch": {
             "charging": {
                 "name": "Aufladen"
-            },
-            "enable_dev_sensors": {
-                "name": "δ | Entwicklungssensoren"
             }
         }
     },

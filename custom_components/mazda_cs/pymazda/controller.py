@@ -23,6 +23,16 @@ class Controller:  # noqa: D101
             session_refresh_provider,
             websession,
         )
+        # Kintaro client for legacyAPIEndpoints prefixes (junction/, content/, ...).
+        # Shares the token provider and HTTP session; never attaches.
+        self.legacy_connection = Connection(
+            user_sub,
+            region,
+            access_token_provider,
+            None,
+            self.connection._session,
+            legacy=True,
+        )
 
     async def attach(self, locale="en-US", country="US", fcm_token=None):  # noqa: D102
         """Register device session with Mazda backend. Must be called after login.
@@ -60,19 +70,28 @@ class Controller:  # noqa: D101
             needs_auth=True,
         )
 
-    async def get_tac(self):  # noqa: D102
-        return await self.connection.api_request(
-            "GET", "content/getTac/v4", needs_keys=True, needs_auth=False
-        )
-
     async def get_language_pkg(self):  # noqa: D102
         postBody = {"platformType": "ANDROID", "region": self.region, "version": "2.0.4"}
-        return await self.connection.api_request(
+        return await self.legacy_connection.api_request(
             "POST",
             "junction/getLanguagePkg/v4",
             body_dict=postBody,
             needs_keys=True,
             needs_auth=False,
+        )
+
+    async def get_home_bg_images(self, model_code):  # noqa: D102
+        post_body = {
+            "modelCode": model_code,
+            "platformType": "ANDROID",
+            "region": self.region,
+        }
+        return await self.legacy_connection.api_request(
+            "POST",
+            "junction/getHomeBgImages/v4",
+            body_dict=post_body,
+            needs_keys=True,
+            needs_auth=True,
         )
 
     async def get_vec_base_infos(self):  # noqa: D102

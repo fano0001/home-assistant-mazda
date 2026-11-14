@@ -108,6 +108,7 @@ class Client:  # noqa: D101
         self._cached_state = {}
         self._session_id = None
         self._fcm_token: str | None = None  # stored so re-attach (600100 recovery) reuses it
+        self._home_bg_image_selection: dict[int, str] = {}  # vehicle_id → option label
         self._flash_light_counts: dict[
             int, int
         ] = {}  # vehicle_id → CarFinderParameter (0/1/2)
@@ -195,6 +196,9 @@ class Client:  # noqa: D101
                 ),
                 "modelCode": other_veh_info.get("OtherInformation", {}).get(
                     "modelCode"
+                ),
+                "modelCode4": other_veh_info.get("OtherInformation", {}).get(
+                    "modelCode4"
                 ),
                 "modelName": other_veh_info.get("OtherInformation", {}).get(
                     "modelName"
@@ -627,6 +631,23 @@ class Client:  # noqa: D101
         return await self.controller.get_inbox_list(
             internal_vin_list, actiontype, status, limit, offset
         )
+
+    async def get_home_bg_images(self, model_code4):  # noqa: D102
+        # The app falls back to "0000" when modelCode4 is missing or malformed
+        if not model_code4 or len(model_code4) != 4:
+            model_code4 = "0000"
+        response = await self.controller.get_home_bg_images(model_code4)
+        return [
+            {"name": image.get("name"), "url": image["url"]}
+            for image in response.get("images") or []
+            if image.get("url")
+        ]
+
+    def set_home_bg_image(self, vehicle_id: int, option: str) -> None:  # noqa: D102
+        self._home_bg_image_selection[vehicle_id] = option
+
+    def get_home_bg_image(self, vehicle_id: int) -> str | None:  # noqa: D102
+        return self._home_bg_image_selection.get(vehicle_id)
 
     async def update_vehicle_nickname(self, vin, new_nickname):  # noqa: D102
         await self.controller.update_nickname(vin, new_nickname)
