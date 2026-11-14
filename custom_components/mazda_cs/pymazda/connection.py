@@ -126,9 +126,9 @@ LEGACY_REGION_CONFIG = {
 }
 # APP_PACKAGE_ID: Android package name, used in app-unique-id header
 APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "MyMazda/9.5.0 (Linux; Android 16)"
+USER_AGENT_BASE_API = "MyMazda/10.0.1 (Linux; Android 16)"
 APP_OS = "ANDROID"
-APP_VERSION = "9.5.0"
+APP_VERSION = "10.0.1"
 
 MAX_RETRIES = 4
 
