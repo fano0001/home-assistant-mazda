@@ -29,15 +29,13 @@ Mazda Connected Services uses OAuth authentication which blocks automated logins
 
 ### OAuth Assist for HA (Chrome and Firefox extensions)
 
-The new extension does the same job as the original Mazda OAuth Helper, but is generic, designed for use across multiple authentication platforms, and available in the Chrome Web Store. Future extension development will be focused on this one moving forward.
+The new extension does the same job as the original Mazda OAuth Helper, but is generic, designed for use across multiple authentication platforms, and available in the Chrome Web Store and Firefox Add-Ons. Future extension development will be focused here moving forward.
 
 1. Install the extension
    - Chrome / Edge / other Chromium browsers:
       - Install [OAuth Assist for HA](https://chromewebstore.google.com/detail/oauth-assist-for-ha/mdoleppdlojmeeogmmocmjnkemecaofh) from the Chrome Web Store
-   - Firefox (store listing is under review; install manually until it's approved):
-      - Download the Firefox zip from the [latest release](https://github.com/crash0verride11/ha-oauth-assist/releases/latest/) page and extract it
-      - Go to about:debugging → Load Temporary Add-on and select a file in the extracted extension/ folder
-      > A manually loaded extension is tied to the folder location on your computer and may 'disappear' if you move the folder.
+   - Firefox:
+      - Install [OAuth Assist for HA](https://addons.mozilla.org/en-US/firefox/addon/oauth-assist-for-ha/) from Firefox Add-Ons.
 2. In a new tab, click the extension's icon to open its popup
 3. Select `Manage providers...`
 4. Download and import the [mazda_ha-oauth-assist.json](https://github.com/fano0001/home-assistant-mazda/blob/main/browser-extensions/mazda_ha-oauth-assist.json) provider profile
