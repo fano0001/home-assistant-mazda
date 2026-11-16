@@ -7,3 +7,7 @@ __pycache__/
 CLAUDE.md
 /.claude
 tests/TESTING.md
+
+# Xcode per-user state
+xcuserdata/
+*.xcuserstate
