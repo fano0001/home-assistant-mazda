@@ -157,6 +157,14 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
                 new_token.get("error"),
                 new_token.get("error_description", ""),
             )
+            # Azure AD B2C returns these for outages on the token endpoint
+            # (RFC 6749 defines them for the authorization endpoint, §4.1.2.1;
+            # Microsoft documents temporarily_unavailable for /token as
+            # "retry after a small delay"). Same retry path as the HTML case.
+            if new_token["error"] in ("server_error", "temporarily_unavailable"):
+                raise Exception(
+                    f"B2C token refresh failed transiently ({new_token['error']}) — will retry"
+                )
             raise ConfigEntryAuthFailed(
                 f"Token refresh failed: {new_token.get('error_description', new_token['error'])}"
             )
