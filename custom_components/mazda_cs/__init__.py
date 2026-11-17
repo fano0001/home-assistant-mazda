@@ -496,6 +496,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         conductor_internal_id=effective_internal_id,
         conductor_device_id=conductor_device_id,
     )
+    # A failed setup (SETUP_RETRY) skips async_unload_entry but still runs the
+    # on_unload callbacks, so stop the listener here or every retry leaks a live
+    # MCS connection on the same android_id. async_stop defaults to
+    # unregister=False: deleting the FID would leave a stale fid in entry.data.
+    entry.async_on_unload(fcm_listener.async_stop)
 
     # Set runtime_data before starting FCM so any push arriving during setup
     # (e.g. action_code "010") can safely access entry.runtime_data.health_coordinator.
@@ -676,10 +681,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> bo
             except Exception:
                 pass
 
-        if entry_data.fcm_listener:
-            # Deleting the FID on reload would leave a stale fid in entry.data
-            # causing a 404 on next startup when refreshing the FIS auth token.
-            await entry_data.fcm_listener.async_stop(unregister=False)
+        # The FCM listener is stopped by the entry.async_on_unload callback
+        # registered in async_setup_entry (runs after this returns True).
 
     return unload_ok
 
