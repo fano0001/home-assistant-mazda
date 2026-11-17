@@ -8,7 +8,7 @@ None`` and trap the config entry in a setup-retry loop.
 """
 
 import datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -16,6 +16,11 @@ from custom_components.mazda_cs.pymazda.client import (
     Client,
     _parse_occurrence_date,
     _warn_undocumented_fields,
+)
+from custom_components.mazda_cs.pymazda.connection import MAX_RETRIES, Connection
+from custom_components.mazda_cs.pymazda.exceptions import (
+    MazdaException,
+    MazdaSessionExpiredException,
 )
 
 VEHICLE_ID = 12345
@@ -252,3 +257,62 @@ async def test_get_vehicle_status_warns_on_undocumented_field(caplog) -> None:
         await client.get_vehicle_status(VEHICLE_ID)
 
     assert any("PwPosRl" in r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# Connection retry / 600100 recovery
+# ---------------------------------------------------------------------------
+
+
+def _connection(response: MagicMock) -> tuple[Connection, MagicMock]:
+    """Build a Connection over a mocked aiohttp session returning ``response``."""
+    session = MagicMock()
+    session.request = AsyncMock(return_value=response)
+    return Connection("test-sub", "MNAO", AsyncMock(), websession=session), session
+
+
+async def test_persistent_600100_gives_up_after_max_retries() -> None:
+    """A re-attach that did not help is retried MAX_RETRIES times, then given up."""
+    conn, _ = _connection(MagicMock(status=200))
+    conn.session_refresh_provider = AsyncMock()
+    send = AsyncMock(side_effect=MazdaSessionExpiredException("conflict"))
+    conn._Connection__send_api_request = send
+
+    with pytest.raises(MazdaException, match="max number of retries"):
+        await conn.api_request("POST", "x", needs_keys=False)
+
+    assert send.await_count == MAX_RETRIES + 1
+    assert conn.session_refresh_provider.await_count == MAX_RETRIES + 1
+
+
+async def test_600100_on_attach_raises_without_reattaching() -> None:
+    """A 600100 answering attach itself must not call attach again (recursion)."""
+    conn, _ = _connection(MagicMock(status=200))
+    conn.session_refresh_provider = AsyncMock()
+    send = AsyncMock(side_effect=MazdaSessionExpiredException("conflict"))
+    conn._Connection__send_api_request = send
+
+    with pytest.raises(MazdaSessionExpiredException):
+        await conn.api_request("POST", "remoteServices/attach/v4", needs_keys=False)
+
+    assert send.await_count == 1
+    conn.session_refresh_provider.assert_not_awaited()
+
+
+async def test_600100_on_detach_still_reattaches() -> None:
+    """The attach guard must not match the detach endpoint."""
+    conn, _ = _connection(MagicMock(status=200))
+    conn.session_refresh_provider = AsyncMock()
+    send = AsyncMock(
+        side_effect=[MazdaSessionExpiredException("conflict"), {"resultCode": "200S00"}]
+    )
+    conn._Connection__send_api_request = send
+
+    result = await conn.api_request(
+        "POST", "remoteServices/detach/v4", needs_keys=False
+    )
+
+    assert result == {"resultCode": "200S00"}
+    assert send.await_count == 2
+    conn.session_refresh_provider.assert_awaited_once()
+
