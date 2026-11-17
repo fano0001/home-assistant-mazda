@@ -50,6 +50,7 @@ from .pymazda.push._conductor import conductor_device_id_from_user_sub
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
 from .pymazda.exceptions import (
+    MazdaConnectionException,
     MazdaRateLimitException,
     MazdaTermsNotAcceptedException,
 )
@@ -354,9 +355,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         except MazdaRateLimitException as ex:
             _LOGGER.warning("Mazda API rate limited (429); will retry next cycle")
             raise UpdateFailed(str(ex)) from ex
-        except aiohttp.ClientConnectionError as ex:
-            _LOGGER.warning("Mazda API client connection error (will retry): %s", ex)
-            raise UpdateFailed(f"Cannot connect to Mazda API: {ex}") from ex
+        except MazdaConnectionException as ex:
+            # connection.py translates aiohttp errors and per-request timeouts.
+            _LOGGER.warning("Mazda API unreachable (will retry): %s", ex)
+            raise UpdateFailed(str(ex)) from ex
         except ConfigEntryAuthFailed:
             raise  # Let HA's coordinator trigger reauthentication
         except Exception as ex:

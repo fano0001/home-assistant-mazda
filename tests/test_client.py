@@ -17,8 +17,15 @@ from custom_components.mazda_cs.pymazda.client import (
     _parse_occurrence_date,
     _warn_undocumented_fields,
 )
-from custom_components.mazda_cs.pymazda.connection import MAX_RETRIES, Connection
+import aiohttp
+
+from custom_components.mazda_cs.pymazda.connection import (
+    MAX_RETRIES,
+    REQUEST_TIMEOUT_SECONDS,
+    Connection,
+)
 from custom_components.mazda_cs.pymazda.exceptions import (
+    MazdaConnectionException,
     MazdaException,
     MazdaRateLimitException,
     MazdaSessionExpiredException,
@@ -328,3 +335,51 @@ async def test_rate_limited_response_is_released() -> None:
 
     resp.release.assert_called_once()
     resp.json.assert_not_called()
+
+
+async def test_requests_carry_a_timeout() -> None:
+    """Both request sites pass a ClientTimeout (HA's shared session has none)."""
+    resp = MagicMock(status=200)
+    resp.json = AsyncMock(return_value={"state": "S", "payload": "x"})
+    conn, session = _connection(resp)
+
+    with pytest.raises(MazdaException):  # payload is not decryptable; irrelevant here
+        await conn._Connection__api_request_to_url("POST", "https://x/checkVersion")
+    assert session.request.call_args.kwargs["timeout"].total == REQUEST_TIMEOUT_SECONDS
+
+    session.request.reset_mock()
+    with pytest.raises(MazdaException):
+        # checkVersion signs with app_code only, so no enc/sign keys are needed.
+        await conn._Connection__send_api_request("POST", "service/checkVersion")
+    session.request.assert_awaited_once()
+    assert session.request.call_args.kwargs["timeout"].total == REQUEST_TIMEOUT_SECONDS
+
+
+@pytest.mark.parametrize(
+    "error",
+    [TimeoutError(), aiohttp.ClientConnectionError("refused")],
+    ids=["timeout", "connection"],
+)
+async def test_transport_errors_become_mazda_exceptions(error: Exception) -> None:
+    """Entity platforms only catch MazdaException, so transport errors must map to it."""
+    conn, session = _connection(MagicMock(status=200))
+    session.request.side_effect = error
+
+    with pytest.raises(MazdaConnectionException) as exc_info:
+        await conn.api_request("POST", "service/checkVersion")
+
+    assert isinstance(exc_info.value, MazdaException)
+    assert exc_info.value.__cause__ is error
+    assert session.request.await_count == 1  # transport errors are not retried
+
+
+async def test_non_json_body_becomes_mazda_exception() -> None:
+    """A proxy/HTML body (ContentTypeError) is a transport failure, not a crash."""
+    resp = MagicMock(status=502)
+    resp.json = AsyncMock(
+        side_effect=aiohttp.ContentTypeError(MagicMock(), (), message="not json")
+    )
+    conn, _ = _connection(resp)
+
+    with pytest.raises(MazdaConnectionException):
+        await conn.api_request("POST", "service/checkVersion")

@@ -17,6 +17,7 @@ from .crypto_utils import (
 from .exceptions import (
     MazdaAPIEncryptionException,
     MazdaConfigException,
+    MazdaConnectionException,
     MazdaException,
     MazdaRateLimitException,
     MazdaRequestInProgressException,
@@ -130,6 +131,12 @@ USER_AGENT_BASE_API = "MyMazda/10.0.1 (Linux; Android 16)"
 APP_OS = "ANDROID"
 APP_VERSION = "10.0.1"
 
+# Per request: HA's shared aiohttp session carries no ClientTimeout, so without
+# this a hung endpoint holds a remote command, attach, or config-flow call for
+# aiohttp's 5-minute default. The coordinator's own with_timeout() is also 30 s.
+REQUEST_TIMEOUT_SECONDS = 30
+_TIMEOUT = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT_SECONDS)
+
 # Retries after the first send. Two covers a 600100 re-attach followed by a
 # 600002 token refresh on the same request; a lasting error then costs at most
 # three sends instead of five.
@@ -156,6 +163,15 @@ def _redact(data):
     if isinstance(data, list):
         return [_redact(item) for item in data]
     return data
+
+
+def _connection_error(ex: BaseException) -> MazdaConnectionException:
+    """Translate an aiohttp/timeout failure into the integration's error type."""
+    if isinstance(ex, TimeoutError):
+        return MazdaConnectionException(
+            f"Mazda API request timed out after {REQUEST_TIMEOUT_SECONDS} s"
+        )
+    return MazdaConnectionException(f"Cannot reach Mazda API: {ex}")
 
 
 class Connection:
@@ -495,13 +511,17 @@ class Connection:
                 original_body_str, timestamp
             )
 
-        response = await self._session.request(
-            method,
-            self.base_url + uri,
-            headers=headers,
-            data=encrypted_body_str,
-            ssl=ssl_context,
-        )
+        try:
+            response = await self._session.request(
+                method,
+                self.base_url + uri,
+                headers=headers,
+                data=encrypted_body_str,
+                ssl=ssl_context,
+                timeout=_TIMEOUT,
+            )
+        except (TimeoutError, aiohttp.ClientError) as ex:
+            raise _connection_error(ex) from ex
 
         if response.status == 429:
             # Raising before the body is read would keep the pooled connection
@@ -512,7 +532,10 @@ class Connection:
                 "Rate limited by Mazda API (429) — will retry on next cycle"
             )
 
-        response_json = await response.json()
+        try:
+            response_json = await response.json()
+        except (TimeoutError, aiohttp.ClientError) as ex:
+            raise _connection_error(ex) from ex
         # saving body logger for future debug purposes, but typically just noise
         # self.logger.debug("Response status: %s, body: %s", response.status, response_json)
         self.logger.debug("Response status: %s", response.status)
@@ -612,10 +635,18 @@ class Connection:
             self.app_code,
             headers["sign"],
         )
-        response = await self._session.request(
-            method, full_url, headers=headers, data="", ssl=ssl_context
-        )
-        response_json = await response.json()
+        try:
+            response = await self._session.request(
+                method,
+                full_url,
+                headers=headers,
+                data="",
+                ssl=ssl_context,
+                timeout=_TIMEOUT,
+            )
+            response_json = await response.json()
+        except (TimeoutError, aiohttp.ClientError) as ex:
+            raise _connection_error(ex) from ex
         self.logger.debug("checkVersion response: %s", response_json)
         if response_json.get("state") == "S":
             return self.__decrypt_payload_using_app_code(

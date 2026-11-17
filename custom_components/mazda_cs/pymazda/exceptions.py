@@ -38,6 +38,14 @@ class MazdaRateLimitException(MazdaException):
     """Raised when the Mazda API responds with HTTP 429 (rate limited)."""
 
 
+class MazdaConnectionException(MazdaException):
+    """Raised when a request to the Mazda API times out or cannot connect.
+
+    Wraps aiohttp's ClientError family and TimeoutError so callers that handle
+    MazdaException (entity platforms, coordinator) see one transient error type.
+    """
+
+
 class MazdaRequestInProgressException(Exception):
     """Raised when a request fails because another request is already in progress."""
 
