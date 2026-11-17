@@ -20,6 +20,7 @@ from custom_components.mazda_cs.pymazda.client import (
 from custom_components.mazda_cs.pymazda.connection import MAX_RETRIES, Connection
 from custom_components.mazda_cs.pymazda.exceptions import (
     MazdaException,
+    MazdaRateLimitException,
     MazdaSessionExpiredException,
 )
 
@@ -316,3 +317,14 @@ async def test_600100_on_detach_still_reattaches() -> None:
     assert send.await_count == 2
     conn.session_refresh_provider.assert_awaited_once()
 
+
+async def test_rate_limited_response_is_released() -> None:
+    """A 429 raises without reading the body, so it must release its connection."""
+    resp = MagicMock(status=429)
+    conn, _ = _connection(resp)
+
+    with pytest.raises(MazdaRateLimitException):
+        await conn._Connection__send_api_request("POST", "service/checkVersion")
+
+    resp.release.assert_called_once()
+    resp.json.assert_not_called()

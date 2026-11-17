@@ -504,6 +504,10 @@ class Connection:
         )
 
         if response.status == 429:
+            # Raising before the body is read would keep the pooled connection
+            # checked out for as long as the exception lives (the coordinator
+            # keeps it until the next refresh). Release it now.
+            response.release()
             raise MazdaRateLimitException(
                 "Rate limited by Mazda API (429) — will retry on next cycle"
             )
