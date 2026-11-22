@@ -35,7 +35,7 @@
 | **binary_sensor** | `tns_lamp` | Exterior lights-on warning |  |
 | **binary_sensor** | `health_lights_problem` | Light problem warning | One sensor for 7 bulbs, see entity details for each bulb. Only created when the account has the Health Report service |
 | **lock** | `lock` | Lock |  |
-| **device_tracker** | `device_tracker` | Device tracker |  |
+| **device_tracker** | `location` | Location |  |
 | **select** | `flash_light_count` | Flash light count | `hasFlashLight` |
 | **select** | `vehicle_image` | Vehicle image | MyMazda vehicle images option (default off); options are the MyMazda home-screen images for the model |
 | **image** | `vehicle_image` | Vehicle image | MyMazda vehicle images option (default off); shows the image picked in the select; image list fetched when the integration loads |

@@ -197,8 +197,8 @@
       }
     },
     "device_tracker": {
-      "device_tracker": {
-        "name": "[%key:component::device_tracker::title%]"
+      "location": {
+        "name": "Location"
       }
     },
     "image": {
