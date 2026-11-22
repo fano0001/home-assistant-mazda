@@ -19,6 +19,42 @@ def _parse_occurrence_date(value):
         return None
 
 
+def _frame_position(frame):
+    """Return (latitude, longitude, acquired_at) from a status frame's PositionInfo.
+
+    None when the frame has no coordinates. ``acquired_at`` is the parsed
+    AcquisitionDatetime (UTC), or None if absent or malformed.
+    """
+    info = frame.get("PositionInfo") or {}
+    latitude = info.get("Latitude")
+    longitude = info.get("Longitude")
+    if latitude is None or longitude is None:
+        return None
+    latitude = latitude * (-1 if info.get("LatitudeFlag") == 1 else 1)
+    longitude = longitude * (1 if info.get("LongitudeFlag") == 1 else -1)
+    return latitude, longitude, _parse_occurrence_date(info.get("AcquisitionDatetime"))
+
+
+# Sort key for an undated position: older than any real AcquisitionDatetime.
+_EPOCH = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+
+
+def _newest_position(remote_info, alert_info):
+    """Pick the position with the newer AcquisitionDatetime from the two frames.
+
+    remoteInfos and alertInfos each carry a PositionInfo and are uploaded at
+    different times, so either can hold the more recent fix. A dated position
+    beats an undated one; on a tie remoteInfos wins (the historical source).
+    """
+    candidates = [
+        p for p in (_frame_position(remote_info), _frame_position(alert_info)) if p
+    ]
+    if not candidates:
+        return None, None, None
+    # max() keeps the first of equal keys, so remoteInfos wins ties.
+    return max(candidates, key=lambda p: (p[2] is not None, p[2] or _EPOCH))
+
+
 # Fields with no confirmed usage: every observation to date returns 0, 0.0, or the
 # key is absent.  Rather than surface them as entities nobody can interpret, we log
 # whenever a vehicle reports anything else, so a usage gate can be correlated.
@@ -245,20 +281,9 @@ class Client:  # noqa: D101
 
         _warn_undocumented_fields(vehicle_id, alert_info, remote_info)
 
-        latitude = remote_info.get("PositionInfo", {}).get("Latitude")
-        if latitude is not None:
-            latitude = latitude * (
-                -1
-                if remote_info.get("PositionInfo", {}).get("LatitudeFlag") == 1
-                else 1
-            )
-        longitude = remote_info.get("PositionInfo", {}).get("Longitude")
-        if longitude is not None:
-            longitude = longitude * (
-                1
-                if remote_info.get("PositionInfo", {}).get("LongitudeFlag") == 1
-                else -1
-            )
+        latitude, longitude, position_timestamp = _newest_position(
+            remote_info, alert_info
+        )
 
         vehicle_status = {
             "lastUpdatedTimestamp": max(
@@ -274,9 +299,7 @@ class Client:  # noqa: D101
             ),
             "latitude": latitude,
             "longitude": longitude,
-            "positionTimestamp": remote_info.get("PositionInfo", {}).get(
-                "AcquisitionDatetime"
-            ),
+            "positionTimestamp": position_timestamp,
             "fuelRemainingPercent": remote_info.get("ResidualFuel", {}).get(
                 "FuelSegementDActl"
             ),

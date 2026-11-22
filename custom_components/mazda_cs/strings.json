@@ -228,6 +228,9 @@
       "vehicle_status_timestamp": {
         "name": "Vehicle status last updated"
       },
+      "location_timestamp": {
+        "name": "Location last updated"
+      },
       "fuel_remaining_percentage": {
         "name": "Fuel remaining percentage"
       },

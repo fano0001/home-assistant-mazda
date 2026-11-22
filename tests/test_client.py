@@ -436,3 +436,85 @@ async def test_mazda_auth_logs_token_state_only_when_token_changes(caplog) -> No
 
     assert caplog.text.count("Token state") == 2
     assert oauth_session.async_ensure_token_valid.await_count == 3
+
+
+def _utc(hour: int, minute: int, second: int) -> datetime.datetime:
+    return datetime.datetime(2026, 11, 22, hour, minute, second, tzinfo=datetime.UTC)
+
+
+def _position_frame(lat, lon, acquired=None, *, lat_flag=0, lon_flag=0) -> dict:
+    info = {
+        "Latitude": lat,
+        "LatitudeFlag": lat_flag,
+        "Longitude": lon,
+        "LongitudeFlag": lon_flag,
+    }
+    if acquired is not None:
+        info["AcquisitionDatetime"] = acquired
+    return {"OccurrenceDate": "20261122180000", "PositionInfo": info}
+
+
+async def _status_position(remote: dict, alert: dict) -> tuple:
+    client = _make_client()
+    client.controller.get_vehicle_status.return_value = {
+        "remoteInfos": [remote],
+        "alertInfos": [alert],
+    }
+    status = await client.get_vehicle_status(VEHICLE_ID)
+    return status["latitude"], status["longitude"], status["positionTimestamp"]
+
+
+@pytest.mark.parametrize(
+    ("remote", "alert", "expected"),
+    [
+        pytest.param(
+            _position_frame(10.0, 20.0, "20261122181828"),
+            _position_frame(11.0, 21.0, "20261122193811"),
+            (11.0, -21.0, _utc(19, 38, 11)),
+            id="alert-newer",
+        ),
+        pytest.param(
+            _position_frame(10.0, 20.0, "20261122193811"),
+            _position_frame(11.0, 21.0, "20261122181828"),
+            (10.0, -20.0, _utc(19, 38, 11)),
+            id="remote-newer",
+        ),
+        pytest.param(
+            _position_frame(10.0, 20.0, "20261122181828"),
+            {"OccurrenceDate": "20261122193855"},
+            (10.0, -20.0, _utc(18, 18, 28)),
+            id="alert-without-position",
+        ),
+        pytest.param(
+            _position_frame(10.0, 20.0, "not-a-date"),
+            _position_frame(11.0, 21.0, "20261122181828"),
+            (11.0, -21.0, _utc(18, 18, 28)),
+            id="dated-beats-malformed",
+        ),
+        pytest.param(
+            _position_frame(10.0, 20.0, "20261122181828"),
+            _position_frame(11.0, 21.0, "20261122181828"),
+            (10.0, -20.0, _utc(18, 18, 28)),
+            id="tie-keeps-remote",
+        ),
+        pytest.param(
+            _position_frame(10.0, 20.0),
+            _position_frame(11.0, 21.0),
+            (10.0, -20.0, None),
+            id="both-undated-keeps-remote",
+        ),
+        pytest.param({}, {}, (None, None, None), id="no-position"),
+    ],
+)
+async def test_vehicle_status_uses_newest_position(remote, alert, expected) -> None:
+    """Coordinates and positionTimestamp come from the frame with the newer fix."""
+    assert await _status_position(remote, alert) == expected
+
+
+async def test_position_flags_set_hemisphere() -> None:
+    """LatitudeFlag 1 is south (negative); LongitudeFlag 1 is east (positive)."""
+    remote = _position_frame(10.0, 20.0, "20261122181828", lat_flag=1, lon_flag=1)
+
+    lat, lon, _ = await _status_position(remote, {})
+
+    assert (lat, lon) == (-10.0, 20.0)

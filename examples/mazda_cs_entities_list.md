@@ -5,6 +5,7 @@
 | Platform | Entity (key) | Entity name | Feature gating |
 |---|---|---|---|
 | **sensor** | `vehicle_status_timestamp` | Vehicle status last updated | Last time the vehicle sent an update to the server |
+| **sensor** | `location_timestamp` | Location last updated | When the reported position was acquired (newer of the two status frames) |
 | **sensor** | `odometer` | Odometer |  |
 | **sensor** | `front_left_tire_pressure` | Front left tire pressure |  |
 | **sensor** | `front_right_tire_pressure` | Front right tire pressure |  |
