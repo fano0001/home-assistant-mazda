@@ -36,6 +36,11 @@ MCS_HOST = "mtalk.google.com"
 MCS_PORT = 5228
 MCS_VERSION = 41
 MCS_SELECTIVE_ACK_ID = 12
+# Real MCS stanzas are a few KB (FCM data payloads are capped at 4 KB), so a
+# larger length prefix means the stream is not one we can parse.
+_MAX_MESSAGE_SIZE = 1 << 20
+# 5 varint bytes carry 35 bits, enough for any 32-bit length.
+_MAX_VARINT_BYTES = 5
 
 # Maps protobuf message type to its integer tag in the MCS wire format
 _TAG_BY_TYPE: dict[type, int] = {
@@ -55,6 +60,10 @@ MessageCallback = Callable[[dict[str, Any]], None]
 
 class _McsServerClose(Exception):
     """Raised when the MCS server sends a Close stanza (expected periodic reconnect)."""
+
+
+class _McsProtocolError(Exception):
+    """Raised when the stream does not follow the MCS wire format; triggers a reconnect."""
 
 
 class McsClient:
@@ -150,13 +159,13 @@ class McsClient:
 
     async def _read_varint(self) -> int:
         res = shift = 0
-        while True:
+        for _ in range(_MAX_VARINT_BYTES):
             (b,) = struct.unpack("B", await self._reader.readexactly(1))  # type: ignore[union-attr]
             res |= (b & 0x7F) << shift
             if not (b & 0x80):
-                break
+                return res
             shift += 7
-        return res
+        raise _McsProtocolError(f"length prefix longer than {_MAX_VARINT_BYTES} bytes")
 
     async def _send(self, msg: Any) -> None:
         tag = _TAG_BY_TYPE[type(msg)]
@@ -171,12 +180,16 @@ class McsClient:
             hdr = await self._reader.readexactly(2)  # type: ignore[union-attr]
             version, tag = struct.unpack("BB", hdr)
             if version < MCS_VERSION and version != 38:
-                raise RuntimeError(f"MCS protocol version {version} unsupported")
+                raise _McsProtocolError(f"protocol version {version} unsupported")
             self._first_message = False
         else:
             (tag,) = struct.unpack("B", await self._reader.readexactly(1))  # type: ignore[union-attr]
 
         size = await self._read_varint()
+        if size > _MAX_MESSAGE_SIZE:
+            raise _McsProtocolError(
+                f"message size {size} exceeds {_MAX_MESSAGE_SIZE} bytes"
+            )
         buf = await self._reader.readexactly(size)
 
         msg_class = _TYPE_BY_TAG.get(tag)
@@ -389,6 +402,10 @@ class McsClient:
             except _McsServerClose:
                 if not self._do_listen:
                     return
+            except _McsProtocolError as ex:
+                if not self._do_listen:
+                    return
+                _LOGGER.warning("MCS: %s, reconnecting", ex)
             except (OSError, EOFError, asyncio.IncompleteReadError, ConnectionResetError, ssl.SSLError) as ex:
                 if not self._do_listen:
                     return
