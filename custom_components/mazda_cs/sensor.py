@@ -25,7 +25,6 @@ class MazdaSensorRequiredKeysMixin:
     """Mixin for required keys."""
 
     # Function to determine the value for this sensor, given the coordinator data
-    # and the configured unit system
     value: Callable[[dict[str, Any]], StateType]
 
 

@@ -1,4 +1,4 @@
-"""Minimal StationDM Conductor request builder (updateuser) for diagnostics."""
+"""Minimal StationDM Conductor request builder (updateuser)."""
 
 from __future__ import annotations
 

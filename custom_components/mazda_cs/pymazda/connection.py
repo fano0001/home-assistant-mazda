@@ -610,7 +610,7 @@ class Connection:
         self.sign_key = response["signKey"]
 
     async def __api_request_to_url(self, method, full_url, body_dict={}):
-        """Send a request to an explicit URL (used for checkVersion on old API)."""
+        """Send a request to an explicit URL (used for checkVersion)."""
         timestamp = self.__get_timestamp_str_ms()
         headers = {
             "device-id": self.base_api_device_id,

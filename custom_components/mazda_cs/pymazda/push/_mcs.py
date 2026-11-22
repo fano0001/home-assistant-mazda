@@ -108,9 +108,6 @@ class McsClient:
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("MCS: on_connection_state callback failed")
 
-    def is_started(self) -> bool:
-        return self._do_listen and bool(self._tasks) and not all(t.done() for t in self._tasks)
-
     async def start(self) -> None:
         """Start the MCS listener as background tasks."""
         self._do_listen = True

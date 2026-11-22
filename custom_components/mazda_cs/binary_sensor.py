@@ -272,7 +272,7 @@ async def async_setup_entry(
     config_entry: MazdaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the sensor platform."""
+    """Set up the binary sensor platform."""
     client = config_entry.runtime_data.client
     coordinator = config_entry.runtime_data.coordinator
     health_coordinator = config_entry.runtime_data.health_coordinator
@@ -310,7 +310,7 @@ class MazdaBinarySensorEntity(MazdaEntity, BinarySensorEntity):
 
 
 class MazdaHealthBinarySensorEntity(MazdaEntity, BinarySensorEntity):
-    """Binary sensor backed by the 12-hour health report coordinator."""
+    """Binary sensor backed by the daily health report coordinator."""
 
     entity_description: MazdaBinarySensorEntityDescription
 

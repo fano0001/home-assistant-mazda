@@ -37,7 +37,7 @@ from ._conductor import (
     send_update_user,
 )
 from ._mcs import McsClient, MessageCallback
-from ._register import FCM_APP_VERSION_NAME, checkin_and_register, fis_delete_installation, gcm_unregister
+from ._register import FCM_APP_VERSION_NAME, checkin_and_register
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,21 +70,13 @@ class MazdaPushClient:
         self._mcs: McsClient | None = None
         self._local_session: ClientSession | None = None
 
-    @property
-    def credentials(self) -> dict[str, Any] | None:
-        """Current credentials dict — persist this across restarts."""
-        return self._credentials
-
-    def is_started(self) -> bool:
-        return self._mcs is not None and self._mcs.is_started()
-
     async def checkin_or_register(self) -> str | None:
         """Check in (or register fresh) with GCM.
 
         On first call: performs full GCM check-in + Android app registration
         and fires ``credentials_updated_callback`` with the new credentials.
-        On subsequent calls with existing credentials: performs a lightweight
-        re-check-in that reuses the existing registration token.
+        On subsequent calls with existing credentials: re-checks in and re-registers
+        with a refreshed FIS auth token, reusing the existing token if that fails.
 
         Returns the FCM token to pass to ``mazda_client.attach(fcm_token=...)``,
         or None if registration failed.
@@ -112,8 +104,8 @@ class MazdaPushClient:
         message arrives.  Its argument is a ``dict[str, str]`` matching the
         FCM data payload (e.g. ``{"a": "001", "v": "<vin>", "title": "..."}``).
 
-        ``on_connection_state`` is called with ``True`` after a successful MCS
-        login and with ``False`` when the connection is lost (or torn down at
+        ``on_connection_state`` is called with ``True`` once the MCS login
+        request is sent and with ``False`` when the connection is lost (or torn down at
         stop).  Tracking whether push notifications are being delivered.
 
         Must call ``checkin_or_register()`` first.
@@ -149,7 +141,8 @@ class MazdaPushClient:
         ``region`` selects the per-region Conductor server URL and app key.
 
         Returns ``(http_status, response_text)`` on completion, or ``None`` if
-        the region is unknown or no push token is available.
+        the region is unknown, the push token or device id is missing, or the
+        request fails.
         """
         cfg = CONDUCTOR_CONFIG.get(region)
         if cfg is None:
@@ -215,34 +208,11 @@ class MazdaPushClient:
             _LOGGER.warning("Conductor register failed: %s", ex)
             return None
 
-    async def stop(self, unregister: bool = False) -> None:
+    async def stop(self) -> None:
         """Stop the MCS listener and release resources.
 
-        ``unregister=True``: invalidate the FCM token at Firebase before stopping.
-        FIS-path credentials use ``fis_delete_installation``; legacy credentials
-        fall back to GCM ``register3`` unregister.  Equivalent to
-        ``FirebaseMessaging.deleteToken()`` — use on integration removal so
-        Mazda's push backend receives INVALID_REGISTRATION on its next delivery
-        attempt and cleans up the stale Conductor entry.
+        Firebase cleanup on entry removal is done by ``async_remove_entry``.
         """
-        if unregister and self._credentials:
-            session = self._get_session()
-            fid = self._credentials.get("fid")
-            refresh_token = self._credentials.get("refresh_token")
-            if fid and refresh_token:
-                # FIS-path token: delete the installation directly — more reliable
-                # than c2dm/register3 delete which requires FIS auth fields to
-                # locate the token and returns token=<sender_id> without them.
-                await fis_delete_installation(session, fid=fid, refresh_token=refresh_token)
-            else:
-                # Legacy GCM token (no FID): fall back to register3 unregister.
-                await gcm_unregister(
-                    session,
-                    android_id=self._credentials.get("android_id", ""),
-                    security_token=self._credentials.get("security_token", ""),
-                    fcm_token=self._credentials.get("token"),
-                )
-
         if self._mcs:
             await self._mcs.stop()
             self._mcs = None

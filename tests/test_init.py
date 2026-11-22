@@ -24,10 +24,12 @@ from custom_components.mazda_cs import (
     MazdaEntity,
     _enable_all_notify_settings,
     async_migrate_entry,
+    async_remove_entry,
 )
 from custom_components.mazda_cs.const import (
     CONF_ENABLE_DEV_SENSORS,
     CONF_ENABLE_PUSH,
+    CONF_FCM_CREDENTIALS,
     DOMAIN,
 )
 
@@ -319,3 +321,56 @@ async def test_failed_setup_stops_push_listener(hass: HomeAssistant) -> None:
     assert entry.state is ConfigEntryState.SETUP_RETRY
     listener.async_start.assert_awaited_once()
     listener.async_stop.assert_awaited_once()
+
+
+_REGISTER = "custom_components.mazda_cs.pymazda.push._register"
+_GCM_CREDS = {"android_id": "123", "security_token": "456", "token": "gcm-token"}
+
+
+async def _remove_with_creds(hass: HomeAssistant, creds: dict | None):
+    data = {CONF_REGION: "MNAO", "token": MOCK_TOKEN}
+    if creds is not None:
+        data[CONF_FCM_CREDENTIALS] = creds
+    entry = MockConfigEntry(domain=DOMAIN, version=2, minor_version=4, data=data)
+    with (
+        patch(f"{_REGISTER}.fis_delete_installation", AsyncMock()) as fis_delete,
+        patch(f"{_REGISTER}.gcm_unregister", AsyncMock()) as gcm_unregister,
+    ):
+        await async_remove_entry(hass, entry)
+    return fis_delete, gcm_unregister
+
+
+async def test_remove_entry_deletes_firebase_installation(hass: HomeAssistant) -> None:
+    """FIS-path credentials delete the Firebase Installation, not a GCM unregister."""
+    creds = {**_GCM_CREDS, "fid": "fid-1", "refresh_token": "fis-refresh"}
+    fis_delete, gcm_unregister = await _remove_with_creds(hass, creds)
+
+    fis_delete.assert_awaited_once()
+    assert fis_delete.await_args.kwargs == {
+        "fid": "fid-1",
+        "refresh_token": "fis-refresh",
+    }
+    gcm_unregister.assert_not_awaited()
+
+
+async def test_remove_entry_unregisters_gcm_fallback_token(hass: HomeAssistant) -> None:
+    """Plain register3 fallback credentials (no fid) get a GCM unregister."""
+    fis_delete, gcm_unregister = await _remove_with_creds(hass, _GCM_CREDS)
+
+    fis_delete.assert_not_awaited()
+    gcm_unregister.assert_awaited_once()
+    assert gcm_unregister.await_args.kwargs == {
+        "android_id": "123",
+        "security_token": "456",
+        "fcm_token": "gcm-token",
+    }
+
+
+async def test_remove_entry_without_push_credentials_is_noop(
+    hass: HomeAssistant,
+) -> None:
+    """No FCM credentials (push never set up) means no Firebase call at all."""
+    fis_delete, gcm_unregister = await _remove_with_creds(hass, None)
+
+    fis_delete.assert_not_awaited()
+    gcm_unregister.assert_not_awaited()

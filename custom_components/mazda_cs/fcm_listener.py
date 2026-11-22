@@ -62,8 +62,9 @@ class MazdaFcmListener:
     """Manages an Android FCM push subscription for one config entry.
 
     Lifecycle:
-        1. ``async_start()`` — registers with GCM/FCM (lightweight re-check-in
-           if stored credentials exist, otherwise full registration).  Returns
+        1. ``async_start()`` — registers with GCM/FCM (re-check-in and
+           re-registration if stored credentials exist, otherwise full
+           registration).  Returns
            the FCM token, or ``None`` if unavailable.
         2. Pass the token to ``mazda_client.attach(fcm_token=token)`` so
            Mazda's backend knows where to push notifications.
@@ -72,9 +73,10 @@ class MazdaFcmListener:
     Credential persistence:
         GCM credentials (android_id, security_token, token) are stored in
         ``entry.data[CONF_FCM_CREDENTIALS]``, the same mechanism used for
-        OAuth tokens.  On explicit removal the FCM token is invalidated at
-        Firebase (GCM unregister) and a fresh registration will occur on
-        the next setup.
+        OAuth tokens.  On explicit removal ``async_remove_entry`` invalidates
+        the token at Firebase (deletes the Firebase Installation, or sends a
+        GCM unregister for fallback credentials without one) and a fresh
+        registration will occur on the next setup.
     """
 
     def __init__(
@@ -217,16 +219,11 @@ class MazdaFcmListener:
             _LOGGER.debug("FCM client cleanup after failure: %s", ex)
         self._client = None
 
-    async def async_stop(self, unregister: bool = False) -> None:
-        """Stop the FCM listener connection.
-
-        ``unregister=True``: invalidate the FCM token at Firebase so that Mazda's
-        backend receives INVALID_REGISTRATION on the next push delivery attempt.
-        Pass this when the integration is being fully removed, not just restarted.
-        """
+    async def async_stop(self) -> None:
+        """Stop the FCM listener connection."""
         if self._client:
             try:
-                await self._client.stop(unregister=unregister)
+                await self._client.stop()
             except Exception as ex:  # noqa: BLE001
                 _LOGGER.debug("FCM stop error (ignored): %s", ex)
             self._client = None
@@ -249,7 +246,7 @@ class MazdaFcmListener:
 
         Only flips the interval once ``enable_push_based_interval()`` has been
         called — i.e. once the account is confirmed eligible (push enabled and
-        the account has remote/status permissions).
+        the account has the vehicleStatusAlert permission).
         """
         self._mcs_connected = connected
         if not self._push_based_interval:
@@ -265,7 +262,7 @@ class MazdaFcmListener:
         """Allow MCS connection state to flip the coordinator interval 3↔6 min.
 
         Called from ``async_setup_entry`` once the account is confirmed to have
-        remote/status permissions and FCM registration succeeded.  If MCS is
+        the vehicleStatusAlert permission and FCM registration succeeded.  If MCS is
         already connected when this is called, the interval is promoted to 6
         min immediately; otherwise it stays at 3 until MCS comes up.
         """

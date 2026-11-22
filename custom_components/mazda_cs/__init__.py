@@ -500,8 +500,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
     )
     # A failed setup (SETUP_RETRY) skips async_unload_entry but still runs the
     # on_unload callbacks, so stop the listener here or every retry leaks a live
-    # MCS connection on the same android_id. async_stop defaults to
-    # unregister=False: deleting the FID would leave a stale fid in entry.data.
+    # MCS connection on the same android_id.
     entry.async_on_unload(fcm_listener.async_stop)
 
     # Set runtime_data before starting FCM so any push arriving during setup
@@ -693,22 +692,38 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Called only when the config entry is permanently deleted by the user.
 
     async_unload_entry runs first (MCS connection closed, session detached).
-    hass.data for this entry has already been cleaned up by that point, so
+    entry.runtime_data has already been cleaned up by that point, so
     we read cleanup state directly from entry.data.
 
-    Deletes the Firebase Installation so that Mazda's backend receives
+    Invalidates the FCM token at Firebase so that Mazda's backend receives
     INVALID_REGISTRATION on its next push delivery attempt and removes the
-    stale Conductor entry.  Skipped automatically if no FIS credentials exist
-    (legacy GCM-only path or entry never fully set up).
+    stale Conductor entry.  FIS-path credentials delete the Firebase
+    Installation; credentials from the plain GCM register3 fallback (no fid)
+    send a GCM unregister instead.  Both are best-effort.  Skipped if the
+    entry has no FCM credentials (push never enabled or never set up).
     """
-    from .pymazda.push._register import fis_delete_installation  # noqa: PLC0415
+    from .pymazda.push._register import (  # noqa: PLC0415
+        fis_delete_installation,
+        gcm_unregister,
+    )
 
     creds = entry.data.get(CONF_FCM_CREDENTIALS) or {}
     fid = creds.get("fid")
     refresh_token = creds.get("refresh_token")
+    android_id = creds.get("android_id")
+    security_token = creds.get("security_token")
+    token = creds.get("token")
     if fid and refresh_token:
         async with aiohttp.ClientSession() as session:
             await fis_delete_installation(session, fid=fid, refresh_token=refresh_token)
+    elif android_id and security_token and token:
+        async with aiohttp.ClientSession() as session:
+            await gcm_unregister(
+                session,
+                android_id=android_id,
+                security_token=security_token,
+                fcm_token=token,
+            )
 
 
 class MazdaEntity(CoordinatorEntity):

@@ -479,7 +479,8 @@ async def gcm_unregister(
     """Unregister the FCM token so Firebase stops routing to this device.
 
     Equivalent to ``FirebaseMessaging.getInstance().deleteToken()`` on Android.
-    Called on integration unload so the old token becomes invalid — subsequent
+    Called from ``async_remove_entry`` for credentials without a Firebase
+    Installation (plain register3 fallback) so the old token becomes invalid — subsequent
     Mazda push attempts to the old token will receive INVALID_REGISTRATION from
     Firebase, causing Mazda's backend to remove the stale Conductor entry.
 
@@ -537,8 +538,8 @@ async def checkin_and_register(
     Plain GCM register3 tokens (no gmp_app_id) are legacy sender-scoped tokens
     that may not be routable via FCM v1 — kept as fallback only.
 
-    Returns ``{"android_id": str, "security_token": str, "token": str}`` on
-    success, or None on failure.
+    Returns ``{"android_id", "security_token", "token"}`` (plus ``"fid"`` and
+    ``"refresh_token"`` on the FIS path) on success, or None on failure.
     """
     # Check in once and share the resulting device identity with both paths.
     # A separate check-in per path would burn a second android_id, which Google
