@@ -15,6 +15,8 @@ TO_REDACT_INFO = [
     "access_token",
     "id_token",
     "refresh_token",
+    # B2C client_info (requested in oauth.py) encodes the user's object id.
+    "client_info",
     # fcm_credentials contains android_id + security_token — together a full
     # MCS login credential that would let anyone receive this user's pushes.
     "fcm_credentials",

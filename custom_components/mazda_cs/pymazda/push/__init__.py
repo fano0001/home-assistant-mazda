@@ -36,6 +36,7 @@ from ._conductor import (
     send_app_init,
     send_update_user,
 )
+from ..connection import tail
 from ._mcs import McsClient, MessageCallback
 from ._register import FCM_APP_VERSION_NAME, checkin_and_register
 
@@ -169,10 +170,8 @@ class MazdaPushClient:
                 app_key=app_key,
                 device_id=device_id,
             )
-            _LOGGER.debug(
-                "Conductor init: region=%s status=%d response=%s",
-                region, init_status, init_text,
-            )
+            # The init body carries the encrypted session keys: log the status only.
+            _LOGGER.debug("Conductor init: region=%s status=%d", region, init_status)
             if init_status != 200:
                 _LOGGER.warning(
                     "Conductor init failed (HTTP %d) — skipping updateuser", init_status
@@ -198,10 +197,11 @@ class MazdaPushClient:
                 partner1_id=partner1_id,
                 partner2_id=partner2_id,
             )
-            _LOGGER.debug("Conductor deviceId used: %s", device_id)
             _LOGGER.debug(
-                "Conductor updateuser: region=%s status=%d response=%s",
-                region, status, text,
+                "Conductor updateuser: region=%s status=%d deviceId=%s",
+                region,
+                status,
+                tail(device_id),
             )
             return status, text
         except Exception as ex:  # noqa: BLE001

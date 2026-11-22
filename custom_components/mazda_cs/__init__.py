@@ -49,6 +49,7 @@ from .fcm_listener import MazdaFcmListener
 from .pymazda.push._conductor import conductor_device_id_from_user_sub
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
+from .pymazda.connection import tail
 from .pymazda.exceptions import (
     MazdaConnectionException,
     MazdaRateLimitException,
@@ -146,6 +147,51 @@ def bg_image_options(images: list[dict] | None) -> dict[str, str]:
 _NOTIFY_EXCLUDE = {"resultCode", "visitNo", "settingSaveFlag"}
 
 
+async def _check_service_permissions(
+    client: MazdaAPI, vehicles: list
+) -> tuple[bool, bool]:
+    """Return (status_alert_available, health_report_available) across all vehicles.
+
+    Logs a warning per missing permission. WARNING lines end up in pasted bug
+    reports, so they show only the VIN's tail; the full service list is debug.
+    """
+    status_alert_available = True
+    health_report_available = True
+    for vehicle in vehicles:
+        try:
+            available = await client.get_available_service(vehicle["id"])
+        except Exception as ex:  # noqa: BLE001
+            _LOGGER.warning(
+                "getAvailableService(%s) failed: %s", vehicle["id"], ex
+            )
+            continue
+        vin_tail = tail(vehicle["vin"])
+        _LOGGER.debug("Available services for vehicle %s: %s", vin_tail, available)
+        if available.get("vehicleStatusAlert") != 1:
+            status_alert_available = False
+            _LOGGER.warning(
+                "Mazda account lacks vehicle status-alert permission "
+                "for vehicle %s — push notifications and remote commands may "
+                "not work as expected.",
+                vin_tail,
+            )
+        if available.get("healthReports") != 1:
+            health_report_available = False
+            _LOGGER.warning(
+                "Mazda account lacks Health Report permission "
+                "for vehicle %s — health report entities will not be created.",
+                vin_tail,
+            )
+        if available.get("remoteControl") != 1:
+            _LOGGER.warning(
+                "Mazda account lacks remote control permission "
+                "for vehicle %s — remote commands may not work "
+                "as expected.",
+                vin_tail,
+            )
+    return status_alert_available, health_report_available
+
+
 async def _enable_all_notify_settings(client: MazdaAPI, vehicles: list) -> None:
     """Ensure all notification toggles are enabled for each vehicle.
 
@@ -162,15 +208,15 @@ async def _enable_all_notify_settings(client: MazdaAPI, vehicles: list) -> None:
             if all(v == 1 for v in settings.values()):
                 _LOGGER.debug(
                     "Notification settings already fully enabled for %s — skipping update",
-                    vehicle["vin"],
+                    tail(vehicle["vin"]),
                 )
                 continue
             await client.set_notify_setting(vehicle["id"], {k: 1 for k in settings} | {"settingsaveflag": 0})
-            _LOGGER.debug("Notification settings enabled for %s", vehicle["vin"])
+            _LOGGER.debug("Notification settings enabled for %s", tail(vehicle["vin"]))
         except Exception:  # noqa: BLE001
             _LOGGER.debug(
                 "Could not configure notification settings for %s",
-                vehicle.get("vin", ""),
+                tail(vehicle.get("vin")),
             )
 
 
@@ -294,7 +340,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
         user_sub = token_data.get("sub", "")
         _LOGGER.debug(
             "Access token claims: sub=%s, scp=%s, tfp=%s, exp=%s, azp=%s",
-            token_data.get("sub"),
+            tail(token_data.get("sub")),
             token_data.get("scp"),
             token_data.get("tfp"),
             token_data.get("exp"),
@@ -306,7 +352,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
     if not user_sub:
         _LOGGER.error("No 'sub' claim in access token — cannot identify user")
 
-    _LOGGER.debug("Using sub=%s as device identity for region=%s", user_sub, region)
+    _LOGGER.debug(
+        "Using sub=%s as device identity for region=%s", tail(user_sub), region
+    )
 
     auth = MazdaAuth(session)
     websession = aiohttp_client.async_get_clientsession(hass)
@@ -548,42 +596,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
     # Verify the account has vehicle status-alert permission for each vehicle.
     # Missing permission keeps the coordinator at the degraded 3-min poll interval;
     # otherwise the FCM listener is allowed to promote it to 6 min once MCS is connected.
-    status_alert_available = True
-    health_report_available = True
-    for vehicle in coordinator.data or []:
-        try:
-            available = await mazda_client.get_available_service(vehicle["id"])
-        except Exception as ex:  # noqa: BLE001
-            _LOGGER.warning(
-                "getAvailableService(%s) failed: %s", vehicle["id"], ex
-            )
-            continue
-        if available.get("vehicleStatusAlert") != 1:
-            status_alert_available = False
-            _LOGGER.warning(
-                "Mazda account lacks vehicle status-alert permission "
-                "for vehicle %s — push notifications and remote commands may "
-                "not work as expected. Available services: %s",
-                vehicle["vin"],
-                available,
-            )
-        if available.get("healthReports") != 1:
-            health_report_available = False
-            _LOGGER.warning(
-                "Mazda account lacks Health Report permission "
-                "for vehicle %s — health report entities will not be created. "
-                "Available services: %s",
-                vehicle["vin"],
-                available,
-            )
-        if available.get("remoteControl") != 1:
-            _LOGGER.warning(
-                "Mazda account lacks remote control permission "
-                "for vehicle %s — remote commands may not work "
-                "as expected. Available services: %s",
-                vehicle["vin"],
-                available,
-            )
+    status_alert_available, health_report_available = await _check_service_permissions(
+        mazda_client, coordinator.data or []
+    )
 
     if status_alert_available and coordinator.push_enabled:
         fcm_listener.enable_push_based_interval()

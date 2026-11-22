@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import timedelta
 from typing import Any
@@ -12,6 +13,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_FCM_CREDENTIALS
 from .locales import resolve_locale
+from .pymazda.connection import tail
 
 try:
     from .pymazda.push import MazdaPushClient
@@ -44,6 +46,25 @@ _REFRESH_CODES = frozenset(
         "D002",  # CDT_INBOX_CP_CHARGE_COMPLETED
     ]
 )
+
+# Fields of a Conductor JSON error body that explain a failure without the
+# encrypted payload (which can hold session keys).
+_ERROR_FIELDS = ("state", "code", "errorCode", "extraCode", "error", "message", "msg")
+
+
+def _summarize_error_body(text: str | None, limit: int = 100) -> str:
+    """Return the error fields of a JSON body, or a short prefix of a non-JSON one."""
+    if not text:
+        return "(empty)"
+    try:
+        body = json.loads(text)
+    except ValueError:
+        return text[:limit]
+    if not isinstance(body, dict):
+        return text[:limit]
+    fields = {key: body[key] for key in _ERROR_FIELDS if key in body}
+    return str(fields) if fields else "(no error fields)"
+
 
 # Action codes documented but not requiring a refresh:
 # "009",   # INBOX_BCALL_HIGH - B-Call high priority
@@ -121,7 +142,7 @@ class MazdaFcmListener:
         if stored:
             _LOGGER.debug(
                 "FCM: loaded credentials from entry.data (android_id=%s)",
-                stored.get("android_id"),
+                tail(stored.get("android_id")),
             )
 
         self._client = MazdaPushClient(
@@ -172,11 +193,11 @@ class MazdaFcmListener:
         _LOGGER.debug(
             "Conductor registration: region=%s userId=%s primaryId=%s partner2Id=%s partner1Id=%s deviceId=%s",
             self._region,
-            effective_user_id or "(MISSING)",
-            effective_primary_id or "(MISSING)",
-            effective_partner2_id or "(MISSING)",
-            effective_partner1_id or "(MISSING)",
-            self._conductor_device_id or "(MISSING)",
+            tail(effective_user_id),
+            tail(effective_primary_id),
+            tail(effective_partner2_id),
+            tail(effective_partner1_id),
+            tail(self._conductor_device_id),
         )
         resolved = resolve_locale(
             self._region,
@@ -199,7 +220,9 @@ class MazdaFcmListener:
                 _LOGGER.debug("Conductor updateuser succeeded")
             else:
                 _LOGGER.warning(
-                    "Conductor updateuser returned HTTP %d: %s", status, text
+                    "Conductor updateuser returned HTTP %d: %s",
+                    status,
+                    _summarize_error_body(text),
                 )
 
         return self._fcm_token
@@ -238,7 +261,7 @@ class MazdaFcmListener:
         self._hass.config_entries.async_update_entry(self._entry, data=new_data)
         _LOGGER.debug(
             "FCM credentials updated (android_id=%s), persisted to entry.data",
-            credentials.get("android_id"),
+            tail(credentials.get("android_id")),
         )
 
     def _on_mcs_state(self, connected: bool) -> None:

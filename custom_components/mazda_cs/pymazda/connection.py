@@ -150,6 +150,12 @@ _LOG_REDACT_KEYS = {
     "Longitude",
     "Latitude",
     "visitNo",
+    # Account identifiers: attach session, getUserInfo, getCvUserIds.
+    "sessionId",
+    "contactMailAddress",
+    "custId",
+    "usherId",
+    "internalUserId",
 }
 
 
@@ -163,6 +169,20 @@ def _redact(data):
     if isinstance(data, list):
         return [_redact(item) for item in data]
     return data
+
+
+def tail(value, keep: int = 4) -> str:
+    """Return the last ``keep`` characters of an identifier for logging.
+
+    Debug logs end up pasted into bug reports, so identifiers (VIN, JWT sub,
+    customer IDs, android_id) are shown only as "…1234": enough to tell two
+    values apart, not enough to identify the account. Empty values become
+    "(MISSING)" so a missing ID still stands out.
+    """
+    text = "" if value is None else str(value)
+    if not text:
+        return "(MISSING)"
+    return "…" + text[-keep:]
 
 
 def _connection_error(ex: BaseException) -> MazdaConnectionException:
@@ -647,18 +667,24 @@ class Connection:
             response_json = await response.json()
         except (TimeoutError, aiohttp.ClientError) as ex:
             raise _connection_error(ex) from ex
-        self.logger.debug("checkVersion response: %s", response_json)
-        if response_json.get("state") == "S":
+        # The payload decrypts to the API keys and is noise in a log: report
+        # only the outcome fields.
+        state = response_json.get("state")
+        error_code = response_json.get("errorCode")
+        self.logger.debug("checkVersion state=%s errorCode=%s", state, error_code)
+        if state == "S":
             return self.__decrypt_payload_using_app_code(
                 response_json["payload"], self.app_code
             )
-        elif response_json.get("errorCode") == 600001:
+        error = response_json.get("error")
+        if error_code == 600001:
             raise MazdaException(
-                "checkVersion rejected (wrong SHA256_CERT_SIG). response: "
-                + str(response_json)
+                "checkVersion rejected (wrong SHA256_CERT_SIG), "
+                f"errorCode 600001: {error}"
             )
-        else:
-            raise MazdaException("checkVersion failed: " + str(response_json))
+        raise MazdaException(
+            f"checkVersion failed: state={state} errorCode={error_code} error={error}"
+        )
 
     async def close(self):  # noqa: D102
         await self._session.close()
