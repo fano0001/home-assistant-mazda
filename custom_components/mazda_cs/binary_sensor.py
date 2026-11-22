@@ -283,11 +283,17 @@ async def async_setup_entry(
         for description in BINARY_SENSOR_ENTITIES
         if description.is_supported(data)
     ]
-    entities += [
-        MazdaHealthBinarySensorEntity(client, coordinator, health_coordinator, index, description)
-        for index in range(len(coordinator.data))
-        for description in HEALTH_BINARY_SENSOR_ENTITIES
-    ]
+    # Without the healthReports service the health coordinator never polls,
+    # so its entities would stay unknown forever.
+    if config_entry.runtime_data.health_report_available:
+        entities += [
+            MazdaHealthBinarySensorEntity(
+                client, coordinator, health_coordinator, index, description
+            )
+            for index, data in enumerate(coordinator.data)
+            for description in HEALTH_BINARY_SENSOR_ENTITIES
+            if description.is_supported(data)
+        ]
     async_add_entities(entities)
 
 

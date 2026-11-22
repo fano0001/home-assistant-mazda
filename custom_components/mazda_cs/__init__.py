@@ -69,6 +69,9 @@ class MazdaEntryData:
     fcm_listener: MazdaFcmListener | None
     region: str
     vehicles: list[dict] = field(default_factory=list)
+    # False when any vehicle lacks the healthReports service: the health
+    # coordinator then never polls, so no health entities are created.
+    health_report_available: bool = True
 
 
 type MazdaConfigEntry = ConfigEntry[MazdaEntryData]
@@ -568,7 +571,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             health_report_available = False
             _LOGGER.warning(
                 "Mazda account lacks Health Report permission "
-                "for vehicle %s — some entities may not work as expected. "
+                "for vehicle %s — health report entities will not be created. "
                 "Available services: %s",
                 vehicle["vin"],
                 available,
@@ -594,6 +597,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
             "mazda_cs_notify_settings_init",
         )
 
+    entry.runtime_data.health_report_available = health_report_available
     if health_report_available:
         health_coordinator.update_interval = timedelta(hours=24)
         entry.async_create_background_task(

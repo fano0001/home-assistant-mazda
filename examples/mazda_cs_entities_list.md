@@ -32,7 +32,7 @@
 | **binary_sensor** | `brake_oil_level_warning` | Brake oil level warning |  |
 | **binary_sensor** | `pw_sav_mode` | Power saving mode | `!= 2` |
 | **binary_sensor** | `tns_lamp` | Exterior lights-on warning |  |
-| **binary_sensor** | `health_lights_problem` | Light problem warning | One sensor for 7 bulbs, see entity details for each bulb |
+| **binary_sensor** | `health_lights_problem` | Light problem warning | One sensor for 7 bulbs, see entity details for each bulb. Only created when the account has the Health Report service |
 | **lock** | `lock` | Lock |  |
 | **device_tracker** | `device_tracker` | Device tracker |  |
 | **select** | `flash_light_count` | Flash light count | `hasFlashLight` |

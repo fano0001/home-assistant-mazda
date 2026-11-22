@@ -509,6 +509,15 @@ class MazdaSensorEntity(MazdaEntity, SensorEntity):
         self._attr_unique_id = f"{self.vin}_{description.key}"
 
     @property
+    def available(self) -> bool:
+        """Return False once the field this sensor reads is gone or out of range.
+
+        ``is_supported`` decides at setup whether the entity is created; checking
+        it again here keeps a later null frame from raising in ``native_value``.
+        """
+        return super().available and self.entity_description.is_supported(self.data)
+
+    @property
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
         return self.entity_description.value(self.data)
