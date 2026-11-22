@@ -15,7 +15,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_REGION
 from homeassistant.core import callback
-from homeassistant.helpers import config_entry_oauth2_flow, selector
+from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow, selector
 from yarl import URL
 
 from .const import (
@@ -27,6 +27,7 @@ from .const import (
 )
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
+from .pymazda.exceptions import MazdaTermsNotAcceptedException
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -304,39 +305,50 @@ class MazdaOAuth2FlowHandler(
             )
         self._abort_if_unique_id_configured()
 
-        # Attempt to fetch the account email address for a friendlier title
-        title = f"Mazda ({user_id[:8]})"
+        async def _token_provider():
+            return data["token"]["access_token"]
+
+        # One client for both lookups: each client fetches its own enc/sign keys
+        # (checkVersion) on its first request. It uses HA's shared session, the
+        # same as async_setup_entry, so there is no session to leak. Never call
+        # client.close() here: Connection.close() would close the shared session.
+        #
+        # getUserInfo only needs auth + enc keys, not a session ID, so this does
+        # not attach(). attach() here may trigger "multiple devices detected",
+        # but needs further evaluation.
+        client = MazdaAPI(
+            user_id,
+            self._region,
+            _token_provider,
+            websession=aiohttp_client.async_get_clientsession(self.hass),
+        )
+
+        # If getUserInfo fails, abort instead of creating an entry that only
+        # has a fallback title and no Conductor IDs.
         try:
-
-            async def _token_provider():
-                return data["token"]["access_token"]
-
-            # getUserInfo only needs auth + enc keys, not a session ID — 
-            # does not need to attach() here.  attach() here may trigger 
-            # "multiple devices detected", but needs further evaluation.
-            client = MazdaAPI(user_id, self._region, _token_provider)
             user_info = await client.get_user_info()
-            await client.close()
-            email = user_info.get("userInfo", {}).get("contactMailAddress", "")
-            if email:
-                title = f"Mazda ({email})"
-            cust_id = user_info.get("custId", "")
-            if cust_id:
-                data["conductor_customer_id"] = cust_id
-            usher_id = user_info.get("usherId", "")
-            if usher_id:
-                data["conductor_usher_id"] = usher_id
-        except Exception:  # noqa: BLE001
-            _LOGGER.debug(
-                "Could not fetch account email for title; using user_id fallback"
-            )
+        except MazdaTermsNotAcceptedException:
+            return self.async_abort(reason="terms_not_accepted")
+        except Exception as ex:  # noqa: BLE001
+            _LOGGER.warning("Could not fetch Mazda account info: %s", ex)
+            return self.async_abort(reason="cannot_connect")
 
-        # non-MNAO regions use internalUserId (partner2Id) for Conductor userId
+        title = f"Mazda ({user_id[:8]})"
+        email = user_info.get("userInfo", {}).get("contactMailAddress", "")
+        if email:
+            title = f"Mazda ({email})"
+        cust_id = user_info.get("custId", "")
+        if cust_id:
+            data["conductor_customer_id"] = cust_id
+        usher_id = user_info.get("usherId", "")
+        if usher_id:
+            data["conductor_usher_id"] = usher_id
+
+        # non-MNAO regions use internalUserId (partner2Id) for Conductor userId.
+        # Only push needs it, so a failure here does not block setup.
         if self._region != "MNAO":
             try:
-                client = MazdaAPI(user_id, self._region, _token_provider)
                 cv_ids = await client.get_cv_user_ids()
-                await client.close()
                 internal_user_id = str(
                     cv_ids.get("data", {}).get("customerInfo", {}).get("internalUserId", "")
                 )

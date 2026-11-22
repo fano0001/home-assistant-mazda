@@ -8,7 +8,7 @@ import pytest
 from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from yarl import URL
 
@@ -20,6 +20,10 @@ from custom_components.mazda_cs.const import (
     OAUTH2_HOSTS,
 )
 from custom_components.mazda_cs.oauth import MazdaOAuth2Implementation
+from custom_components.mazda_cs.pymazda.exceptions import (
+    MazdaConnectionException,
+    MazdaTermsNotAcceptedException,
+)
 
 TOKEN = {
     "access_token": "access",
@@ -150,13 +154,13 @@ def mock_setup_entry():
         yield setup
 
 
-async def _start_manual(hass: HomeAssistant) -> dict:
+async def _start_manual(hass: HomeAssistant, region: str = "MNAO") -> dict:
     """Start a user flow and pick the manual sign-in from the menu."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"region": "MNAO"}
+        result["flow_id"], {"region": region}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["menu_options"] == ["auth", "auth_manual"]
@@ -282,3 +286,77 @@ async def test_reauth_manual_paste(hass: HomeAssistant, mock_setup_entry) -> Non
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert entry.data["token"]["access_token"] == token["access_token"]
+
+
+async def _finish_manual(hass: HomeAssistant, region: str = "MNAO") -> dict:
+    """Run the manual sign-in through to the account lookups."""
+    result = await _start_manual(hass, region)
+    authorize_url = result["description_placeholders"]["authorize_url"]
+    with patch(_RESOLVE_EXTERNAL_DATA, return_value=_token()):
+        return await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"callback_url": _callback_url(authorize_url, code="auth-code")},
+        )
+
+
+@pytest.mark.parametrize(
+    ("error", "reason"),
+    [
+        (MazdaConnectionException("timeout"), "cannot_connect"),
+        (Exception("unexpected"), "cannot_connect"),
+        (MazdaTermsNotAcceptedException("400C01"), "terms_not_accepted"),
+    ],
+)
+async def test_account_lookup_failure_aborts(
+    hass: HomeAssistant, mock_client, mock_setup_entry, error, reason
+) -> None:
+    """A failed getUserInfo aborts instead of creating a title-only entry."""
+    mock_client.get_user_info.side_effect = error
+
+    result = await _finish_manual(hass)
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == reason
+    assert not hass.config_entries.async_entries(DOMAIN)
+
+
+async def test_account_lookups_share_one_client_on_ha_session(
+    hass: HomeAssistant, mock_setup_entry
+) -> None:
+    """Outside NA both lookups use one client on HA's session, which stays open."""
+    with patch("custom_components.mazda_cs.config_flow.MazdaAPI") as client_cls:
+        client = client_cls.return_value
+        client.get_user_info = AsyncMock(
+            return_value={"userInfo": {}, "custId": "cust-1", "usherId": "usher-1"}
+        )
+        client.get_cv_user_ids = AsyncMock(
+            return_value={"data": {"customerInfo": {"internalUserId": 42}}}
+        )
+        client.close = AsyncMock()
+
+        result = await _finish_manual(hass, "MME")
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == f"Mazda ({_SUB[:8]})"
+    assert result["data"]["conductor_customer_id"] == "cust-1"
+    assert result["data"]["conductor_usher_id"] == "usher-1"
+    assert result["data"]["conductor_internal_id"] == "42"
+    client_cls.assert_called_once()
+    assert client_cls.call_args.kwargs["websession"] is (
+        aiohttp_client.async_get_clientsession(hass)
+    )
+    client.get_cv_user_ids.assert_awaited_once()
+    client.close.assert_not_awaited()
+
+
+async def test_internal_id_failure_does_not_block_setup(
+    hass: HomeAssistant, mock_client, mock_setup_entry
+) -> None:
+    """getCvUserIds is only needed for push, so its failure still creates the entry."""
+    mock_client.get_cv_user_ids = AsyncMock(side_effect=MazdaConnectionException("x"))
+
+    result = await _finish_manual(hass, "MME")
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Mazda (driver@example.com)"
+    assert "conductor_internal_id" not in result["data"]

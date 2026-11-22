@@ -3,6 +3,7 @@
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_account%]",
       "cannot_connect": "[%key:common::config_flow::abort::cannot_connect%]",
+      "terms_not_accepted": "Accept the terms of service in the MyMazda app, then add the integration again.",
       "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
       "oauth_error": "Error during OAuth authentication. Please try again.",
       "wrong_account": "Wrong account. Please authenticate with the same account.",

@@ -3,6 +3,7 @@
         "abort": {
             "already_configured": "Account is already configured",
             "cannot_connect": "Cannot connect to Mazda. Please check your network and try again.",
+            "terms_not_accepted": "Accept the terms of service in the MyMazda app, then add the integration again.",
             "reauth_successful": "Re-authentication was successful",
             "oauth_error": "Error during OAuth authentication. Please try again.",
             "wrong_account": "Wrong account. Please authenticate with the same account.",
