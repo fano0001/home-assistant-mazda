@@ -386,9 +386,8 @@ class Connection:
         except MazdaTokenExpiredException:
             self.logger.info(
                 "Server reports access token was expired (600002). "
-                "Resetting cached token — will re-fetch on retry."
+                "Fetching a fresh token and retrying."
             )
-            self.access_token = None
             return await self.__api_request_retry(
                 method,
                 uri,
@@ -595,9 +594,10 @@ class Connection:
             await self.__retrieve_keys()
 
     async def __ensure_token_is_valid(self):
-        if self.access_token is None:
-            self.logger.info("No access token present. Fetching from provider.")
-            self.access_token = await self.access_token_provider()
+        # Ask the provider on every request: HA's OAuth2Session checks expiry
+        # locally and refreshes only when needed, so a cached token would go
+        # stale at each expiry and cost a 600002 round trip plus a retry.
+        self.access_token = await self.access_token_provider()
 
     async def __retrieve_keys(self):
         self.logger.info("Retrieving encryption keys from %s", self.base_url)

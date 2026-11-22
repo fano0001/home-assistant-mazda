@@ -19,6 +19,7 @@ from custom_components.mazda_cs.pymazda.client import (
 )
 import aiohttp
 
+from custom_components.mazda_cs.api import MazdaAuth
 from custom_components.mazda_cs.pymazda.connection import (
     MAX_RETRIES,
     REQUEST_TIMEOUT_SECONDS,
@@ -29,6 +30,7 @@ from custom_components.mazda_cs.pymazda.exceptions import (
     MazdaException,
     MazdaRateLimitException,
     MazdaSessionExpiredException,
+    MazdaTokenExpiredException,
 )
 
 VEHICLE_ID = 12345
@@ -383,3 +385,54 @@ async def test_non_json_body_becomes_mazda_exception() -> None:
 
     with pytest.raises(MazdaConnectionException):
         await conn.api_request("POST", "service/checkVersion")
+
+
+async def test_access_token_provider_runs_before_every_request() -> None:
+    """The provider is asked per request, so a refreshed token is used at once."""
+    conn, _ = _connection(MagicMock(status=200))
+    conn.access_token_provider = AsyncMock(side_effect=["token-1", "token-2"])
+    sent_tokens = []
+
+    async def send(*args, **kwargs):
+        sent_tokens.append(conn.access_token)
+
+    conn._Connection__send_api_request = send
+    await conn.api_request("POST", "x", needs_keys=False, needs_auth=True)
+    await conn.api_request("POST", "x", needs_keys=False, needs_auth=True)
+
+    assert sent_tokens == ["token-1", "token-2"]
+
+
+async def test_600002_retries_with_token_from_provider() -> None:
+    """After a 600002 the retry sends whatever token the provider returns next."""
+    conn, _ = _connection(MagicMock(status=200))
+    conn.access_token_provider = AsyncMock(side_effect=["stale", "fresh"])
+    sent_tokens = []
+
+    async def send(*args, **kwargs):
+        sent_tokens.append(conn.access_token)
+        if conn.access_token == "stale":
+            raise MazdaTokenExpiredException("Token expired")
+        return {"ok": True}
+
+    conn._Connection__send_api_request = send
+    result = await conn.api_request("POST", "x", needs_keys=False, needs_auth=True)
+
+    assert result == {"ok": True}
+    assert sent_tokens == ["stale", "fresh"]
+
+
+async def test_mazda_auth_logs_token_state_only_when_token_changes(caplog) -> None:
+    """Per-request calls must not log the token state every time."""
+    oauth_session = MagicMock(async_ensure_token_valid=AsyncMock())
+    oauth_session.token = {"access_token": "a", "expires_at": 100.0}
+    auth = MazdaAuth(oauth_session)
+
+    with caplog.at_level("DEBUG", logger="custom_components.mazda_cs.api"):
+        assert await auth.async_get_access_token() == "a"
+        assert await auth.async_get_access_token() == "a"
+        oauth_session.token = {"access_token": "b", "expires_at": 200.0}
+        assert await auth.async_get_access_token() == "b"
+
+    assert caplog.text.count("Token state") == 2
+    assert oauth_session.async_ensure_token_valid.await_count == 3
