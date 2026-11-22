@@ -41,6 +41,14 @@ MCS_SELECTIVE_ACK_ID = 12
 _MAX_MESSAGE_SIZE = 1 << 20
 # 5 varint bytes carry 35 bits, enough for any 32-bit length.
 _MAX_VARINT_BYTES = 5
+# Wait between reconnect cycles: doubles from the minimum up to the maximum,
+# back to the minimum after a successful login.
+_RECONNECT_DELAY_MIN = 3
+_RECONNECT_DELAY_MAX = 900
+# Drop the link after this many client heartbeat intervals with no traffic,
+# i.e. two unanswered pings. A healthy link peaks just under 2 intervals
+# (a ping goes out after 1 quiet interval, its ack arrives right after).
+_DEAD_LINK_HEARTBEATS = 3
 
 # Maps protobuf message type to its integer tag in the MCS wire format
 _TAG_BY_TYPE: dict[type, int] = {
@@ -106,6 +114,7 @@ class McsClient:
         self._last_message_time: float | None = None
         self._persistent_ids: list[str] = []
         self._is_connected = False
+        self._reconnect_delay = _RECONNECT_DELAY_MIN
 
     def _set_connected(self, value: bool) -> None:
         if value == self._is_connected:
@@ -226,6 +235,9 @@ class McsClient:
             self._first_message = True
             self._input_stream_id = 0
             self._last_stream_id_reported = -1
+            # Start the new link's silence clock now, so _monitor doesn't judge
+            # it by the previous link's last message.
+            self._last_message_time = time.monotonic()
             _LOGGER.debug("MCS: connected to %s:%d", MCS_HOST, MCS_PORT)
             return True
         except OSError as ex:
@@ -341,9 +353,11 @@ class McsClient:
             )
             if has_error and error_code != 0:
                 _LOGGER.error("MCS: login failed — error_code=%d message=%r", error_code, error_msg)
-            else:
-                _LOGGER.info("MCS: logged in successfully")
-                self._persistent_ids = []
+                raise ConnectionResetError(f"MCS login failed: {error_code}")
+            _LOGGER.info("MCS: logged in successfully")
+            self._persistent_ids = []
+            self._reconnect_delay = _RECONNECT_DELAY_MIN
+            self._set_connected(True)
             return
 
         if isinstance(msg, Close):
@@ -383,15 +397,15 @@ class McsClient:
                 if not self._do_listen:
                     return
                 _LOGGER.warning(
-                    "MCS: could not connect after %d retries, retrying in 24h",
+                    "MCS: could not connect after %d retries, retrying in %ds",
                     self._retry_count,
+                    self._reconnect_delay,
                 )
-                await asyncio.sleep(86400)
+                await self._backoff()
                 continue
 
             try:
                 await self._login()
-                self._set_connected(True)
                 while self._do_listen:
                     msg = await self._recv()
                     if msg is not None:
@@ -419,10 +433,15 @@ class McsClient:
                 await self._close_writer()
 
             if self._do_listen:
-                await asyncio.sleep(3)
+                await self._backoff()
+
+    async def _backoff(self) -> None:
+        """Wait before reconnecting; the wait doubles until a login succeeds."""
+        await asyncio.sleep(self._reconnect_delay)
+        self._reconnect_delay = min(self._reconnect_delay * 2, _RECONNECT_DELAY_MAX)
 
     async def _monitor(self) -> None:
-        """Send client heartbeats when the server goes quiet."""
+        """Send client heartbeats when the server goes quiet; drop a dead link."""
         while self._do_listen:
             await asyncio.sleep(self._client_hb)
             if (
@@ -431,7 +450,12 @@ class McsClient:
                 and self._writer is not None
             ):
                 age = time.monotonic() - self._last_message_time
-                if age >= self._client_hb:
+                if age >= _DEAD_LINK_HEARTBEATS * self._client_hb:
+                    # Two pings went unanswered. Closing unblocks _recv, so
+                    # _listen reconnects instead of waiting on the OS to give up.
+                    _LOGGER.debug("MCS: no traffic for %.0fs, dropping connection", age)
+                    await self._close_writer()
+                elif age >= self._client_hb:
                     try:
                         ping = HeartbeatPing()
                         if self._has_new_stream_id():

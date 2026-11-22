@@ -104,9 +104,9 @@ class MazdaPushClient:
         message arrives.  Its argument is a ``dict[str, str]`` matching the
         FCM data payload (e.g. ``{"a": "001", "v": "<vin>", "title": "..."}``).
 
-        ``on_connection_state`` is called with ``True`` once the MCS login
-        request is sent and with ``False`` when the connection is lost (or torn down at
-        stop).  Tracking whether push notifications are being delivered.
+        ``on_connection_state`` is called with ``True`` once the MCS server
+        accepts the login and with ``False`` when the connection is lost (or
+        torn down at stop).  Tracking whether push notifications are being delivered.
 
         Must call ``checkin_or_register()`` first.
         """

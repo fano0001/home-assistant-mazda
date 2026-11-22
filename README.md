@@ -139,7 +139,7 @@ The previous mazda_cs_remote_service_result events are removed and have been sup
 
 ## How often does the integration check for updates
 
-**Vehicle Status:** Every 6 minutes and when triggered by a push notification. If the integration fails to register for push notifactions, 3 minutes.
+**Vehicle Status:** Every 6 minutes and when triggered by a push notification. If the integration fails to register for push notifications, or while the push connection is down, 3 minutes.
 **Health Report Status:** Every 24 hours or when triggered by a push notification
 **Vehicle Images:** When the integration loads, if enabled. A failed fetch is retried hourly, up to 6 times.
 
