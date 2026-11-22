@@ -20,8 +20,10 @@ from custom_components.mazda_cs.pymazda.client import (
 import aiohttp
 
 from custom_components.mazda_cs.api import MazdaAuth
+from custom_components.mazda_cs.pymazda import connection as connection_module
 from custom_components.mazda_cs.pymazda.connection import (
     MAX_RETRIES,
+    REQUEST_IN_PROGRESS_RETRY_SECONDS,
     REQUEST_TIMEOUT_SECONDS,
     Connection,
 )
@@ -29,6 +31,7 @@ from custom_components.mazda_cs.pymazda.exceptions import (
     MazdaConnectionException,
     MazdaException,
     MazdaRateLimitException,
+    MazdaRequestInProgressException,
     MazdaSessionExpiredException,
     MazdaTokenExpiredException,
 )
@@ -518,3 +521,100 @@ async def test_position_flags_set_hemisphere() -> None:
     lat, lon, _ = await _status_position(remote, {})
 
     assert (lat, lon) == (-10.0, 20.0)
+
+
+# ---------------------------------------------------------------------------
+# MSG400101: another remote command is still running (fail fast)
+# ---------------------------------------------------------------------------
+
+
+_IN_PROGRESS = MazdaRequestInProgressException("in progress")
+_OK = {"resultCode": "200S00"}
+
+
+@pytest.mark.parametrize(
+    ("responses", "outcome", "sends"),
+    [
+        pytest.param([_IN_PROGRESS, _OK], _OK, 2, id="resend-succeeds"),
+        pytest.param(
+            [_IN_PROGRESS, _IN_PROGRESS], _IN_PROGRESS, 2, id="still-in-progress-raises"
+        ),
+        pytest.param(
+            [_IN_PROGRESS, MazdaTokenExpiredException("600002"), _OK],
+            _OK,
+            3,
+            id="600002-on-resend-still-handled",
+        ),
+        pytest.param(
+            [_IN_PROGRESS, MazdaTokenExpiredException("600002"), _IN_PROGRESS],
+            _IN_PROGRESS,
+            3,
+            id="only-one-in-progress-resend",
+        ),
+    ],
+)
+async def test_request_in_progress_is_resent_once(
+    monkeypatch: pytest.MonkeyPatch, responses, outcome, sends
+) -> None:
+    """MSG400101 gets one re-send after REQUEST_IN_PROGRESS_RETRY_SECONDS, separate
+    from MAX_RETRIES; a second MSG400101 raises."""
+    sleep = AsyncMock()
+    monkeypatch.setattr(connection_module.asyncio, "sleep", sleep)
+    conn, _ = _connection(MagicMock(status=200))
+    send = AsyncMock(side_effect=responses)
+    conn._Connection__send_api_request = send
+    request = conn.api_request("POST", "remoteServices/doorLock/v4", needs_keys=False)
+
+    if isinstance(outcome, Exception):
+        with pytest.raises(type(outcome)):
+            await request
+    else:
+        assert await request == outcome
+
+    assert send.await_count == sends
+    sleep.assert_awaited_once_with(REQUEST_IN_PROGRESS_RETRY_SECONDS)
+
+
+def test_request_in_progress_is_a_mazda_exception() -> None:
+    """Entity platforms catch MazdaException, so this surfaces as a HomeAssistantError."""
+    assert issubclass(MazdaRequestInProgressException, MazdaException)
+
+
+@pytest.mark.parametrize(
+    ("command", "controller_method", "getter", "expected"),
+    [
+        ("lock_doors", "door_lock", "get_assumed_lock_state", True),
+        ("unlock_doors", "door_unlock", "get_assumed_lock_state", False),
+        ("turn_on_hvac", "hvac_on", "get_assumed_hvac_mode", True),
+        ("turn_off_hvac", "hvac_off", "get_assumed_hvac_mode", False),
+    ],
+)
+async def test_assumed_value_saved_only_when_command_accepted(
+    command, controller_method, getter, expected
+) -> None:
+    """A rejected command leaves no assumed value; an accepted one sets it."""
+    client = _make_client()
+    send = getattr(client.controller, controller_method)
+    send.side_effect = MazdaRequestInProgressException("in progress")
+
+    with pytest.raises(MazdaRequestInProgressException):
+        await getattr(client, command)(VEHICLE_ID)
+    assert getattr(client, getter)(VEHICLE_ID) is None
+
+    send.side_effect = None
+    await getattr(client, command)(VEHICLE_ID)
+    assert getattr(client, getter)(VEHICLE_ID) is expected
+
+
+async def test_assumed_hvac_setting_saved_only_when_accepted() -> None:
+    """set_hvac_setting stores the assumed setting only after Mazda accepts it."""
+    client = _make_client()
+    client.controller.set_hvac_setting.side_effect = MazdaException("rejected")
+
+    with pytest.raises(MazdaException):
+        await client.set_hvac_setting(VEHICLE_ID, 21.0, "C", True, False)
+    assert client.get_assumed_hvac_setting(VEHICLE_ID) is None
+
+    client.controller.set_hvac_setting.side_effect = None
+    await client.set_hvac_setting(VEHICLE_ID, 21.0, "C", True, False)
+    assert client.get_assumed_hvac_setting(VEHICLE_ID)["temperature"] == 21.0

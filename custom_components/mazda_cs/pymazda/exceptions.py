@@ -46,13 +46,13 @@ class MazdaConnectionException(MazdaException):
     """
 
 
-class MazdaRequestInProgressException(Exception):
-    """Raised when a request fails because another request is already in progress."""
+class MazdaRequestInProgressException(MazdaException):
+    """Raised when a remote command is rejected because another is still running.
 
-    def __init__(self, status):
-        """Initialize exception."""
-        super().__init__(status)
-        self.status = status
+    Mazda answers MSG400101 while it waits for the vehicle to respond to an
+    earlier command. A MazdaException so entity platforms surface it as a
+    HomeAssistantError.
+    """
 
 
 class MazdaSessionExpiredException(Exception):

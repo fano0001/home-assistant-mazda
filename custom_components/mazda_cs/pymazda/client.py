@@ -529,15 +529,18 @@ class Client:  # noqa: D101
         )  # default: 10 flashes
         await self.controller.flash_lights(vehicle_id, car_finder_parameter)
 
+    # Assumed values (lock, HVAC) are saved only once Mazda accepts the command:
+    # a rejected command (e.g. MSG400101) never reaches the car, so nothing
+    # would ever arrive to correct it.
     async def unlock_doors(self, vehicle_id):  # noqa: D102
-        self.__save_assumed_value(vehicle_id, "lock_state", False)
-
         await self.controller.door_unlock(vehicle_id)
 
-    async def lock_doors(self, vehicle_id):  # noqa: D102
-        self.__save_assumed_value(vehicle_id, "lock_state", True)
+        self.__save_assumed_value(vehicle_id, "lock_state", False)
 
+    async def lock_doors(self, vehicle_id):  # noqa: D102
         await self.controller.door_lock(vehicle_id)
+
+        self.__save_assumed_value(vehicle_id, "lock_state", True)
 
     async def start_engine(self, vehicle_id):  # noqa: D102
         await self.controller.engine_start(vehicle_id)
@@ -581,6 +584,10 @@ class Client:  # noqa: D101
     async def set_hvac_setting(  # noqa: D102
         self, vehicle_id, temperature, temperature_unit, front_defroster, rear_defroster
     ):
+        await self.controller.set_hvac_setting(
+            vehicle_id, temperature, temperature_unit, front_defroster, rear_defroster
+        )
+
         self.__save_assumed_value(
             vehicle_id,
             "hvac_setting",
@@ -592,19 +599,15 @@ class Client:  # noqa: D101
             },
         )
 
-        await self.controller.set_hvac_setting(
-            vehicle_id, temperature, temperature_unit, front_defroster, rear_defroster
-        )
-
     async def turn_on_hvac(self, vehicle_id):  # noqa: D102
-        self.__save_assumed_value(vehicle_id, "hvac_mode", True)
-
         await self.controller.hvac_on(vehicle_id)
 
-    async def turn_off_hvac(self, vehicle_id):  # noqa: D102
-        self.__save_assumed_value(vehicle_id, "hvac_mode", False)
+        self.__save_assumed_value(vehicle_id, "hvac_mode", True)
 
+    async def turn_off_hvac(self, vehicle_id):  # noqa: D102
         await self.controller.hvac_off(vehicle_id)
+
+        self.__save_assumed_value(vehicle_id, "hvac_mode", False)
 
     async def refresh_vehicle_status(self, vehicle_id):  # noqa: D102
         await self.controller.refresh_vehicle_status(vehicle_id)

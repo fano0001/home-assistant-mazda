@@ -142,6 +142,12 @@ _TIMEOUT = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT_SECONDS)
 # three sends instead of five.
 MAX_RETRIES = 2
 
+# MSG400101 ("another remote command is still running") gets one re-send after
+# this wait, outside the MAX_RETRIES budget. A responsive car answers in a few
+# seconds, so a command stacked right behind another still runs, only late; an
+# unresponsive one keeps Mazda busy for ~2 minutes, so the re-send fails fast.
+REQUEST_IN_PROGRESS_RETRY_SECONDS = 15
+
 _LOG_REDACT_KEYS = {
     "vin",
     "internalVin",
@@ -367,6 +373,7 @@ class Connection:
         needs_keys=True,
         needs_auth=False,
         num_retries=0,
+        in_progress_resent=False,
     ):
         if num_retries > MAX_RETRIES:
             raise MazdaException("Request exceeded max number of retries")
@@ -402,6 +409,7 @@ class Connection:
                 needs_keys,
                 needs_auth,
                 num_retries + 1,
+                in_progress_resent=in_progress_resent,
             )
         except MazdaTokenExpiredException:
             self.logger.info(
@@ -416,6 +424,28 @@ class Connection:
                 needs_keys,
                 needs_auth,
                 num_retries + 1,
+                in_progress_resent=in_progress_resent,
+            )
+        except MazdaRequestInProgressException:
+            # Only remote commands get this. The rejected send never reached
+            # the car, so the re-send is its first delivery, not a repeat.
+            if in_progress_resent:
+                raise
+            self.logger.info(
+                "Another remote command is still running on the vehicle; "
+                "re-sending once in %d s.",
+                REQUEST_IN_PROGRESS_RETRY_SECONDS,
+            )
+            await asyncio.sleep(REQUEST_IN_PROGRESS_RETRY_SECONDS)
+            return await self.__api_request_retry(
+                method,
+                uri,
+                query_dict,
+                body_dict,
+                needs_keys,
+                needs_auth,
+                num_retries,
+                in_progress_resent=True,
             )
         except MazdaSessionExpiredException as ex:
             # Legacy (Kintaro) connections never attach, so re-attaching and
@@ -441,20 +471,7 @@ class Connection:
                 needs_keys,
                 needs_auth,
                 num_retries + 1,
-            )
-        except MazdaRequestInProgressException:
-            self.logger.info(
-                "Request failed because another request was already in progress. Waiting 30 seconds and trying again."
-            )
-            await asyncio.sleep(30)
-            return await self.__api_request_retry(
-                method,
-                uri,
-                query_dict,
-                body_dict,
-                needs_keys,
-                needs_auth,
-                num_retries + 1,
+                in_progress_resent=in_progress_resent,
             )
 
     async def __send_api_request(
@@ -585,8 +602,15 @@ class Connection:
             response_json.get("errorCode") == 920000
             and response_json.get("extraCode") == "MSG400101"
         ):
+            # Only remote commands get this: Mazda is still waiting (up to
+            # about 2 minutes) for the vehicle to answer another command, and
+            # this one was rejected without reaching the car. Re-sent once
+            # (see REQUEST_IN_PROGRESS_RETRY_SECONDS); this message is shown
+            # if that re-send is rejected too.
             raise MazdaRequestInProgressException(
-                "Request already in progress, please wait and try again"
+                "Another remote command is still running on the vehicle. Mazda "
+                "waits up to about 2 minutes for the vehicle to respond; try "
+                "again after that."
             )
         elif (
             response_json.get("errorCode") == 920000
