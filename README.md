@@ -60,13 +60,13 @@ Instructions for the original Mazda OAuth Helper Chrome extension are [available
 - Start the authentication process in Home Assistant and choose **Automated sign-in (browser extension)**
 
 ## Manual Authentication
-> No extension is required, but the process is not intuitive. These steps are written for Chrome and Edge; other browsers may word the console message differently. Look for the a message containing `msauth://`.
+> No extension is required, but the process is not intuitive. These steps are written for Chrome and Edge; other browsers may word the console message differently. Look for a message containing `msauth://`.
 
 1. Start the integration (or reauthentication), select your region, and choose **Manual sign-in (copy from the browser console)**.
 2. Open the sign-in link from the form. If no sign-in page loads at all, clear any mazda.com cookies from your browser first.
 3. Complete the Mazda sign-in form and click **LOGIN**. After clicking the button, **no new page loads and the browser appears to do nothing**. That is expected.
 4. Open the browser's developer tools (`F12`, or `⌥⌘I` on a Mac) in that same tab and open the **Console** tab.
-5. Find a similar to the below (exact wording may vary by browser):
+5. Find a line similar to the one below (exact wording may vary by browser):
    ```
    Failed to launch 'msauth://com.interrait.mymazda/…?state=…&code=…' because the scheme does not have a registered handler.
    ```
@@ -91,7 +91,7 @@ Push notification events allow the integration to receive real-time updates from
 
 ## How it works
 
-When enabled, the integration registers with the andoid app's notification service via Google. Push notifications are then sent to your Home Assistant, such as:
+When enabled, the integration registers with the Android app's notification service via Google. Push notifications are then sent to your Home Assistant, such as:
 
 - A remote command (lock, unlock, start engine, etc.) success and failure
 - A door being opened or left unlocked
@@ -121,7 +121,7 @@ Optional entities are turned on or off via **Devices & Services → Mazda Connec
 
 ### Example Automations YAML
 
-Example yaml for sending Home Assistant notifications can be found in the example folder [HERE](https://github.com/fano0001/home-assistant-mazda/blob/v2.2.0-push/examples/mazda_cs_push_events.md).
+Example yaml for sending Home Assistant notifications can be found in the example folder [HERE](https://github.com/fano0001/home-assistant-mazda/blob/main/examples/mazda_cs_push_events.md).
 
 ## Known limitations
 
@@ -133,7 +133,7 @@ If two accounts are used (primary + secondary driver):
 - The **secondary driver does not** receive push notification events for actions triggered by the primary driver.
 
 # mazda_cs_remote_service_result Event Deprecation
-The previous mazda_cs_remote_service_result events are removed and have been superseded by the above mazda_cs_push events. Please [migrate automations](https://github.com/fano0001/home-assistant-mazda/blob/v2.2.0-push/examples/mazda_cs_push_events.md).
+The previous mazda_cs_remote_service_result events are removed and have been superseded by the above mazda_cs_push events. Please [migrate automations](https://github.com/fano0001/home-assistant-mazda/blob/main/examples/mazda_cs_push_events.md).
 
 # FAQ
 
@@ -153,7 +153,7 @@ The vehicle sends an update to Mazda when:
 * A few minutes after the engine is stopped/powered off (door, lock, and alert status notifications).
 * When vehicle status alerts are triggered
 
-**EVs / PHEVs:** Battery and climate imformation can be updated on demand via 'Pull to Refresh' in the official app or the 'Refresh Vehicle Status' button in this integration.
+**EVs / PHEVs:** Battery and climate information can be updated on demand via 'Pull to Refresh' in the official app or the 'Refresh Vehicle Status' button in this integration.
 
 ### Vehicle Status **does not update**
 * When the engine is on

@@ -38,7 +38,6 @@
 | **select** | `flash_light_count` | Flash light count | `hasFlashLight` |
 | **select** | `vehicle_image` | Vehicle image | MyMazda vehicle images option (default off); options are the MyMazda home-screen images for the model |
 | **image** | `vehicle_image` | Vehicle image | MyMazda vehicle images option (default off); shows the image picked in the select; image list fetched when the integration loads |
-| **switch** | `push_notification_events` | Push notification events |  |
 | **button** | `start_engine` | Start engine | `hasRemoteStart` |
 | **button** | `stop_engine` | Stop engine | `hasRemoteStart` |
 | **button** | `turn_on_hazard_lights` | Turn on hazard lights | `hasFlashLight` |
@@ -55,7 +54,7 @@
 | **sensor** | `drive1_fuel_consumption` | Drive 1 fuel consumption | `region != "MNAO"` |
 | **sensor** | `drive1_fuel_efficiency_mpg` | Drive 1 fuel efficiency (MPG) | `region == "MNAO"` |
 | **sensor** | `drive1_fuel_consumption_gal100mi` | Drive 1 fuel consumption (gal/100mi) | `region == "MNAO"` |
-| **sensor** | `dr_oil_deteriorate_level` | Oil health |  |
+| **sensor** | `dr_oil_deteriorate_level` | Oil life remaining |  |
 | **sensor** | `next_oil_change_distance` | Next oil change distance |  |
 | **binary_sensor** | `fuel_lid` | Fuel lid |  |
 | **binary_sensor** | `oil_level_warning` | Oil level warning |  |
