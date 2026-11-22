@@ -7,7 +7,10 @@ client-layer parsing of the image list, plus the image/select entity pair.
 
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
+
 from homeassistant.core import HomeAssistant, State
+from homeassistant.helpers import httpx_client
 import pytest
 from pytest_homeassistant_custom_component.common import mock_restore_cache
 
@@ -303,6 +306,53 @@ async def test_image_with_unknown_bytes_is_rejected(hass: HomeAssistant) -> None
     image._fetch_url = AsyncMock(return_value=response)
 
     assert await image.async_image() is None
+
+
+async def test_image_fetch_verifies_tls(hass: HomeAssistant) -> None:
+    """The image client checks certificates (ImageEntity defaults to no check)."""
+    image, _, _ = await _add_entities(hass, [IMAGES])
+
+    assert image._client is httpx_client.get_async_client(hass, verify_ssl=True)
+
+
+async def test_non_https_image_url_is_not_fetched(hass: HomeAssistant) -> None:
+    """A plain-http URL from the API is refused before any request."""
+    image, _, _ = await _add_entities(
+        hass, [[{"name": "X=01.jpg", "url": "http://img.test/01.jpg"}]]
+    )
+    image._client = MagicMock(get=AsyncMock())
+
+    assert await image.async_image() is None
+    image._client.get.assert_not_called()
+
+
+async def test_image_fetch_does_not_follow_redirects(hass: HomeAssistant) -> None:
+    """A redirect is treated as an error, not followed."""
+    image, _, _ = await _add_entities(hass, [IMAGES])
+    redirect = httpx.Response(
+        302,
+        headers={"location": "http://192.168.1.1/"},
+        request=httpx.Request("GET", IMAGES[0]["url"]),
+    )
+    image._client = MagicMock(get=AsyncMock(return_value=redirect))
+
+    assert await image.async_image() is None
+    assert image._client.get.await_count == 1
+    assert not image._client.get.call_args.kwargs.get("follow_redirects")
+
+
+async def test_image_fetch_returns_bytes_on_200(hass: HomeAssistant) -> None:
+    """A direct 200 from the image host is loaded."""
+    image, _, _ = await _add_entities(hass, [IMAGES])
+    ok = httpx.Response(
+        200,
+        content=JPEG_BYTES,
+        headers={"content-type": "application/octet-stream"},
+        request=httpx.Request("GET", IMAGES[0]["url"]),
+    )
+    image._client = MagicMock(get=AsyncMock(return_value=ok))
+
+    assert await image.async_image() == JPEG_BYTES
 
 
 def _config_entry(options: dict) -> MagicMock:

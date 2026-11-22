@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.image import Image, ImageEntity, infer_image_type
+import httpx
+
+from homeassistant.components.image import (
+    GET_IMAGE_TIMEOUT,
+    Image,
+    ImageEntity,
+    infer_image_type,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -55,7 +62,8 @@ class MazdaVehicleImage(MazdaEntity, ImageEntity):
     ) -> None:
         """Initialize the vehicle image."""
         MazdaEntity.__init__(self, client, coordinator, index)
-        ImageEntity.__init__(self, hass)
+        # ImageEntity defaults to verify_ssl=False; Mazda's S3 host has a valid cert.
+        ImageEntity.__init__(self, hass, verify_ssl=True)
         self.image_coordinator = image_coordinator
         self._attr_unique_id = f"{self.vin}_vehicle_image"
         self._attr_image_url = None
@@ -98,6 +106,30 @@ class MazdaVehicleImage(MazdaEntity, ImageEntity):
             self._attr_image_url = url
             self._attr_image_last_updated = dt_util.utcnow() if url else None
             self._cached_image = None
+
+    async def _fetch_url(self, url: str) -> httpx.Response | None:
+        """Fetch the image over https only, without following redirects.
+
+        The URL comes from Mazda's API. Observed images are served directly
+        (200, no redirect) from s3-eu-central-1.amazonaws.com, so refusing
+        other schemes and redirects costs nothing and keeps the fetch on the
+        host the API named. A 3xx fails ``raise_for_status``.
+        """
+        if httpx.URL(url).scheme != "https":
+            _LOGGER.error("%s: Refusing non-https image URL %s", self.entity_id, url)
+            return None
+        try:
+            response = await self._client.get(url, timeout=GET_IMAGE_TIMEOUT)
+            response.raise_for_status()
+        except httpx.TimeoutException:
+            _LOGGER.error("%s: Timeout getting image from %s", self.entity_id, url)
+            return None
+        except (httpx.RequestError, httpx.HTTPStatusError) as err:
+            _LOGGER.error(
+                "%s: Error getting image from %s: %s", self.entity_id, url, err
+            )
+            return None
+        return response
 
     async def _async_load_image_from_url(self, url: str) -> Image | None:
         """Load the image, taking its type from the bytes.
