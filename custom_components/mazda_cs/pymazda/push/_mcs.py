@@ -370,12 +370,14 @@ class McsClient:
 
         if isinstance(msg, DataMessageStanza):
             data = self._parse_data_message(msg)
-            self._persistent_ids.append(msg.persistent_id)
-            await self._send_selective_ack(msg.persistent_id)
+            # Deliver before the ack: the ack raises if the link has ended, and
+            # the next login reports every recorded ID as received.
             try:
                 self._on_message(data)
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("MCS: exception in on_message callback")
+            self._persistent_ids.append(msg.persistent_id)
+            await self._send_selective_ack(msg.persistent_id)
             return
 
         if isinstance(msg, HeartbeatPing):

@@ -1,4 +1,4 @@
-"""Tests for MCS wire-format limits, reconnect backoff and dead-link handling."""
+"""Tests for MCS wire-format limits, push delivery, reconnects and dead links."""
 
 import asyncio
 import time
@@ -8,6 +8,7 @@ import pytest
 
 from custom_components.mazda_cs.pymazda.push import _mcs
 from custom_components.mazda_cs.pymazda.push._mcs import (
+    DataMessageStanza,
     HeartbeatAck,
     LoginResponse,
     McsClient,
@@ -174,3 +175,54 @@ async def test_connect_resets_silence_clock(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert await client._connect()
     assert time.monotonic() - client._last_message_time < 5
+
+
+def _push() -> DataMessageStanza:
+    msg = DataMessageStanza(category="com.interrait.mymazda", persistent_id="PID1")
+    msg.app_data.add(key="a", value="001")
+    return msg
+
+
+async def test_push_is_delivered_before_it_is_acked() -> None:
+    """The callback runs first, then the ID is recorded, then acked."""
+    seen: list = []
+    client = McsClient(
+        "1234",
+        "token",
+        on_message=lambda data: seen.append(
+            ("delivered", data, list(client._persistent_ids))
+        ),
+    )
+
+    async def ack(persistent_id: str) -> None:
+        seen.append(("acked", persistent_id, list(client._persistent_ids)))
+
+    client._send_selective_ack = ack
+
+    await client._dispatch(_push())
+
+    assert seen == [("delivered", {"a": "001"}, []), ("acked", "PID1", ["PID1"])]
+
+
+async def test_push_is_delivered_if_the_link_ends_before_the_ack() -> None:
+    """The next login reports the push as received, so it must not be dropped."""
+    on_message = MagicMock()
+    client = McsClient("1234", "token", on_message=on_message)
+    client._send = AsyncMock(side_effect=ConnectionResetError("Connection lost"))
+
+    with pytest.raises(ConnectionResetError):
+        await client._dispatch(_push())
+
+    on_message.assert_called_once_with({"a": "001"})
+    assert client._persistent_ids == ["PID1"]
+
+
+async def test_failing_callback_still_acks() -> None:
+    """A push our callback cannot handle is not sent again."""
+    client = McsClient("1234", "token", on_message=MagicMock(side_effect=ValueError))
+    client._send = AsyncMock()
+
+    await client._dispatch(_push())
+
+    client._send.assert_awaited_once()
+    assert client._persistent_ids == ["PID1"]
