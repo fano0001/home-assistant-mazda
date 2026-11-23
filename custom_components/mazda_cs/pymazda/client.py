@@ -732,6 +732,16 @@ class Client:  # noqa: D101
         cached_state["api_" + key] = value
         cached_state["api_" + key + "_timestamp"] = timestamp_value
 
+    def clear_assumed_values(self, vehicle_id):
+        """Drop every assumed value for a vehicle so its API values show again.
+
+        Called when Mazda reports a remote command failed. The car did not act
+        on it, so the value assumed when the command was accepted is wrong.
+        """
+        cached_state = self.__get_cached_state(vehicle_id)
+        for key in [k for k in cached_state if k.startswith("assumed_")]:
+            del cached_state[key]
+
     def __get_cached_state(self, vehicle_id):
         if vehicle_id not in self._cached_state:
             self._cached_state[vehicle_id] = {}

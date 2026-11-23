@@ -66,6 +66,11 @@ def _summarize_error_body(text: str | None, limit: int = 100) -> str:
     return str(fields) if fields else "(no error fields)"
 
 
+# Remote command result pushes. A result ID ending "_02" means the command
+# failed ("_01" success); "_02" is confirmed live for 001, assumed for 021.
+_REMOTE_RESULT_CODES = frozenset(["001", "021"])
+_FAILED_RESULT_SUFFIX = "_02"
+
 # Action codes documented but not requiring a refresh:
 # "009",   # INBOX_BCALL_HIGH - B-Call high priority
 # "014",   # INBOX_BCALL_LOW - B-Call low priority
@@ -294,6 +299,37 @@ class MazdaFcmListener:
             minutes=6 if self._mcs_connected else 3
         )
 
+    def _clear_assumed_state_on_failure(
+        self, action_code: str, payload: dict[str, Any]
+    ) -> None:
+        """Clear a vehicle's assumed values when Mazda reports a remote command failed.
+
+        The assumed value (e.g. "Locked") is saved once Mazda accepts a command.
+        If the car then never answers, it uploads nothing newer than the press,
+        so the refresh alone would keep showing the assumed value for up to
+        10 minutes. Clearing every assumed value for the vehicle only changes the
+        one still winning: an earlier command that succeeded made the car upload
+        a newer status, so its API value already wins.
+        """
+        if action_code not in _REMOTE_RESULT_CODES or not str(
+            payload.get("r", "")
+        ).endswith(_FAILED_RESULT_SUFFIX):
+            return
+        vin = payload.get("v")
+        vehicle = next(
+            (v for v in self._coordinator.data or [] if v.get("vin") == vin), None
+        )
+        if vehicle is None:
+            _LOGGER.debug(
+                "Failure push for unknown vehicle %s; assumed state left as is",
+                tail(vin),
+            )
+            return
+        self._entry.runtime_data.client.clear_assumed_values(vehicle["id"])
+        _LOGGER.debug(
+            "Remote command failed for vehicle %s; cleared assumed state", tail(vin)
+        )
+
     def _on_notification(self, payload: dict[str, Any]) -> None:
         """Handle an incoming FCM push notification.
 
@@ -323,6 +359,9 @@ class MazdaFcmListener:
                 "data": payload,
             },
         )
+
+        # Before the refresh, so the refresh shows the car's real state.
+        self._clear_assumed_state_on_failure(action_code, payload)
 
         if action_code in _REFRESH_CODES:
             _LOGGER.debug(
