@@ -238,6 +238,42 @@ async def test_maintenance_fields_absent() -> None:
     assert status["maintenanceInfo"]["nextMaintenanceDistanceKm"] is None
 
 
+@pytest.mark.parametrize("result_data", [[], None, [{}]])
+async def test_ev_status_without_a_report(result_data) -> None:
+    """A vehicle with no EV report yet is unknown and does not fail the poll."""
+    client = _make_client()
+    client.controller.get_ev_vehicle_status.return_value = {"resultData": result_data}
+
+    ev_status = await client.get_ev_vehicle_status(VEHICLE_ID)
+
+    assert ev_status["lastUpdatedTimestamp"] is None
+    assert ev_status["chargeInfo"]["batteryLevelPercentage"] is None
+    assert ev_status["chargeInfo"]["pluggedIn"] is None
+    assert ev_status["chargeInfo"]["charging"] is None
+    assert ev_status["hvacInfo"]["interiorTemperatureCelsius"] is None
+    assert client.get_assumed_hvac_mode(VEHICLE_ID) is None
+
+
+@pytest.mark.parametrize(
+    ("fitting", "status", "plugged_in", "charging"),
+    [(1, 6, True, True), (1, 0, True, False), (0, 0, False, False)],
+)
+async def test_ev_charge_flags(fitting, status, plugged_in, charging) -> None:
+    """With a charge report the flags stay plain on/off."""
+    client = _make_client()
+    charge_info = {"ChargerConnectorFitting": fitting, "ChargeStatusSub": status}
+    client.controller.get_ev_vehicle_status.return_value = {
+        "resultData": [
+            {"PlusBInformation": {"VehicleInfo": {"ChargeInfo": charge_info}}}
+        ]
+    }
+
+    ev_status = await client.get_ev_vehicle_status(VEHICLE_ID)
+
+    assert ev_status["chargeInfo"]["pluggedIn"] is plugged_in
+    assert ev_status["chargeInfo"]["charging"] is charging
+
+
 # --- Undocumented-field watch -------------------------------------------------
 #
 # Pw.PwPos*, Door.SrSlideSignal/SrTiltSignal and DriveInformation.Drv1AmntFuel have

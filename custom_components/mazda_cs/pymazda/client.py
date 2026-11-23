@@ -469,7 +469,7 @@ class Client:  # noqa: D101
             vehicle_id
         )
 
-        result_data = ev_vehicle_status_response.get("resultData")[0]
+        result_data = (ev_vehicle_status_response.get("resultData") or [{}])[0]
         vehicle_info = result_data.get("PlusBInformation", {}).get("VehicleInfo", {})
         charge_info = vehicle_info.get("ChargeInfo", {})
         hvac_info = vehicle_info.get("RemoteHvacInfo", {})
@@ -480,8 +480,13 @@ class Client:  # noqa: D101
                 "batteryLevelPercentage": charge_info.get("SmaphSOC"),
                 "drivingRangeKm": charge_info.get("SmaphRemDrvDistKm"),
                 "drivingRangeBevKm": charge_info.get("BatRemDrvDistKm"),
-                "pluggedIn": charge_info.get("ChargerConnectorFitting") == 1,
-                "charging": charge_info.get("ChargeStatusSub") == 6,
+                # Unknown, not off, when the car has sent no charge report
+                "pluggedIn": charge_info.get("ChargerConnectorFitting") == 1
+                if charge_info
+                else None,
+                "charging": charge_info.get("ChargeStatusSub") == 6
+                if charge_info
+                else None,
                 "basicChargeTimeMinutes": charge_info.get("MaxChargeMinuteAC"),
                 "quickChargeTimeMinutes": charge_info.get("MaxChargeMinuteQBC"),
                 "batteryHeaterAuto": charge_info.get("CstmzStatBatHeatAutoSW") == 1,
