@@ -162,6 +162,33 @@ async def test_ev_status_without_occurrence_date_does_not_raise() -> None:
     assert client.get_assumed_hvac_mode(VEHICLE_ID) is None
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (21.5, 21.5),
+        (0.0, 0.0),
+        (-40, -40),
+        (62.3, 62.3),
+        (-40.1, None),
+        (62.4, None),
+        (127.0, None),
+        (None, None),
+    ],
+)
+async def test_ev_cabin_temperature_range(raw, expected) -> None:
+    """Missing or out-of-range cabin temperatures are no reading, like in the app."""
+    client = _make_client()
+    client.controller.get_ev_vehicle_status.return_value = {
+        "resultData": [
+            {"PlusBInformation": {"VehicleInfo": {"RemoteHvacInfo": {"InCarTeDC": raw}}}}
+        ]
+    }
+
+    ev_status = await client.get_ev_vehicle_status(VEHICLE_ID)
+
+    assert ev_status["hvacInfo"]["interiorTemperatureCelsius"] == expected
+
+
 # --- Undocumented-field watch -------------------------------------------------
 #
 # Pw.PwPos*, Door.SrSlideSignal/SrTiltSignal and DriveInformation.Drv1AmntFuel have

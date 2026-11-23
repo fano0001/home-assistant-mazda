@@ -118,6 +118,17 @@ def _build_tpms_timestamp(tpms: dict):
         return None
 
 
+def _cabin_temperature(value):
+    """Return the cabin temperature in °C, or None if the car has no reading.
+
+    Same range as the app (SDMRemoteHvacInfo.getInCarTeDC): below -40 or above
+    62.3 is not a temperature.
+    """
+    if value is None or not -40 <= value <= 62.3:
+        return None
+    return value
+
+
 class Client:  # noqa: D101
     def __init__(  # noqa: D107
         self,
@@ -477,7 +488,9 @@ class Client:  # noqa: D101
                 "hvacOn": hvac_info.get("HVAC") == 1,
                 "frontDefroster": hvac_info.get("FrontDefroster") == 1,
                 "rearDefroster": hvac_info.get("RearDefogger") == 1,
-                "interiorTemperatureCelsius": hvac_info.get("InCarTeDC"),
+                "interiorTemperatureCelsius": _cabin_temperature(
+                    hvac_info.get("InCarTeDC")
+                ),
             },
         }
 
