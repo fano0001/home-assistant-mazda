@@ -213,7 +213,8 @@ BINARY_SENSOR_ENTITIES = [
         icon="mdi:power-sleep",
         entity_category=EntityCategory.DIAGNOSTIC,
         is_supported=lambda data: data["status"]["vehicleCondition"]["pwSavMode"] is not None and data["status"]["vehicleCondition"]["pwSavMode"] != 2,
-        value_fn=lambda data: bool(data["status"]["vehicleCondition"]["pwSavMode"]),
+        # 1 is the only "on" value; 2 means not supported (see is_supported).
+        value_fn=lambda data: data["status"]["vehicleCondition"]["pwSavMode"] == 1,
     ),
     MazdaBinarySensorEntityDescription(
         key="oil_level_warning",
