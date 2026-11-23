@@ -15,6 +15,7 @@ from typing import Any
 
 from aiohttp import ClientSession, ClientTimeout
 
+from ..connection import tail
 from ._proto.android_checkin_pb2 import (
     DEVICE_ANDROID_OS,
     AndroidCheckinProto,
@@ -334,7 +335,7 @@ async def gcm_check_in(
                     acir = AndroidCheckinResponse()
                     acir.ParseFromString(raw)
                     result = MessageToDict(acir)
-                    _LOGGER.debug("GCM check-in succeeded: androidId=%s", result.get("androidId"))
+                    _LOGGER.debug("GCM check-in succeeded: androidId=%s", tail(result.get("androidId")))
                     return result
                 text = await resp.text()
                 _LOGGER.warning(
@@ -565,7 +566,7 @@ async def checkin_and_register(
     if fis_creds:
         _LOGGER.info(
             "FCM token source: FIS path (android_id=%s token_prefix=%s...)",
-            fis_creds["android_id"],
+            tail(fis_creds["android_id"]),
             fis_creds["token"][:30],
         )
         return fis_creds
@@ -582,7 +583,7 @@ async def checkin_and_register(
 
     _LOGGER.info(
         "FCM token source: plain GCM register3 fallback (android_id=%s token_prefix=%s...)",
-        android_id,
+        tail(android_id),
         token[:30],
     )
     return {

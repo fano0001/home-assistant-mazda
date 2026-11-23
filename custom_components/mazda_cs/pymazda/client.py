@@ -3,6 +3,7 @@ import datetime
 import json
 import logging
 
+from .connection import tail
 from .controller import Controller
 from .exceptions import MazdaConfigException
 
@@ -94,7 +95,7 @@ def _warn_undocumented_fields(vehicle_id, alert_info, remote_info):
             "Vehicle %s: undocumented field %s. %s reported %r (expected 0) at %s. "
             "This value has no known usage - please open an issue to report it, "
             "along with relevant vehicle information, at %s",
-            vehicle_id,
+            tail(vehicle_id),
             group_path,
             key,
             value,
@@ -444,7 +445,7 @@ class Client:  # noqa: D101
             _LOGGER.debug(
                 "Vehicle %s: alert info has no usable OccurrenceDate; "
                 "leaving cached lock state untouched",
-                vehicle_id,
+                tail(vehicle_id),
             )
 
         return vehicle_status
@@ -492,7 +493,7 @@ class Client:  # noqa: D101
             _LOGGER.debug(
                 "Vehicle %s: EV status has no usable OccurrenceDate; "
                 "leaving cached hvac mode untouched",
-                vehicle_id,
+                tail(vehicle_id),
             )
 
         return ev_vehicle_status

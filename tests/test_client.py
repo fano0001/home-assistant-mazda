@@ -191,7 +191,9 @@ def test_warn_undocumented_fields_warns_on_non_zero(
     record = caplog.records[0]
     assert record.levelname == "WARNING"
     assert expected_key in record.getMessage()
-    assert str(VEHICLE_ID) in record.getMessage()
+    # Only the ID's tail: the message asks people to post it in a public issue.
+    assert "…2345" in record.getMessage()
+    assert str(VEHICLE_ID) not in record.getMessage()
 
 
 @pytest.mark.parametrize(

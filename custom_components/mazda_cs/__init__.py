@@ -158,14 +158,14 @@ async def _check_service_permissions(
     status_alert_available = True
     health_report_available = True
     for vehicle in vehicles:
+        vin_tail = tail(vehicle["vin"])
         try:
             available = await client.get_available_service(vehicle["id"])
         except Exception as ex:  # noqa: BLE001
             _LOGGER.warning(
-                "getAvailableService(%s) failed: %s", vehicle["id"], ex
+                "getAvailableService for vehicle %s failed: %s", vin_tail, ex
             )
             continue
-        vin_tail = tail(vehicle["vin"])
         _LOGGER.debug("Available services for vehicle %s: %s", vin_tail, available)
         if available.get("vehicleStatusAlert") != 1:
             status_alert_available = False

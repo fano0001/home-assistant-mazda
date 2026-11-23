@@ -161,20 +161,45 @@ _LOG_REDACT_KEYS = {
     "contactMailAddress",
     "custId",
     "usherId",
-    "internalUserId",
+    "firstName",
+    "familyName",
+    # getUserInfo: almost all contact details, so everything inside is masked.
+    "userInfo",
 }
+
+# Account IDs shown only by their tail. getCvUserIds repeats custId and usherId
+# as rucId and rccId.
+_LOG_TAIL_KEYS = {"rucId", "rccId", "internalUserId"}
+
+
+def _mask(data):
+    """Mask every value that is not empty, keeping key names.
+
+    Empty values stay visible: a log should still show what Mazda left blank.
+    """
+    if isinstance(data, dict):
+        return {k: _mask(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_mask(item) for item in data]
+    return data if data is None or data == "" else "**REDACTED**"
 
 
 def _redact(data):
     """Recursively redact sensitive keys from a dict/list before logging."""
     if isinstance(data, dict):
-        return {
-            k: "**REDACTED**" if k in _LOG_REDACT_KEYS else _redact(v)
-            for k, v in data.items()
-        }
+        return {k: _redact_item(k, v) for k, v in data.items()}
     if isinstance(data, list):
         return [_redact(item) for item in data]
     return data
+
+
+def _redact_item(key, value):
+    """Redact one dict value according to its key."""
+    if key in _LOG_REDACT_KEYS:
+        return _mask(value)
+    if key in _LOG_TAIL_KEYS:
+        return tail(value)
+    return _redact(value)
 
 
 def tail(value, keep: int = 4) -> str:
