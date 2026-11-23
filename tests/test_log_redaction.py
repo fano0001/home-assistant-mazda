@@ -10,10 +10,10 @@ from custom_components.mazda_cs import (
     _enable_all_notify_settings,
 )
 from custom_components.mazda_cs.diagnostics import TO_REDACT_INFO
-from custom_components.mazda_cs.fcm_listener import _summarize_error_body
 from custom_components.mazda_cs.pymazda.connection import Connection, _redact, tail
 from custom_components.mazda_cs.pymazda.exceptions import MazdaException
 from custom_components.mazda_cs.pymazda.push import _register
+from custom_components.mazda_cs.pymazda.push._conductor import summarize_error_body
 
 VIN = "JM1TESTVIN0001234"
 
@@ -135,7 +135,7 @@ def test_tail(value, expected) -> None:
 )
 def test_summarize_error_body(text, expected) -> None:
     """Error bodies keep their error fields and never the encrypted payload."""
-    assert _summarize_error_body(text) == expected
+    assert summarize_error_body(text) == expected
 
 
 async def test_check_version_failure_omits_payload(caplog) -> None:

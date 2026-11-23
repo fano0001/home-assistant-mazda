@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import timedelta
 from typing import Any
@@ -46,25 +45,6 @@ _REFRESH_CODES = frozenset(
         "D002",  # CDT_INBOX_CP_CHARGE_COMPLETED
     ]
 )
-
-# Fields of a Conductor JSON error body that explain a failure without the
-# encrypted payload (which can hold session keys).
-_ERROR_FIELDS = ("state", "code", "errorCode", "extraCode", "error", "message", "msg")
-
-
-def _summarize_error_body(text: str | None, limit: int = 100) -> str:
-    """Return the error fields of a JSON body, or a short prefix of a non-JSON one."""
-    if not text:
-        return "(empty)"
-    try:
-        body = json.loads(text)
-    except ValueError:
-        return text[:limit]
-    if not isinstance(body, dict):
-        return text[:limit]
-    fields = {key: body[key] for key in _ERROR_FIELDS if key in body}
-    return str(fields) if fields else "(no error fields)"
-
 
 # Remote command result pushes. A result ID ending "_02" means the command
 # failed ("_01" success); "_02" is confirmed live for 001, assumed for 021.
@@ -209,7 +189,7 @@ class MazdaFcmListener:
             self._hass.config.language,
             self._hass.config.country,
         )
-        result = await self._client.register_with_conductor(
+        await self._client.register_with_conductor(
             self._region,
             language=resolved.language,
             locale=resolved.locale,
@@ -219,16 +199,6 @@ class MazdaFcmListener:
             partner2_id=effective_partner2_id,
             conductor_device_id=self._conductor_device_id or None,
         )
-        if result:
-            status, text = result
-            if status == 200:
-                _LOGGER.debug("Conductor updateuser succeeded")
-            else:
-                _LOGGER.warning(
-                    "Conductor updateuser returned HTTP %d: %s",
-                    status,
-                    _summarize_error_body(text),
-                )
 
         return self._fcm_token
 

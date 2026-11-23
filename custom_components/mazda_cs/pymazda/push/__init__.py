@@ -32,9 +32,11 @@ from aiohttp import ClientSession
 from ._conductor import (
     CONDUCTOR_CONFIG,
     CONDUCTOR_DEVICE_OS,
+    conductor_accepted,
     default_timezone,
     send_app_init,
     send_update_user,
+    summarize_error_body,
 )
 from ..connection import tail
 from ._mcs import McsClient, MessageCallback
@@ -134,30 +136,29 @@ class MazdaPushClient:
         partner1_id: str | None = None,
         partner2_id: str | None = None,
         conductor_device_id: str | None = None,
-    ) -> tuple[int, str] | None:
+    ) -> None:
         """Register the FCM push token with the StationDM Conductor backend.
 
         Must be called after ``checkin_or_register()`` so that a token is available.
         ``push_token`` defaults to the token returned by ``checkin_or_register()``.
         ``region`` selects the per-region Conductor server URL and app key.
 
-        Returns ``(http_status, response_text)`` on completion, or ``None`` if
-        the region is unknown, the push token or device id is missing, or the
-        request fails.
+        Logs the outcome. A failure does not stop push setup: an earlier
+        registration may still be delivering.
         """
         cfg = CONDUCTOR_CONFIG.get(region)
         if cfg is None:
             _LOGGER.warning("Conductor: unknown region %r — skipping updateuser", region)
-            return None
+            return
 
         token = push_token or (self._credentials or {}).get("token")
         if not token:
             _LOGGER.warning("Conductor: no push token available — skipping updateuser")
-            return None
+            return
 
         if not conductor_device_id:
             _LOGGER.warning("Conductor: no device_id provided — skipping updateuser")
-            return None
+            return
         device_id = conductor_device_id
 
         session = self._get_session()
@@ -172,11 +173,13 @@ class MazdaPushClient:
             )
             # The init body carries the encrypted session keys: log the status only.
             _LOGGER.debug("Conductor init: region=%s status=%d", region, init_status)
-            if init_status != 200:
+            if not conductor_accepted(init_status, init_text):
                 _LOGGER.warning(
-                    "Conductor init failed (HTTP %d) — skipping updateuser", init_status
+                    "Conductor init rejected (HTTP %d) — skipping updateuser: %s",
+                    init_status,
+                    summarize_error_body(init_text),
                 )
-                return init_status, init_text
+                return
 
             status, text = await send_update_user(
                 session,
@@ -197,16 +200,20 @@ class MazdaPushClient:
                 partner1_id=partner1_id,
                 partner2_id=partner2_id,
             )
-            _LOGGER.debug(
-                "Conductor updateuser: region=%s status=%d deviceId=%s",
-                region,
-                status,
-                tail(device_id),
-            )
-            return status, text
+            if conductor_accepted(status, text):
+                _LOGGER.debug(
+                    "Conductor updateuser succeeded: region=%s deviceId=%s",
+                    region,
+                    tail(device_id),
+                )
+            else:
+                _LOGGER.warning(
+                    "Conductor updateuser rejected (HTTP %d): %s",
+                    status,
+                    summarize_error_body(text),
+                )
         except Exception as ex:  # noqa: BLE001
             _LOGGER.warning("Conductor register failed: %s", ex)
-            return None
 
     async def stop(self) -> None:
         """Stop the MCS listener and release resources.

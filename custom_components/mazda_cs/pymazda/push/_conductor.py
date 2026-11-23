@@ -45,6 +45,39 @@ CONDUCTOR_CONFIG: dict[str, dict[str, str]] = {
 
 _TIMEOUT = ClientTimeout(total=15)
 
+# Fields of a Conductor JSON error body that explain a failure without the
+# encrypted payload (which can hold session keys).
+_ERROR_FIELDS = ("state", "code", "errorCode", "extraCode", "error", "message", "msg")
+
+
+def conductor_accepted(status: int, text: str) -> bool:
+    """Return True for HTTP 200 with body state "S", as the SDK does.
+
+    The SDK reads error codes only from HTTP 200 bodies, so a rejection can
+    come with HTTP 200.
+    """
+    if status != 200:
+        return False
+    try:
+        body = json.loads(text)
+    except ValueError:
+        return False
+    return isinstance(body, dict) and str(body.get("state")).upper() == "S"
+
+
+def summarize_error_body(text: str | None, limit: int = 100) -> str:
+    """Return the error fields of a JSON body, or a short prefix of a non-JSON one."""
+    if not text:
+        return "(empty)"
+    try:
+        body = json.loads(text)
+    except ValueError:
+        return text[:limit]
+    if not isinstance(body, dict):
+        return text[:limit]
+    fields = {key: body[key] for key in _ERROR_FIELDS if key in body}
+    return str(fields) if fields else "(no error fields)"
+
 
 def _sha256_hex(data: str) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest().lower()
