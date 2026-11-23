@@ -5,11 +5,13 @@
       "cannot_connect": "[%key:common::config_flow::abort::cannot_connect%]",
       "terms_not_accepted": "Accept the terms of service in the MyMazda app, then add the integration again.",
       "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+      "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]",
       "oauth_error": "Error during OAuth authentication. Please try again.",
       "wrong_account": "Wrong account. Please authenticate with the same account.",
       "oauth_failed": "[%key:common::config_flow::abort::oauth2_failed%]",
       "oauth_timeout": "[%key:common::config_flow::abort::oauth2_timeout%]",
-      "oauth_unauthorized": "[%key:common::config_flow::abort::oauth2_unauthorized%]"
+      "oauth_unauthorized": "[%key:common::config_flow::abort::oauth2_unauthorized%]",
+      "user_rejected_authorize": "[%key:common::config_flow::abort::oauth2_user_rejected_authorize%]"
     },
     "error": {
       "authorize_rejected": "Mazda returned an error instead of a sign-in code, for example because the sign-in was cancelled. Open the sign-in link above and try again.",

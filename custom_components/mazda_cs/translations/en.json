@@ -5,11 +5,13 @@
             "cannot_connect": "Cannot connect to Mazda. Please check your network and try again.",
             "terms_not_accepted": "Accept the terms of service in the MyMazda app, then add the integration again.",
             "reauth_successful": "Re-authentication was successful",
+            "reconfigure_successful": "Reconfiguration was successful",
             "oauth_error": "Error during OAuth authentication. Please try again.",
             "wrong_account": "Wrong account. Please authenticate with the same account.",
             "oauth_failed": "Error while obtaining access token.",
             "oauth_timeout": "Timeout resolving OAuth token.",
-            "oauth_unauthorized": "OAuth authorization error while obtaining access token."
+            "oauth_unauthorized": "OAuth authorization error while obtaining access token.",
+            "user_rejected_authorize": "Account linking rejected: {error}"
         },
         "error": {
             "authorize_rejected": "Mazda returned an error instead of a sign-in code, for example because the sign-in was cancelled. Open the sign-in link above and try again.",

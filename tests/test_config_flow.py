@@ -5,10 +5,15 @@ from unittest.mock import AsyncMock, patch
 
 import jwt
 import pytest
-from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER
+from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    SOURCE_RECONFIGURE,
+    SOURCE_USER,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow
+from homeassistant.helpers.translation import async_get_translations
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from yarl import URL
 
@@ -360,3 +365,61 @@ async def test_internal_id_failure_does_not_block_setup(
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Mazda (driver@example.com)"
     assert "conductor_internal_id" not in result["data"]
+
+
+# ---------------------------------------------------------------------------
+# Abort texts — a reason without a string shows up as its raw key.
+# ---------------------------------------------------------------------------
+
+
+async def _abort_text(hass: HomeAssistant, result: dict) -> str | None:
+    """Return this integration's English text for an abort result."""
+    strings = await async_get_translations(hass, "en", "config", {DOMAIN})
+    return strings.get(f"component.{DOMAIN}.config.abort.{result['reason']}")
+
+
+async def test_reconfigure_abort_has_a_text(
+    hass: HomeAssistant, mock_setup_entry
+) -> None:
+    """Saving the push setting ends in a translated abort."""
+    entry = _entry("MNAO")
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+    )
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"enable_push_notifications": True}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert await _abort_text(hass, result) == "Reconfiguration was successful"
+
+
+async def test_rejected_sign_in_abort_has_a_text(hass: HomeAssistant) -> None:
+    """A sign-in error forwarded by the browser extension ends in a translated abort."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"region": "MNAO"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "auth"}
+    )
+    assert result["type"] is FlowResultType.EXTERNAL_STEP
+
+    await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"state": {}, "error": "access_denied"}
+    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "user_rejected_authorize"
+    text = await _abort_text(hass, result)
+    assert text.format(**result["description_placeholders"]) == (
+        "Account linking rejected: access_denied"
+    )
