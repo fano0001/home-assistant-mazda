@@ -1,4 +1,4 @@
-"""Tests for B2C token-refresh error classification in ``oauth.py``.
+"""Tests for B2C token refresh in ``oauth.py``.
 
 Only a confirmed-permanent JSON error (e.g. ``invalid_grant``) may raise
 ``ConfigEntryAuthFailed`` and start re-authentication; outage-type errors must
@@ -27,10 +27,12 @@ def _b2c_session(body: dict) -> MagicMock:
     return session
 
 
-async def _refresh(hass: HomeAssistant, body: dict) -> None:
+async def _refresh(hass: HomeAssistant, body: dict) -> dict:
     impl = MazdaOAuth2Implementation(hass, "MNAO")
     with patch.object(oauth.aiohttp, "ClientSession", return_value=_b2c_session(body)):
-        await impl.async_refresh_token({"refresh_token": "r", "last_saved_at": 0})
+        return await impl.async_refresh_token(
+            {"access_token": "a", "refresh_token": "r", "last_saved_at": 0}
+        )
 
 
 @pytest.mark.parametrize("error", ["server_error", "temporarily_unavailable"])
@@ -47,3 +49,18 @@ async def test_invalid_grant_forces_reauth(hass: HomeAssistant) -> None:
     """A revoked refresh token is a permanent failure."""
     with pytest.raises(ConfigEntryAuthFailed):
         await _refresh(hass, {"error": "invalid_grant"})
+
+
+@pytest.mark.parametrize(
+    ("extra", "expected"), [({"refresh_token": "r2"}, "r2"), ({}, "r")]
+)
+async def test_refresh_keeps_refresh_token_when_omitted(
+    hass: HomeAssistant, extra: dict, expected: str
+) -> None:
+    """A new refresh token replaces the stored one; without one it is kept."""
+    token = await _refresh(hass, {"access_token": "a2", "expires_in": 7200, **extra})
+
+    assert token["refresh_token"] == expected
+    assert token["access_token"] == "a2"
+    assert token["last_saved_at"] > 0
+    assert token["expires_at"] > token["last_saved_at"]

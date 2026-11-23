@@ -176,4 +176,5 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             new_token.get("expires_in"),
             bool(new_token.get("refresh_token")),
         )
-        return new_token
+        # Like HA's own refresh: a response may leave out the refresh token.
+        return {**token, **new_token}
