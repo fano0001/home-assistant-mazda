@@ -2,14 +2,27 @@
     "config": {
         "abort": {
             "already_configured": "Der Account wurde bereits registriert",
+            "cannot_connect": "Verbindung zu Mazda nicht möglich. Bitte überprüfe deine Netzwerkverbindung und versuche es erneut.",
+            "terms_not_accepted": "Akzeptiere die Nutzungsbedingungen in der MyMazda-App und füge die Integration dann erneut hinzu.",
             "reauth_successful": "Die erneute Authentifizierung war erfolgreich",
             "oauth_error": "Fehler bei der OAuth-Authentifizierung. Bitte versuche es erneut.",
-            "wrong_account": "Falscher Account. Bitte mit demselben Account authentifizieren."
+            "wrong_account": "Falscher Account. Bitte mit demselben Account authentifizieren.",
+            "oauth_failed": "Fehler beim Abrufen des Zugriffstokens.",
+            "oauth_timeout": "Zeitüberschreitung beim Abrufen des OAuth-Tokens.",
+            "oauth_unauthorized": "OAuth-Autorisierungsfehler beim Abrufen des Zugriffstokens."
+        },
+        "error": {
+            "authorize_rejected": "Mazda hat statt eines Anmeldecodes einen Fehler zurückgegeben, zum Beispiel weil die Anmeldung abgebrochen wurde. Öffne den Anmeldelink oben und versuche es erneut.",
+            "invalid_callback_url": "Die eingefügte Callback-URL ist ungültig. Kopiere die vollständige msauth://-Adresse aus der Konsole, einschließlich des Codes.",
+            "state_mismatch": "Die Adresse gehört zu einem anderen Anmeldeversuch. Verwende die neueste msauth://-Zeile in der Konsole oder öffne den Anmeldelink oben erneut und füge die neue Adresse ein."
         },
         "step": {
             "user": {
                 "data": {
                     "region": "Region"
+                },
+                "data_description": {
+                    "region": "Wähle die Region, in der dein Mazda Connected Services-Konto registriert ist."
                 },
                 "description": "Wähle deine Region, dann wirst du zur Anmeldung mit deinem Mazda-Konto weitergeleitet."
             },
@@ -18,6 +31,9 @@
                 "description": "Mazda Connected Services verwendet jetzt eine neue Anmeldemethode. Bitte bestätige unten deine Region.\n\nHinweis: Kanada (MCI) und Australien (MA) sind neue Optionen, die zuvor nicht vorhanden waren.",
                 "data": {
                     "region": "Region"
+                },
+                "data_description": {
+                    "region": "Wähle die Region, in der dein Mazda Connected Services-Konto registriert ist."
                 }
             },
             "reauth_confirm": {
@@ -32,6 +48,44 @@
                 },
                 "data_description": {
                     "enable_push_notifications": "Empfange Echtzeit-Push-Benachrichtigungen von Mazda (erfordert FCM-Registrierung). Deaktivieren, wenn keine push-basierte Bestätigung von Fernbefehlen benötigt wird."
+                }
+            },
+            "pick_method": {
+                "title": "Bei Mazda anmelden",
+                "description": "Wähle, wie du dich anmelden möchtest.",
+                "menu_options": {
+                    "auth": "Automatische Anmeldung (Browser-Erweiterung)",
+                    "auth_manual": "Manuelle Anmeldung (aus der Browser-Konsole kopieren)"
+                }
+            },
+            "auth": {
+                "title": "Mit der Browser-Erweiterung anmelden",
+                "description": "Ein neuer Tab mit der Anmeldeseite wird geöffnet. Wenn die Erweiterung OAuth Assist for HA (oder eine ältere Mazda OAuth Helper-Erweiterung) installiert ist, melde dich an und folge den Anweisungen unter 'Link to Home Assistant', um die Einrichtung automatisch abzuschließen.\nLass dieses Fenster geöffnet."
+            },
+            "auth_manual": {
+                "title": "Bei Mazda anmelden",
+                "description": "Die Anmeldung der mobilen App endet mit einer Übergabe an die offizielle App über eine Adresse, die Desktop-Browser nicht öffnen können. Folge den Anweisungen unten und kopiere die Callback-Adresse stattdessen aus der Entwicklerkonsole des Browsers.\n\n1. [Öffne die Mazda-Anmeldung]({authorize_url}). Wenn überhaupt keine Anmeldeseite lädt, lösche zuerst alle mazda.com-Cookies in deinem Browser.\n2. Fülle das Mazda-Anmeldeformular aus und klicke auf LOGIN. Nach dem Klick **lädt keine neue Seite und der Browser scheint nichts zu tun**. Das ist zu erwarten.\n3. Öffne die Entwicklertools des Browsers (Chrome oder Edge: F12, oder ⌥⌘I auf einem Mac) und wechsle zum Tab **Konsole**.\n4. Suche eine Zeile mit `Failed to launch 'msauth://com.interrait.mymazda/...'` oder einer ähnlichen Meldung. Sie wird protokolliert, weil der Browser `msauth://`-Adressen nicht öffnen kann.\n5. Klicke mit der rechten Maustaste auf die `msauth://`-Adresse, wähle **Linkadresse kopieren** und füge sie unten ein.\n\nLass dieses Fenster geöffnet, bis du absendest. Die Adresse ist ein einmaliger Anmeldenachweis, füge sie also nicht in Fehlerberichte oder Screenshots ein.",
+                "data": {
+                    "callback_url": "Callback-URL"
+                },
+                "data_description": {
+                    "callback_url": "Die vollständige msauth://-Adresse, einschließlich allem nach dem '?'."
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Optionen",
+                "description": "Optionale Entitäten aktivieren oder deaktivieren. Beim Speichern wird die Integration neu geladen.",
+                "data": {
+                    "enable_vehicle_images": "MyMazda-Fahrzeugbilder",
+                    "enable_dev_sensors": "Entwicklungssensoren (δ)"
+                },
+                "data_description": {
+                    "enable_vehicle_images": "Fügt eine Fahrzeugbild-Entität und eine Auswahl hinzu, um zwischen den in der MyMazda-App angezeigten Fahrzeugbildern zu wählen.",
+                    "enable_dev_sensors": "Fügt experimentelle Sensoren hinzu, die rohe, undokumentierte Fahrzeugstatusfelder auslesen. Gedacht für Entwicklung und Fehlersuche. Alle Entwicklungssensoren beginnen mit 'δ |'."
                 }
             }
         }
@@ -90,7 +144,7 @@
                 "name": "δ | MntTyreAtFlg"
             },
             "brake_oil_level_warning": {
-                "name": "Bremsflüssigkeits-Warnung"
+                "name": "Bremsflüssigkeitsstand-Warnung"
             },
             "mnt_oil_at_flg": {
                 "name": "δ | MntOilAtFlg"
@@ -144,7 +198,12 @@
         },
         "device_tracker": {
             "location": {
-                "name": "Auto-Tracker"
+                "name": "Standort"
+            }
+        },
+        "image": {
+            "vehicle_image": {
+                "name": "Fahrzeugbild"
             }
         },
         "lock": {
@@ -160,6 +219,9 @@
                     "10": "10 Blinkvorgänge",
                     "30": "30 Blinkvorgänge"
                 }
+            },
+            "vehicle_image": {
+                "name": "Fahrzeugbild"
             }
         },
         "sensor": {
@@ -189,6 +251,9 @@
             },
             "vehicle_status_timestamp": {
                 "name": "Fahrzeugstatus zuletzt aktualisiert"
+            },
+            "location_timestamp": {
+                "name": "Standort zuletzt aktualisiert"
             },
             "fuel_remaining_percentage": {
                 "name": "Tankfüllstand in %"
@@ -227,7 +292,7 @@
                 "name": "δ | Fahrt 1 Kraftstoffmenge"
             },
             "dr_oil_deteriorate_level": {
-                "name": "Ölzustand"
+                "name": "Verbleibende Öllebensdauer"
             },
             "drive1_fuel_efficiency_mpg": {
                 "name": "Fahrt 1 Kraftstoffeffizienz (MPG)"
@@ -277,26 +342,26 @@
     },
     "services": {
         "send_poi": {
-            "name": "POI senden",
             "description": "Sendet einen GPS-Standort als POI (Point of Interest) an das Navigationssystem des Fahrzeugs. Erfordert eine Navigations-SD-Karte im Fahrzeug.",
             "fields": {
                 "device_id": {
-                    "name": "Fahrzeug",
-                    "description": "Das Fahrzeug, an das der GPS-Standort gesendet werden soll."
+                    "description": "Das Fahrzeug, an das der GPS-Standort gesendet werden soll.",
+                    "name": "Fahrzeug"
                 },
                 "latitude": {
-                    "name": "Breitengrad",
-                    "description": "Der Breitengrad des zu sendenden Standorts."
+                    "description": "Der Breitengrad des zu sendenden Standorts.",
+                    "name": "Breitengrad"
                 },
                 "longitude": {
-                    "name": "Längengrad",
-                    "description": "Der Längengrad des zu sendenden Standorts."
+                    "description": "Der Längengrad des zu sendenden Standorts.",
+                    "name": "Längengrad"
                 },
                 "poi_name": {
-                    "name": "POI-Name",
-                    "description": "Ein benutzerfreundlicher Name für den Standort."
+                    "description": "Ein benutzerfreundlicher Name für den Standort.",
+                    "name": "POI-Name"
                 }
-            }
+            },
+            "name": "POI senden"
         }
     }
 }

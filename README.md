@@ -170,3 +170,6 @@ Even if you pull to refresh in mymazda, the latest timestamp for vehicle status 
 
 ## Multiple Devices Detected
 Each MyMazda account can only be signed into one device at a time. To use the integration and the MyMazda app simultaneously, a secondary driver account can be created just for Home Assistant and provide access to the vehicle.
+
+# Translations
+The integration is available in English and German. Translation pull requests are welcome: copy [`translations/en.json`](https://github.com/fano0001/home-assistant-mazda/blob/main/custom_components/mazda_cs/translations/en.json) to `translations/<language>.json` (using Home Assistant's language code, `fr` for example), translate the values, and leave the keys and placeholders such as `{authorize_url}` unchanged. Anything left untranslated falls back to English.
