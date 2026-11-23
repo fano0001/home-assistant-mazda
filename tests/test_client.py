@@ -189,6 +189,55 @@ async def test_ev_cabin_temperature_range(raw, expected) -> None:
     assert ev_status["hvacInfo"]["interiorTemperatureCelsius"] == expected
 
 
+async def _maintenance_status(remote: dict) -> dict:
+    client = _make_client()
+    client.controller.get_vehicle_status.return_value = {
+        "remoteInfos": [{**REMOTE_INFO, **remote}],
+        "alertInfos": [ALERT_INFO],
+    }
+    return await client.get_vehicle_status(VEHICLE_ID)
+
+
+@pytest.mark.parametrize(
+    ("year", "month", "day", "expected"),
+    [
+        (2026, 11, 4, datetime.date(2026, 11, 4)),
+        (2018, 1, 1, datetime.date(2018, 1, 1)),
+        (2272, 12, 31, datetime.date(2272, 12, 31)),
+        (2017, 12, 31, None),
+        (2273, 1, 1, None),
+        (0, 0, 0, None),
+        (2026, 255, 255, None),
+        (2026, 2, 31, None),
+        (65535, 1, 1, None),
+        (2026, None, 4, None),
+    ],
+)
+async def test_maintenance_date_limits(year, month, day, expected) -> None:
+    """An invalid due date is no date, like in the app, and does not fail the poll."""
+    status = await _maintenance_status(
+        {
+            "RegularMntInformation": {
+                "MntSetYear": year,
+                "MntSetMonth": month,
+                "MntSetDate": day,
+            }
+        }
+    )
+
+    assert status["maintenanceInfo"]["nextMaintenanceDate"] == expected
+
+
+async def test_maintenance_fields_absent() -> None:
+    """A car without a service reminder sends only MntSetDist* (65535)."""
+    status = await _maintenance_status(
+        {"RegularMntInformation": {"MntSetDistKm": 65535, "MntSetDistMile": 40721}}
+    )
+
+    assert status["maintenanceInfo"]["nextMaintenanceDate"] is None
+    assert status["maintenanceInfo"]["nextMaintenanceDistanceKm"] is None
+
+
 # --- Undocumented-field watch -------------------------------------------------
 #
 # Pw.PwPos*, Door.SrSlideSignal/SrTiltSignal and DriveInformation.Drv1AmntFuel have

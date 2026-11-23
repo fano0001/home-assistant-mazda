@@ -393,7 +393,8 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"] is not None,
+        # 65535 or out of range: not supported or not enabled
+        is_supported=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"] is not None and 0 <= data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"] < 65535,
         value=lambda data: data["status"]["maintenanceInfo"]["nextMaintenanceDistanceKm"],
     ),
     MazdaSensorEntityDescription(
@@ -412,7 +413,8 @@ SENSOR_ENTITIES = [
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["nextOilChangeDistanceKm"] is not None,
+        # 65535 or out of range: not supported or not enabled
+        is_supported=lambda data: data["hasFuel"] and data["status"]["oilMaintenanceInfo"]["nextOilChangeDistanceKm"] is not None and 0 <= data["status"]["oilMaintenanceInfo"]["nextOilChangeDistanceKm"] < 65535,
         value=lambda data: data["status"]["oilMaintenanceInfo"]["nextOilChangeDistanceKm"],
     ),
     MazdaSensorEntityDescription(

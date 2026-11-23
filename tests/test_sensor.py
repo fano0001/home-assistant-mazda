@@ -4,6 +4,8 @@ import datetime
 import logging
 from unittest.mock import AsyncMock
 
+import pytest
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -80,3 +82,40 @@ async def test_location_timestamp_sensor(hass: HomeAssistant) -> None:
     sensor.coordinator.data[0]["status"]["positionTimestamp"] = None
 
     assert sensor.available is False
+
+
+@pytest.mark.parametrize(
+    ("key", "group", "field"),
+    [
+        (
+            "next_maintenance_distance",
+            "maintenanceInfo",
+            "nextMaintenanceDistanceKm",
+        ),
+        (
+            "next_oil_change_distance",
+            "oilMaintenanceInfo",
+            "nextOilChangeDistanceKm",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    ("value", "available"),
+    [
+        (5011, True),
+        (0, True),
+        (65534, True),
+        (65535, False),
+        (65536, False),
+        (-1, False),
+        (None, False),
+    ],
+)
+async def test_remaining_distance_limits(
+    hass: HomeAssistant, key, group, field, value, available
+) -> None:
+    """65535 or out of range means the distance is not supported or not enabled."""
+    sensor = _sensor(hass, key, {group: {field: value}})
+    sensor.coordinator.data[0]["hasFuel"] = True
+
+    assert sensor.available is available

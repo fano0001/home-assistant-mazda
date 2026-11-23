@@ -118,6 +118,18 @@ def _build_tpms_timestamp(tpms: dict):
         return None
 
 
+def _maintenance_date(info):
+    """Build the service due date, or None if it is unset or invalid.
+
+    Same limits as the app (SDMVehicleRegularMntInfo.isMntSetDateInvalid).
+    """
+    try:
+        due = datetime.date(info["MntSetYear"], info["MntSetMonth"], info["MntSetDate"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return due if 2018 <= due.year <= 2272 else None
+
+
 def _cabin_temperature(value):
     """Return the cabin temperature in °C, or None if the car has no reading.
 
@@ -412,17 +424,8 @@ class Client:  # noqa: D101
                 "nextScrMaintenanceDistance": remote_info.get("MntSCRInformation", {}).get("RemainingMileage"),
             },
             "maintenanceInfo": {
-                "nextMaintenanceDate": (
-                    datetime.date(
-                        remote_info["RegularMntInformation"]["MntSetYear"],
-                        remote_info["RegularMntInformation"]["MntSetMonth"],
-                        remote_info["RegularMntInformation"]["MntSetDate"],
-                    )
-                    if all(
-                        remote_info.get("RegularMntInformation", {}).get(k) is not None
-                        for k in ("MntSetYear", "MntSetMonth", "MntSetDate")
-                    )
-                    else None
+                "nextMaintenanceDate": _maintenance_date(
+                    remote_info.get("RegularMntInformation", {})
                 ),
                 "nextMaintenanceDistanceKm": remote_info.get("RegularMntInformation", {}).get("RemRegDistKm"),
             },
