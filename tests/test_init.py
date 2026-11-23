@@ -323,6 +323,39 @@ async def test_failed_setup_stops_push_listener(hass: HomeAssistant) -> None:
     listener.async_stop.assert_awaited_once()
 
 
+async def test_setup_loads_every_platform(hass: HomeAssistant) -> None:
+    """An entry sets up on the Home Assistant release under test.
+
+    Setup imports every platform whatever the options are, so one name an older
+    release lacks (image.infer_image_type, new in HA 2025.12) fails the entry.
+    CI also runs this on the hacs.json minimum.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        minor_version=4,
+        data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
+    )
+    entry.add_to_hass(hass)
+    client = AsyncMock()
+    client.get_user_info.return_value = {}
+    client.attach.return_value = {}
+    client.get_vehicles.return_value = []
+
+    with (
+        patch("custom_components.mazda_cs.MazdaAPI", return_value=client),
+        patch(
+            "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
+            ".async_ensure_token_valid",
+            AsyncMock(),
+        ),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.LOADED
+
+
 _REGISTER = "custom_components.mazda_cs.pymazda.push._register"
 _GCM_CREDS = {"android_id": "123", "security_token": "456", "token": "gcm-token"}
 
