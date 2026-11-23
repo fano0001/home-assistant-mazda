@@ -1,5 +1,6 @@
 """Platform for Mazda switch integration."""
 
+import logging
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
@@ -10,6 +11,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import MazdaAPI as MazdaAPIClient, MazdaConfigEntry, MazdaEntity
 from .pymazda.exceptions import MazdaException
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -50,13 +53,19 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
         """Return true if the vehicle is charging."""
         return self.data["evStatus"]["chargeInfo"]["charging"]
 
-    async def refresh_status_and_write_state(self):
-        """Request a status update, retrieve it through the coordinator, and write the state."""
-        await self.client.refresh_vehicle_status(self.vehicle_id)
+    async def _request_status_report(self) -> None:
+        """Ask the vehicle for a new EV status report after an accepted charge command.
 
-        await self.coordinator.async_request_refresh()
-
-        self.async_write_ha_state()
+        Mazda's reply only means the request was accepted. The report is read on
+        the next push (022 is its result) or poll.
+        """
+        try:
+            await self.client.refresh_vehicle_status(self.vehicle_id)
+        except MazdaException as ex:
+            _LOGGER.warning(
+                "Charge command accepted, but requesting a new status report failed: %s",
+                ex,
+            )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging the vehicle."""
@@ -64,7 +73,7 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
             await self.client.start_charging(self.vehicle_id)
         except MazdaException as ex:
             raise HomeAssistantError(ex) from ex
-        await self.refresh_status_and_write_state()
+        await self._request_status_report()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Stop charging the vehicle."""
@@ -72,4 +81,4 @@ class MazdaChargingSwitch(MazdaEntity, SwitchEntity):
             await self.client.stop_charging(self.vehicle_id)
         except MazdaException as ex:
             raise HomeAssistantError(ex) from ex
-        await self.refresh_status_and_write_state()
+        await self._request_status_report()

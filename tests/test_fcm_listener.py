@@ -80,3 +80,17 @@ async def test_other_pushes_keep_assumed_state(payload) -> None:
 
     assert client.get_assumed_lock_state(VEHICLE_ID) is True
     assert client.get_assumed_hvac_mode(VEHICLE_ID) is True
+
+
+@pytest.mark.parametrize("action_code", ["021", "022"])
+@pytest.mark.parametrize("suffix", ["_01", "_02"])
+async def test_ev_result_pushes_refresh(action_code, suffix) -> None:
+    """Charge results (021) and status report results (022) are read."""
+    client = await _client_with_assumed_lock()
+    listener, coordinator, _ = _listener(client)
+
+    listener._on_notification(
+        {"a": action_code, "r": f"{action_code}20261118011652{suffix}", "v": VIN}
+    )
+
+    coordinator.async_request_refresh.assert_called_once()
