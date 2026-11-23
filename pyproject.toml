@@ -4,3 +4,8 @@
 asyncio_mode = "auto"
 testpaths = ["tests"]
 norecursedirs = [".git", "custom_components"]
+
+[tool.ruff]
+# protoc output ("DO NOT EDIT"); regenerate instead of editing. Its imports of
+# sibling *_pb2 modules register descriptors and only look unused.
+extend-exclude = ["custom_components/mazda_cs/pymazda/push/_proto"]

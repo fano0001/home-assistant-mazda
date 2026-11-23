@@ -11,7 +11,6 @@ import asyncio
 import base64
 import hashlib
 import logging
-import struct
 from typing import Any
 
 from aiohttp import ClientSession, ClientTimeout
