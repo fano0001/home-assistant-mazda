@@ -107,7 +107,6 @@ async def test_location_timestamp_sensor(hass: HomeAssistant) -> None:
         (65534, True),
         (65535, False),
         (65536, False),
-        (-1, False),
         (None, False),
     ],
 )
@@ -119,3 +118,32 @@ async def test_remaining_distance_limits(
     sensor.coordinator.data[0]["hasFuel"] = True
 
     assert sensor.available is available
+
+
+@pytest.mark.parametrize(
+    ("key", "group", "field", "available"),
+    [
+        (
+            "next_maintenance_distance",
+            "maintenanceInfo",
+            "nextMaintenanceDistanceKm",
+            True,
+        ),
+        (
+            "next_oil_change_distance",
+            "oilMaintenanceInfo",
+            "nextOilChangeDistanceKm",
+            False,
+        ),
+    ],
+)
+async def test_negative_distance(
+    hass: HomeAssistant, key: str, group: str, field: str, available: bool
+) -> None:
+    """The app shows a negative service distance but hides a negative oil distance."""
+    sensor = _sensor(hass, key, {group: {field: -500}})
+    sensor.coordinator.data[0]["hasFuel"] = True
+
+    assert sensor.available is available
+    if available:
+        assert sensor.native_value == -500
