@@ -1,6 +1,4 @@
 {
-  "name": "mazda_cs",
-  "render_readme": true,
-  "country": "US",
+  "name": "Mazda Connected Services",
   "homeassistant": "2025.12.0"
 }
