@@ -20,8 +20,13 @@ def _parse_occurrence_date(value):
         return None
 
 
-def _frame_position(frame):
+def _frame_position(frame, *, signed):
     """Return (latitude, longitude, acquired_at) from a status frame's PositionInfo.
+
+    For the same western position, remoteInfos sent a positive longitude and
+    alertInfos a negative one, both with LongitudeFlag 0. So remoteInfos needs its
+    flags applied (LatitudeFlag 1 = south, LongitudeFlag 0 = west), while
+    alertInfos (``signed``) is used as sent.
 
     None when the frame has no coordinates. ``acquired_at`` is the parsed
     AcquisitionDatetime (UTC), or None if absent or malformed.
@@ -31,8 +36,9 @@ def _frame_position(frame):
     longitude = info.get("Longitude")
     if latitude is None or longitude is None:
         return None
-    latitude = latitude * (-1 if info.get("LatitudeFlag") == 1 else 1)
-    longitude = longitude * (1 if info.get("LongitudeFlag") == 1 else -1)
+    if not signed:
+        latitude = latitude * (-1 if info.get("LatitudeFlag") == 1 else 1)
+        longitude = longitude * (1 if info.get("LongitudeFlag") == 1 else -1)
     return latitude, longitude, _parse_occurrence_date(info.get("AcquisitionDatetime"))
 
 
@@ -47,9 +53,11 @@ def _newest_position(remote_info, alert_info):
     different times, so either can hold the more recent fix. A dated position
     beats an undated one; on a tie remoteInfos wins (the historical source).
     """
-    candidates = [
-        p for p in (_frame_position(remote_info), _frame_position(alert_info)) if p
-    ]
+    positions = (
+        _frame_position(remote_info, signed=False),
+        _frame_position(alert_info, signed=True),
+    )
+    candidates = [p for p in positions if p]
     if not candidates:
         return None, None, None
     # max() keeps the first of equal keys, so remoteInfos wins ties.

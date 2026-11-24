@@ -586,13 +586,13 @@ async def _status_position(remote: dict, alert: dict) -> tuple:
     [
         pytest.param(
             _position_frame(10.0, 20.0, "20261122181828"),
-            _position_frame(11.0, 21.0, "20261122193811"),
+            _position_frame(11.0, -21.0, "20261122193811"),
             (11.0, -21.0, _utc(19, 38, 11)),
             id="alert-newer",
         ),
         pytest.param(
             _position_frame(10.0, 20.0, "20261122193811"),
-            _position_frame(11.0, 21.0, "20261122181828"),
+            _position_frame(11.0, -21.0, "20261122181828"),
             (10.0, -20.0, _utc(19, 38, 11)),
             id="remote-newer",
         ),
@@ -604,19 +604,19 @@ async def _status_position(remote: dict, alert: dict) -> tuple:
         ),
         pytest.param(
             _position_frame(10.0, 20.0, "not-a-date"),
-            _position_frame(11.0, 21.0, "20261122181828"),
+            _position_frame(11.0, -21.0, "20261122181828"),
             (11.0, -21.0, _utc(18, 18, 28)),
             id="dated-beats-malformed",
         ),
         pytest.param(
             _position_frame(10.0, 20.0, "20261122181828"),
-            _position_frame(11.0, 21.0, "20261122181828"),
+            _position_frame(11.0, -21.0, "20261122181828"),
             (10.0, -20.0, _utc(18, 18, 28)),
             id="tie-keeps-remote",
         ),
         pytest.param(
             _position_frame(10.0, 20.0),
-            _position_frame(11.0, 21.0),
+            _position_frame(11.0, -21.0),
             (10.0, -20.0, None),
             id="both-undated-keeps-remote",
         ),
@@ -628,13 +628,38 @@ async def test_vehicle_status_uses_newest_position(remote, alert, expected) -> N
     assert await _status_position(remote, alert) == expected
 
 
-async def test_position_flags_set_hemisphere() -> None:
+async def test_remote_position_flags_set_hemisphere() -> None:
     """LatitudeFlag 1 is south (negative); LongitudeFlag 1 is east (positive)."""
     remote = _position_frame(10.0, 20.0, "20261122181828", lat_flag=1, lon_flag=1)
 
     lat, lon, _ = await _status_position(remote, {})
 
     assert (lat, lon) == (-10.0, 20.0)
+
+
+@pytest.mark.parametrize("flag", [0, 1])
+@pytest.mark.parametrize(
+    ("latitude", "longitude"),
+    [(10.0, -20.0), (10.0, 20.0), (-10.0, 20.0)],
+    ids=["north-west", "north-east", "south-east"],
+)
+async def test_alert_position_is_used_as_sent(latitude, longitude, flag) -> None:
+    """alertInfos coordinates are already signed, so its flags are not applied."""
+    alert = _position_frame(
+        latitude, longitude, "20261122181828", lat_flag=flag, lon_flag=flag
+    )
+
+    lat, lon, _ = await _status_position({}, alert)
+
+    assert (lat, lon) == (latitude, longitude)
+
+
+async def test_both_frames_give_the_same_western_position() -> None:
+    """remoteInfos 20 and alertInfos -20, both with flag 0, are the same place."""
+    remote = _position_frame(10.0, 20.0, "20261122181828")
+    alert = _position_frame(10.0, -20.0, "20261122181828")
+
+    assert await _status_position(remote, {}) == await _status_position({}, alert)
 
 
 # ---------------------------------------------------------------------------
