@@ -181,7 +181,11 @@ def _mask(data):
         return {k: _mask(v) for k, v in data.items()}
     if isinstance(data, list):
         return [_mask(item) for item in data]
-    return data if data is None or data == "" else "**REDACTED**"
+    if data is None or data == "":
+        return data
+    # A coordinate's sign shows only the hemisphere, and can differ per frame.
+    negative = isinstance(data, (int, float)) and data < 0
+    return "-**REDACTED**" if negative else "**REDACTED**"
 
 
 def _redact(data):

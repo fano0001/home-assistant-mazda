@@ -38,6 +38,18 @@ def test_redact_hides_account_identifiers() -> None:
     assert "200S00" in redacted
 
 
+def test_redact_keeps_coordinate_sign() -> None:
+    """The sign survives masking, the number does not; empty values stay visible."""
+    assert _redact({"Longitude": -20.5, "Latitude": 10.5}) == {
+        "Longitude": "-**REDACTED**",
+        "Latitude": "**REDACTED**",
+    }
+    assert _redact({"Longitude": None, "Latitude": 0}) == {
+        "Longitude": None,
+        "Latitude": "**REDACTED**",
+    }
+
+
 def test_redact_masks_every_user_info_value_but_keeps_empty_ones() -> None:
     """getUserInfo is contact details: mask all of it, but show what was blank."""
     redacted = _redact(
