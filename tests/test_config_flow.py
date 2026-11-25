@@ -195,6 +195,8 @@ async def test_manual_paste_creates_entry(
     assert result["title"] == "Mazda (dri•••@example.com)"
     assert result["result"].unique_id == _SUB
     assert result["data"]["region"] == "MNAO"
+    # Push is on by default for a new entry
+    assert result["result"].options == {"enable_push_notifications": True}
     # Same shape the OAuth callback view would have handed the flow
     external_data = mock_resolve.call_args.args[0]
     assert external_data["code"] == "auth-code"

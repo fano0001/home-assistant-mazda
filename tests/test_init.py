@@ -70,12 +70,40 @@ async def test_migrate_entry_v1_to_v2(hass: HomeAssistant) -> None:
     # Region is preserved; the stale credentials are dropped so async_setup_entry
     # (no "token" key) will raise ConfigEntryAuthFailed and trigger reauth.
     assert entry.version == 2
-    assert entry.minor_version == 1
+    assert entry.minor_version == 5
     assert entry.data == {CONF_REGION: "MME"}
 
 
-async def test_migrate_entry_v2_1_to_v2_2_disables_push(hass: HomeAssistant) -> None:
-    """v2.1 -> v2.2 opts existing entries out of push notifications."""
+async def test_v1_upgrade_keeps_push_choice_and_masks_title(
+    hass: HomeAssistant,
+) -> None:
+    """Push enabled after a v1 upgrade survives the next migration run."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="alexander@example.com",
+        version=1,
+        data={CONF_REGION: "MME", "email": "alexander@example.com"},
+    )
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is True
+    assert entry.title == "Mazda (ale•••er@example.com)"
+    # Push is never turned on for an upgraded entry on its own.
+    assert not entry.options.get(CONF_ENABLE_PUSH, False)
+
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, CONF_ENABLE_PUSH: True}
+    )
+    assert await async_migrate_entry(hass, entry) is True
+
+    assert entry.minor_version == 5
+    assert entry.options[CONF_ENABLE_PUSH] is True
+
+
+async def test_migrate_entry_v2_1_reaches_current_version(
+    hass: HomeAssistant,
+) -> None:
+    """A v2.1 entry has no step of its own, but is not left behind."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         version=2,
@@ -87,9 +115,9 @@ async def test_migrate_entry_v2_1_to_v2_2_disables_push(hass: HomeAssistant) -> 
 
     assert await async_migrate_entry(hass, entry) is True
 
-    # Later steps are fresh `if`s, so a v2.1 entry lands on the current minor in one pass.
     assert entry.minor_version == 5
-    assert entry.options[CONF_ENABLE_PUSH] is False
+    # It predates push, so push stays off.
+    assert not entry.options.get(CONF_ENABLE_PUSH, False)
 
 
 async def test_migrate_entry_v2_2_to_v2_3_drops_enable_windows(

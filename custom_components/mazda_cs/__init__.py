@@ -544,6 +544,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MazdaConfigEntry) -> boo
     effective_customer_id = conductor_customer_id if region == "MNAO" else ""
     effective_internal_id = conductor_internal_id if region != "MNAO" else ""
 
+    # New entries store this as on; one without it predates push and stays off.
     enable_push = entry.options.get(CONF_ENABLE_PUSH, False)
     fcm_listener = MazdaFcmListener(
         hass,
@@ -647,22 +648,12 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config_entries.async_update_entry(
             entry, data=new_data, minor_version=1, version=2
         )
-    elif entry.version == 2 and entry.minor_version == 1:
-        # minor_version 2: introduce CONF_ENABLE_PUSH option.
-        # Opt existing entries out so they can consciously enable push via Reconfigure.
-        hass.config_entries.async_update_entry(
-            entry,
-            options={**entry.options, CONF_ENABLE_PUSH: False},
-            minor_version=2,
-        )
-        _LOGGER.warning(
-            "Migration Successful: Push notification event support disabled by default. "
-            "Reconfigure the integration to enable. See the ReadMe for more information."
-        )
 
-    # Deliberately fresh `if`s so an entry coming from minor_version 1 above
-    # continues on to the current minor version in a single pass.
-    if entry.version == 2 and entry.minor_version == 2:
+    # Deliberately fresh `if`s so an older entry, including one coming from v1
+    # above, continues on to the current minor version in a single pass. There is
+    # no step for minor_version 2: it only stored the push option as off, which is
+    # already how a missing option is read.
+    if entry.version == 2 and entry.minor_version < 3:
         # minor_version 3: window sensors removed. Their raw fields (Pw.PwPos*,
         # Door.SrSlideSignal, Door.SrTiltSignal) have never been observed as
         # anything but 0; non-zero values are now logged as warnings instead.
@@ -676,7 +667,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             minor_version=3,
         )
 
-    if entry.version == 2 and entry.minor_version == 3:
+    if entry.version == 2 and entry.minor_version < 4:
         # minor_version 4: the per-vehicle "Development sensors" switch was replaced
         # by the options flow. The enable_dev_sensors option itself is kept; only the
         # orphaned switch entities are removed from the registry.
@@ -688,7 +679,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 ent_reg.async_remove(reg_entry.entity_id)
         hass.config_entries.async_update_entry(entry, minor_version=4)
 
-    if entry.version == 2 and entry.minor_version == 4:
+    if entry.version == 2 and entry.minor_version < 5:
         # minor_version 5: mask the account email in the entry title, which HA
         # core repeats in its log messages. Titles the user changed are kept.
         title = entry.title
