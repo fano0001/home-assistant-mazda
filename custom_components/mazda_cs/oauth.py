@@ -33,6 +33,9 @@ from .locales import resolve_locale
 
 _LOGGER = logging.getLogger(__name__)
 
+# https://github.com/fano0001/home-assistant-mazda/issues/69
+MAZDA_USER_AGENT = "MyMazda/8.0.0"
+
 
 def _build_oauth2_url(region: str, endpoint: str) -> str:
     """Build Azure AD B2C OAuth2 URL for a given region and endpoint."""
@@ -101,8 +104,32 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
         return data
 
     async def async_resolve_external_data(self, external_data: Any) -> dict:
-        """Resolve external data to tokens."""
-        return await super().async_resolve_external_data(external_data)
+        """Resolve external data to tokens with MyMazda User-Agent."""
+        data = {
+            "grant_type": "authorization_code",
+            "code": external_data["code"],
+            "redirect_uri": external_data["state"]["redirect_uri"],
+            "client_id": self.client_id,
+        }
+        data.update(self.extra_token_resolve_data)
+
+        async with aiohttp.ClientSession(
+            headers={"User-Agent": MAZDA_USER_AGENT}
+        ) as session:
+            async with session.post(
+                self.token_url,
+                data=data,
+                timeout=aiohttp.ClientTimeout(total=30),
+            ) as resp:
+                if resp.status >= 400:
+                    body = await resp.text()
+                    _LOGGER.error(
+                        "Token exchange failed — status=%s body=%s",
+                        resp.status,
+                        body,
+                    )
+                resp.raise_for_status()
+                return await resp.json()
 
     async def async_refresh_token(self, token: dict) -> dict:
         """Refresh tokens, handling B2C which returns text/html on session expiry."""
@@ -124,7 +151,9 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
         }
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(
+            headers={"User-Agent": MAZDA_USER_AGENT}
+        ) as session:
             resp = await session.post(
                 self.token_url,
                 data=refresh_data,
