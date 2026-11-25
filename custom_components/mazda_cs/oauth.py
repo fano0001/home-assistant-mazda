@@ -21,36 +21,37 @@ if TYPE_CHECKING:
 from .const import (
     DOMAIN,
     MOBILE_REDIRECT_URI,
-    MSAL_APP_NAME,
-    MSAL_APP_VER,
-    MSAL_CLIENT_SKU,
-    MSAL_CLIENT_VER,
     OAUTH2_AUTH,
     OAUTH2_HOSTS,
     OAUTH2_POLICY,
     PHONE_NUMBER_LENGTHS,
 )
 from .locales import resolve_locale
+from .pymazda.const import (
+    ANDROID_SDK,
+    APP_PACKAGE_ID,
+    APP_VERSION,
+    DEVICE_ABI,
+    DEVICE_MODEL,
+    MSAL_CLIENT_SKU,
+    MSAL_CLIENT_VER,
+    USER_AGENT_DALVIK,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-# Mazda's edge (Akamai) rejects the default Home Assistant and aiohttp
-# User-Agents on some regional sign-in hosts with a 403 HTML page (issue #69).
-# MSAL sets no User-Agent on token requests, so the app sends Android's default.
-# Keep the Android version in step with x-client-OS (34 = Android 14) and the
-# model with x-client-DM.
-TOKEN_USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 14; Pixel 9 Build/AD1A.240530.047)"
-
-# MSAL sends these as query parameters when authorizing and as headers on token
-# requests (OAuth2Strategy.performTokenRequest in the APK).
+# MSAL sends these as headers on token requests (OAuth2Strategy.performTokenRequest
+# in the APK). When authorizing it sends x-client-* as query parameters and x-app-*
+# as headers; a browser link cannot set headers, so we send all of them as
+# parameters. x-app-name is the package name (CommandParametersAdapter).
 MSAL_CLIENT_PARAMS = {
-    "x-app-name": MSAL_APP_NAME,
-    "x-app-ver": MSAL_APP_VER,
+    "x-app-name": APP_PACKAGE_ID,
+    "x-app-ver": APP_VERSION,
     "x-client-SKU": MSAL_CLIENT_SKU,
     "x-client-Ver": MSAL_CLIENT_VER,
-    "x-client-OS": "34",  # Android SDK_INT
-    "x-client-DM": "Pixel 9",  # Android device model
-    "x-client-CPU": "arm64-v8a",  # Android ABI
+    "x-client-OS": ANDROID_SDK,
+    "x-client-DM": DEVICE_MODEL,
+    "x-client-CPU": DEVICE_ABI,
 }
 
 
@@ -120,8 +121,10 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
 
     async def _post_token(self, data: dict) -> tuple[aiohttp.ClientResponse, bytes]:
         """POST to the token endpoint with the headers the app sends."""
+        # Mazda's edge (Akamai) answers the default Home Assistant and aiohttp
+        # User-Agents with a 403 HTML page on the EU sign-in host (issue #69).
         headers = {
-            "User-Agent": TOKEN_USER_AGENT,
+            "User-Agent": USER_AGENT_DALVIK,
             "client-request-id": str(uuid.uuid4()),
             **MSAL_CLIENT_PARAMS,
         }

@@ -17,9 +17,9 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from custom_components.mazda_cs.oauth import (
     MSAL_CLIENT_PARAMS,
-    TOKEN_USER_AGENT,
     MazdaOAuth2Implementation,
 )
+from custom_components.mazda_cs.pymazda.const import USER_AGENT_DALVIK
 
 TOKEN = {"access_token": "a2", "refresh_token": "r2", "expires_in": 7200}
 EDGE_BLOCK = {
@@ -86,7 +86,7 @@ async def test_token_requests_send_app_headers(
 
     assert result["access_token"] == "a2"
     headers, _ = b2c.requests[0]
-    assert headers["User-Agent"] == TOKEN_USER_AGENT
+    assert headers["User-Agent"] == USER_AGENT_DALVIK
     assert headers["client-request-id"]
     assert {key: headers[key] for key in MSAL_CLIENT_PARAMS} == MSAL_CLIENT_PARAMS
 

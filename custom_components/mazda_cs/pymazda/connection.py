@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 
 import aiohttp
 
+from .const import APP_PACKAGE_ID, APP_VERSION, USER_AGENT_BASE_API
 from .crypto_utils import (
     decrypt_aes128cbc_buffer_to_str,
     encrypt_aes128cbc_buffer_to_base64_str,
@@ -125,11 +126,7 @@ LEGACY_REGION_CONFIG = {
         "base_url": "https://wcs9p6wj.mazda.com/prod/",
     },
 }
-# APP_PACKAGE_ID: Android package name, used in app-unique-id header
-APP_PACKAGE_ID = "com.interrait.mymazda"
-USER_AGENT_BASE_API = "MyMazda/10.0.1 (Linux; Android 16)"
 APP_OS = "ANDROID"
-APP_VERSION = "10.0.1"
 
 # Per request: HA's shared aiohttp session carries no ClientTimeout, so without
 # this a hung endpoint holds a remote command, attach, or config-flow call for

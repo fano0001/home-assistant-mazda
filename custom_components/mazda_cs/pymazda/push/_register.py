@@ -16,6 +16,15 @@ from typing import Any
 from aiohttp import ClientSession, ClientTimeout
 
 from ..connection import tail
+from ..const import (
+    ANDROID_SDK,
+    APP_PACKAGE_ID,
+    APP_TARGET_SDK,
+    APP_VERSION,
+    APP_VERSION_CODE,
+    FCM_CLIENT_LIBRARY,
+    FIS_SDK_VERSION,
+)
 from ._proto.android_checkin_pb2 import (
     DEVICE_ANDROID_OS,
     AndroidCheckinProto,
@@ -44,28 +53,19 @@ FIS_DELETE_URL = (
     "my-mazda-app/installations/{fid}"
 )
 
-# MyMazda Android app identity — must match what the app sends so Mazda's
-# Firebase project recognises the sender and routes messages correctly.
-MAZDA_APP_PACKAGE = "com.interrait.mymazda"
+# Must match what the app sends so Mazda's Firebase project recognises the
+# sender and routes messages correctly.
 MAZDA_SENDER_ID = "583786267773"  # messaging_sender_id from google-services.json
 
-# Firebase credentials extracted from com.interrait.mymazda 9.0.8 APK
+# Firebase credentials, confirmed in the MyMazda 10.0.1 APK (res/values/strings.xml)
 FCM_PROJECT_ID = "my-mazda-app"
 FCM_APP_ID = "1:583786267773:android:e1aaf592642d239e"
 FCM_API_KEY = "AIzaSyAnYvHIERUEsluFJdJC9GO17h4eY8d-g9g"
 FCM_SENDER_ID = "583786267773"
 
-# Firebase SDK version string format used by Android clients (a:<major>.<minor>.<patch>)
-FIS_SDK_VERSION = "a:19.0.1"
-FCM_CLIENT_LIBRARY = "fcm-25.0.1"
-FCM_APP_VERSION_CODE = "653"
-FCM_APP_VERSION_NAME = "10.0.1"
 FCM_GMSV = "243816016"
-FCM_OSV = "36"
-FCM_TARGET_VER = "36"
 FCM_PLATFORM = "0"
 FIREBASE_APP_NAME = "[DEFAULT]"
-FCM_ANDROID_PACKAGE = "com.interrait.mymazda"
 FCM_ANDROID_CERT_SHA1 = "FE728CBB5FA50A3CB9F9EECE17DBDFA78785064B"
 
 _TIMEOUT = ClientTimeout(total=10)
@@ -92,7 +92,7 @@ async def _fis_create_installation(session: ClientSession) -> dict[str, Any] | N
     headers = {
         "x-goog-api-key": FCM_API_KEY,
         "Content-Type": "application/json",
-        "X-Android-Package": FCM_ANDROID_PACKAGE,
+        "X-Android-Package": APP_PACKAGE_ID,
         "X-Android-Cert": FCM_ANDROID_CERT_SHA1,
     }
     body = {
@@ -132,7 +132,7 @@ async def _fis_generate_auth_token(
         "x-goog-api-key": FCM_API_KEY,
         "Content-Type": "application/json",
         "Authorization": f"FIS_v2 {refresh_token}",
-        "X-Android-Package": FCM_ANDROID_PACKAGE,
+        "X-Android-Package": APP_PACKAGE_ID,
         "X-Android-Cert": FCM_ANDROID_CERT_SHA1,
     }
     body = {"installation": {"sdkVersion": FIS_SDK_VERSION}}
@@ -268,9 +268,9 @@ def _gcm_fis_fields(fid: str, auth_token: str) -> dict[str, str]:
         "X-Goog-Firebase-Installations-Auth": auth_token,
         "X-cliv": FCM_CLIENT_LIBRARY,
         "X-firebase-app-name-hash": _firebase_app_name_hash(),
-        "X-app_ver": FCM_APP_VERSION_CODE,
-        "X-app_ver_name": FCM_APP_VERSION_NAME,
-        "X-osv": FCM_OSV,
+        "X-app_ver": APP_VERSION_CODE,
+        "X-app_ver_name": APP_VERSION,
+        "X-osv": ANDROID_SDK,
         "X-gmsv": FCM_GMSV,
         "X-scope": "*",
         "X-subtype": FCM_SENDER_ID,
@@ -279,9 +279,9 @@ def _gcm_fis_fields(fid: str, auth_token: str) -> dict[str, str]:
         "Goog-Firebase-Installations-Auth": auth_token,
         "cliv": FCM_CLIENT_LIBRARY,
         "firebase-app-name-hash": _firebase_app_name_hash(),
-        "app_ver": FCM_APP_VERSION_CODE,
-        "app_ver_name": FCM_APP_VERSION_NAME,
-        "osv": FCM_OSV,
+        "app_ver": APP_VERSION_CODE,
+        "app_ver_name": APP_VERSION,
+        "osv": ANDROID_SDK,
         "gmsv": FCM_GMSV,
         "scope": "*",
         "subtype": FCM_SENDER_ID,
@@ -376,7 +376,7 @@ async def gcm_register(
     headers = {
         "Authorization": f"AidLogin {android_id}:{security_token}",
         "Content-Type": "application/x-www-form-urlencoded",
-        "X-Android-Package": FCM_ANDROID_PACKAGE,
+        "X-Android-Package": APP_PACKAGE_ID,
         "X-Android-Cert": FCM_ANDROID_CERT_SHA1,
     }
     # X-subtype = sender_id is the correct value used by Firebase SDK 23.x
@@ -385,7 +385,7 @@ async def gcm_register(
     if extra_fields and "subtype" in extra_fields:
         x_subtype = extra_fields["subtype"]
     body = {
-        "app": MAZDA_APP_PACKAGE,
+        "app": APP_PACKAGE_ID,
         "X-subtype": x_subtype,
         "device": android_id,
         "sender": MAZDA_SENDER_ID,
@@ -394,10 +394,10 @@ async def gcm_register(
     if extra_fields:
         body.setdefault("gcm_ver", FCM_GMSV)
         body.setdefault("plat", FCM_PLATFORM)
-        body.setdefault("app_ver", FCM_APP_VERSION_CODE)
-        body.setdefault("app_ver_name", FCM_APP_VERSION_NAME)
-        body.setdefault("osv", FCM_OSV)
-        body.setdefault("target_ver", FCM_TARGET_VER)
+        body.setdefault("app_ver", APP_VERSION_CODE)
+        body.setdefault("app_ver_name", APP_VERSION)
+        body.setdefault("osv", ANDROID_SDK)
+        body.setdefault("target_ver", APP_TARGET_SDK)
         body.update(extra_fields)
 
     for attempt in range(retries):
@@ -448,7 +448,7 @@ async def fis_delete_installation(
     headers = {
         "Authorization": f"FIS_v2 {refresh_token}",
         "x-goog-api-key": FCM_API_KEY,
-        "X-Android-Package": FCM_ANDROID_PACKAGE,
+        "X-Android-Package": APP_PACKAGE_ID,
         "X-Android-Cert": FCM_ANDROID_CERT_SHA1,
     }
     try:
@@ -494,11 +494,11 @@ async def gcm_unregister(
     headers = {
         "Authorization": f"AidLogin {android_id}:{security_token}",
         "Content-Type": "application/x-www-form-urlencoded",
-        "X-Android-Package": FCM_ANDROID_PACKAGE,
+        "X-Android-Package": APP_PACKAGE_ID,
         "X-Android-Cert": FCM_ANDROID_CERT_SHA1,
     }
     body = {
-        "app": MAZDA_APP_PACKAGE,
+        "app": APP_PACKAGE_ID,
         "X-subtype": MAZDA_SENDER_ID,
         "device": android_id,
         "sender": MAZDA_SENDER_ID,

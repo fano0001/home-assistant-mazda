@@ -39,8 +39,9 @@ from ._conductor import (
     summarize_error_body,
 )
 from ..connection import tail
+from ..const import APP_VERSION
 from ._mcs import McsClient, MessageCallback
-from ._register import FCM_APP_VERSION_NAME, checkin_and_register
+from ._register import checkin_and_register
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -192,7 +193,7 @@ class MazdaPushClient:
                 timezone=default_timezone(),
                 language=language,
                 locale=locale,
-                app_version=FCM_APP_VERSION_NAME,
+                app_version=APP_VERSION,
                 device_type=CONDUCTOR_DEVICE_OS,
                 device_os=CONDUCTOR_DEVICE_OS,
                 user_id=user_id,
