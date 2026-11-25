@@ -26,17 +26,25 @@ VIN = "JM1TESTVIN0001234"
 @pytest.mark.parametrize(
     ("email", "expected"),
     [
-        ("a@example.com", "•••@example.com"),
-        ("al@example.com", "a•••@example.com"),
-        ("abc@example.com", "a•••@example.com"),
-        ("alex@example.com", "al•••@example.com"),
-        ("alexand@example.com", "ale•••@example.com"),
-        ("alexande@example.com", "alex•••@example.com"),
-        ("alexander@example.com", "ale•••er@example.com"),
+        ("a@example.com", "•••@exa•••.com"),
+        ("al@example.com", "a•••@exa•••.com"),
+        ("abc@example.com", "a•••@exa•••.com"),
+        ("alex@example.com", "al•••@exa•••.com"),
+        ("alexand@example.com", "ale•••@exa•••.com"),
+        ("alexande@example.com", "alex•••@exa•••.com"),
+        ("alexander@example.com", "ale•••er@exa•••.com"),
         # Two plus-addresses of one mailbox stay distinguishable.
-        ("alex+mazda@example.com", "ale•••da@example.com"),
-        ("alex+home@example.com", "ale•••me@example.com"),
-        (" alex@example.com ", "al•••@example.com"),
+        ("alex+mazda@example.com", "ale•••da@exa•••.com"),
+        ("alex+home@example.com", "ale•••me@exa•••.com"),
+        (" alex@example.com ", "al•••@exa•••.com"),
+        # A personal domain can identify its owner, so it is masked too.
+        ("alex@12345678.xyz", "al•••@123•••.xyz"),
+        ("alex@mail.example.co.uk", "al•••@mai•••.uk"),
+        ("alex@alexandersmith.com", "al•••@ale•••.com"),
+        ("alex@gmail.com", "al•••@gm•••.com"),
+        ("alex@x.org", "al•••@•••.org"),
+        ("alex@localhost", ""),
+        ("alex@.com", ""),
         ("not-an-email", ""),
         ("@example.com", ""),
         ("alex@", ""),
@@ -44,7 +52,7 @@ VIN = "JM1TESTVIN0001234"
     ],
 )
 def test_mask_email(email: str, expected: str) -> None:
-    """The local part is masked by length; anything but an address gives nothing."""
+    """Local part and domain are masked; anything but an address gives nothing."""
     assert mask_email(email) == expected
 
 

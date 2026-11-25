@@ -683,8 +683,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # minor_version 5: mask the account email in the entry title, which HA
         # core repeats in its log messages. Titles the user changed are kept.
         title = entry.title
-        if match := _EMAIL_TITLE.fullmatch(title):
-            title = f"Mazda ({mask_email(match['v2'] or match['v1'])})"
+        if (match := _EMAIL_TITLE.fullmatch(title)) and (
+            masked := mask_email(match["v2"] or match["v1"])
+        ):
+            title = f"Mazda ({masked})"
         hass.config_entries.async_update_entry(entry, title=title, minor_version=5)
 
     return True
