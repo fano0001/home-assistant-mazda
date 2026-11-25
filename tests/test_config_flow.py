@@ -45,7 +45,7 @@ def _entry(region: str) -> MockConfigEntry:
         unique_id=f"sub-{region}",
         data=data,
         version=2,
-        minor_version=4,
+        minor_version=5,
     )
 
 
@@ -192,7 +192,7 @@ async def test_manual_paste_creates_entry(
         )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Mazda (driver@example.com)"
+    assert result["title"] == "Mazda (dri•••@example.com)"
     assert result["result"].unique_id == _SUB
     assert result["data"]["region"] == "MNAO"
     # Same shape the OAuth callback view would have handed the flow
@@ -268,7 +268,7 @@ async def test_reauth_manual_paste(hass: HomeAssistant, mock_setup_entry) -> Non
         unique_id=_SUB,
         data={"auth_implementation": DOMAIN, "region": "MME", "token": dict(TOKEN)},
         version=2,
-        minor_version=4,
+        minor_version=5,
     )
     entry.add_to_hass(hass)
 
@@ -354,6 +354,20 @@ async def test_account_lookups_share_one_client_on_ha_session(
     client.close.assert_not_awaited()
 
 
+async def test_title_falls_back_when_contact_address_is_not_an_email(
+    hass: HomeAssistant, mock_client, mock_setup_entry
+) -> None:
+    """A contact address that cannot be masked never reaches the title."""
+    mock_client.get_user_info = AsyncMock(
+        return_value={"userInfo": {"contactMailAddress": "not-an-email"}}
+    )
+
+    result = await _finish_manual(hass)
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == f"Mazda ({_SUB[:8]})"
+
+
 async def test_internal_id_failure_does_not_block_setup(
     hass: HomeAssistant, mock_client, mock_setup_entry
 ) -> None:
@@ -363,7 +377,7 @@ async def test_internal_id_failure_does_not_block_setup(
     result = await _finish_manual(hass, "MME")
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Mazda (driver@example.com)"
+    assert result["title"] == "Mazda (dri•••@example.com)"
     assert "conductor_internal_id" not in result["data"]
 
 

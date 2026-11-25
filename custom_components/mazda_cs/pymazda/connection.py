@@ -220,6 +220,24 @@ def tail(value, keep: int = 4) -> str:
     return "…" + text[-keep:]
 
 
+def mask_email(email: str) -> str:
+    """Mask the local part of an email address, keeping the domain.
+
+    Enough stays visible to tell two accounts apart, including plus-addresses
+    that share a beginning. A local part under 9 characters shows its first half,
+    rounded down, so never all of it. Returns "" for anything that is not an email
+    address.
+    """
+    local, _, domain = email.strip().rpartition("@")
+    if not local or not domain:
+        return ""
+    if len(local) >= 9:
+        head, end = local[:3], local[-2:]
+    else:
+        head, end = local[: len(local) // 2], ""
+    return f"{head}•••{end}@{domain}"
+
+
 def _connection_error(ex: BaseException) -> MazdaConnectionException:
     """Translate an aiohttp/timeout failure into the integration's error type."""
     if isinstance(ex, TimeoutError):

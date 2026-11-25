@@ -27,6 +27,7 @@ from .const import (
 )
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
+from .pymazda.connection import mask_email
 from .pymazda.exceptions import MazdaTermsNotAcceptedException
 
 if TYPE_CHECKING:
@@ -83,7 +84,7 @@ class MazdaOAuth2FlowHandler(
     """
 
     VERSION = 2
-    MINOR_VERSION = 4
+    MINOR_VERSION = 5
 
     DOMAIN = DOMAIN
 
@@ -334,9 +335,10 @@ class MazdaOAuth2FlowHandler(
             return self.async_abort(reason="cannot_connect")
 
         title = f"Mazda ({user_id[:8]})"
+        # HA core puts the entry title in its log messages, so mask the address.
         email = user_info.get("userInfo", {}).get("contactMailAddress", "")
-        if email:
-            title = f"Mazda ({email})"
+        if email and (masked := mask_email(email)):
+            title = f"Mazda ({masked})"
         cust_id = user_info.get("custId", "")
         if cust_id:
             data["conductor_customer_id"] = cust_id

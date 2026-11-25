@@ -10,12 +10,42 @@ from custom_components.mazda_cs import (
     _enable_all_notify_settings,
 )
 from custom_components.mazda_cs.diagnostics import TO_REDACT_INFO
-from custom_components.mazda_cs.pymazda.connection import Connection, _redact, tail
+from custom_components.mazda_cs.pymazda.connection import (
+    Connection,
+    _redact,
+    mask_email,
+    tail,
+)
 from custom_components.mazda_cs.pymazda.exceptions import MazdaException
 from custom_components.mazda_cs.pymazda.push import _register
 from custom_components.mazda_cs.pymazda.push._conductor import summarize_error_body
 
 VIN = "JM1TESTVIN0001234"
+
+
+@pytest.mark.parametrize(
+    ("email", "expected"),
+    [
+        ("a@example.com", "•••@example.com"),
+        ("al@example.com", "a•••@example.com"),
+        ("abc@example.com", "a•••@example.com"),
+        ("alex@example.com", "al•••@example.com"),
+        ("alexand@example.com", "ale•••@example.com"),
+        ("alexande@example.com", "alex•••@example.com"),
+        ("alexander@example.com", "ale•••er@example.com"),
+        # Two plus-addresses of one mailbox stay distinguishable.
+        ("alex+mazda@example.com", "ale•••da@example.com"),
+        ("alex+home@example.com", "ale•••me@example.com"),
+        (" alex@example.com ", "al•••@example.com"),
+        ("not-an-email", ""),
+        ("@example.com", ""),
+        ("alex@", ""),
+        ("", ""),
+    ],
+)
+def test_mask_email(email: str, expected: str) -> None:
+    """The local part is masked by length; anything but an address gives nothing."""
+    assert mask_email(email) == expected
 
 
 def test_redact_hides_account_identifiers() -> None:

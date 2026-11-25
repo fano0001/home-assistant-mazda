@@ -19,7 +19,7 @@ def _entry(options: dict) -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
         version=2,
-        minor_version=4,
+        minor_version=5,
         data={CONF_REGION: "MNAO"},
         options=options,
     )

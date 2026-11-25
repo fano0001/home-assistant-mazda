@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.setup import async_setup_component
+import pytest
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -87,7 +88,7 @@ async def test_migrate_entry_v2_1_to_v2_2_disables_push(hass: HomeAssistant) -> 
     assert await async_migrate_entry(hass, entry) is True
 
     # Later steps are fresh `if`s, so a v2.1 entry lands on the current minor in one pass.
-    assert entry.minor_version == 4
+    assert entry.minor_version == 5
     assert entry.options[CONF_ENABLE_PUSH] is False
 
 
@@ -106,7 +107,7 @@ async def test_migrate_entry_v2_2_to_v2_3_drops_enable_windows(
 
     assert await async_migrate_entry(hass, entry) is True
 
-    assert entry.minor_version == 4
+    assert entry.minor_version == 5
     assert "enable_windows" not in entry.options
     # Unrelated options survive the migration.
     assert entry.options[CONF_ENABLE_PUSH] is True
@@ -132,16 +133,32 @@ async def test_migrate_entry_v2_3_to_v2_4_removes_dev_sensors_switch(
 
     assert await async_migrate_entry(hass, entry) is True
 
-    assert entry.minor_version == 4
+    assert entry.minor_version == 5
     assert ent_reg.async_get(dev_switch.entity_id) is None
     assert ent_reg.async_get(charging.entity_id) is not None
     assert entry.options[CONF_ENABLE_DEV_SENSORS] is True
 
 
-async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> None:
-    """A current-version entry is left untouched by the migration hook."""
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Mazda (alexander@example.com)", "Mazda (ale•••er@example.com)"),
+        ("alexander@example.com", "Mazda (ale•••er@example.com)"),
+        # Not set by this integration, or already free of an address.
+        ("Alex's Mazda", "Alex's Mazda"),
+        ("Alex alexander@example.com", "Alex alexander@example.com"),
+        ("Mazda (1a2b3c4d)", "Mazda (1a2b3c4d)"),
+        ("Mazda (ale•••er@example.com)", "Mazda (ale•••er@example.com)"),
+        ("Mazda (•••@example.com)", "Mazda (•••@example.com)"),
+    ],
+)
+async def test_migrate_entry_v2_4_to_v2_5_masks_email_title(
+    hass: HomeAssistant, title: str, expected: str
+) -> None:
+    """v2.4 -> v2.5 masks the email in generated titles and keeps other titles."""
     entry = MockConfigEntry(
         domain=DOMAIN,
+        title=title,
         version=2,
         minor_version=4,
         data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
@@ -151,8 +168,26 @@ async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> Non
 
     assert await async_migrate_entry(hass, entry) is True
 
+    assert entry.minor_version == 5
+    assert entry.title == expected
+    assert entry.options == {CONF_ENABLE_PUSH: True}
+
+
+async def test_migrate_entry_current_version_is_noop(hass: HomeAssistant) -> None:
+    """A current-version entry is left untouched by the migration hook."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        minor_version=5,
+        data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
+        options={CONF_ENABLE_PUSH: True},
+    )
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is True
+
     assert entry.version == 2
-    assert entry.minor_version == 4
+    assert entry.minor_version == 5
     assert entry.options[CONF_ENABLE_PUSH] is True
 
 
@@ -294,7 +329,7 @@ async def test_failed_setup_stops_push_listener(hass: HomeAssistant) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN,
         version=2,
-        minor_version=4,
+        minor_version=5,
         data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
         options={CONF_ENABLE_PUSH: True},
     )
@@ -333,7 +368,7 @@ async def test_setup_loads_every_platform(hass: HomeAssistant) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN,
         version=2,
-        minor_version=4,
+        minor_version=5,
         data={CONF_REGION: "MNAO", "token": MOCK_TOKEN},
     )
     entry.add_to_hass(hass)
@@ -364,7 +399,7 @@ async def _remove_with_creds(hass: HomeAssistant, creds: dict | None):
     data = {CONF_REGION: "MNAO", "token": MOCK_TOKEN}
     if creds is not None:
         data[CONF_FCM_CREDENTIALS] = creds
-    entry = MockConfigEntry(domain=DOMAIN, version=2, minor_version=4, data=data)
+    entry = MockConfigEntry(domain=DOMAIN, version=2, minor_version=5, data=data)
     with (
         patch(f"{_REGISTER}.fis_delete_installation", AsyncMock()) as fis_delete,
         patch(f"{_REGISTER}.gcm_unregister", AsyncMock()) as gcm_unregister,

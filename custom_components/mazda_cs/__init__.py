@@ -49,7 +49,7 @@ from .fcm_listener import MazdaFcmListener
 from .pymazda.push._conductor import conductor_device_id_from_user_sub
 from .oauth import MazdaOAuth2Implementation
 from .pymazda.client import Client as MazdaAPI
-from .pymazda.connection import tail
+from .pymazda.connection import mask_email, tail
 from .pymazda.exceptions import (
     MazdaConnectionException,
     MazdaRateLimitException,
@@ -57,6 +57,12 @@ from .pymazda.exceptions import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Entry titles this integration set itself: "Mazda (email)" since v2, the bare
+# email in v1. A masked address contains "•" and does not match.
+_EMAIL_TITLE = re.compile(
+    r"Mazda \((?P<v2>[^\s()@•]+@[^\s()@•]+)\)|(?P<v1>[^\s()@•]+@[^\s()@•]+)"
+)
 
 
 @dataclass
@@ -681,6 +687,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ):
                 ent_reg.async_remove(reg_entry.entity_id)
         hass.config_entries.async_update_entry(entry, minor_version=4)
+
+    if entry.version == 2 and entry.minor_version == 4:
+        # minor_version 5: mask the account email in the entry title, which HA
+        # core repeats in its log messages. Titles the user changed are kept.
+        title = entry.title
+        if match := _EMAIL_TITLE.fullmatch(title):
+            title = f"Mazda ({mask_email(match['v2'] or match['v1'])})"
+        hass.config_entries.async_update_entry(entry, title=title, minor_version=5)
 
     return True
 
