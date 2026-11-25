@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+import uuid
 from typing import TYPE_CHECKING, Any
 
 import aiohttp
@@ -33,8 +34,24 @@ from .locales import resolve_locale
 
 _LOGGER = logging.getLogger(__name__)
 
-# https://github.com/fano0001/home-assistant-mazda/issues/69
-MAZDA_USER_AGENT = "MyMazda/8.0.0"
+# Mazda's edge (Akamai) rejects the default Home Assistant and aiohttp
+# User-Agents on some regional sign-in hosts with a 403 HTML page (issue #69).
+# MSAL sets no User-Agent on token requests, so the app sends Android's default.
+# Keep the Android version in step with x-client-OS (34 = Android 14) and the
+# model with x-client-DM.
+TOKEN_USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 14; Pixel 9 Build/AD1A.240530.047)"
+
+# MSAL sends these as query parameters when authorizing and as headers on token
+# requests (OAuth2Strategy.performTokenRequest in the APK).
+MSAL_CLIENT_PARAMS = {
+    "x-app-name": MSAL_APP_NAME,
+    "x-app-ver": MSAL_APP_VER,
+    "x-client-SKU": MSAL_CLIENT_SKU,
+    "x-client-Ver": MSAL_CLIENT_VER,
+    "x-client-OS": "34",  # Android SDK_INT
+    "x-client-DM": "Pixel 9",  # Android device model
+    "x-client-CPU": "arm64-v8a",  # Android ABI
+}
 
 
 def _build_oauth2_url(region: str, endpoint: str) -> str:
@@ -89,13 +106,7 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             "phone_number_max_length": str(phone_max),
             "email_verify_flg": "true",
             "login_user_restrict": "true",
-            "x-app-name": MSAL_APP_NAME,
-            "x-app-ver": MSAL_APP_VER,
-            "x-client-SKU": MSAL_CLIENT_SKU,
-            "x-client-Ver": MSAL_CLIENT_VER,
-            "x-client-OS": "34",  # Android SDK_INT
-            "x-client-DM": "Pixel 9",  # Android device model
-            "x-client-CPU": "arm64-v8a",  # Android ABI
+            **MSAL_CLIENT_PARAMS,
             "haschrome": "1",
             "return-client-request-id": "true",
             "client_info": "1",
@@ -104,32 +115,44 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
         return data
 
     async def async_resolve_external_data(self, external_data: Any) -> dict:
-        """Resolve external data to tokens with MyMazda User-Agent."""
-        data = {
-            "grant_type": "authorization_code",
-            "code": external_data["code"],
-            "redirect_uri": external_data["state"]["redirect_uri"],
-            "client_id": self.client_id,
-        }
-        data.update(self.extra_token_resolve_data)
+        """Resolve external data to tokens."""
+        return await super().async_resolve_external_data(external_data)
 
-        async with aiohttp.ClientSession(
-            headers={"User-Agent": MAZDA_USER_AGENT}
-        ) as session:
-            async with session.post(
+    async def _post_token(self, data: dict) -> tuple[aiohttp.ClientResponse, bytes]:
+        """POST to the token endpoint with the headers the app sends."""
+        headers = {
+            "User-Agent": TOKEN_USER_AGENT,
+            "client-request-id": str(uuid.uuid4()),
+            **MSAL_CLIENT_PARAMS,
+        }
+        # Use a fresh ClientSession (not the shared HA session) to avoid stale
+        # persistent connections to B2C which cause repeated HTML responses.
+        async with aiohttp.ClientSession() as session:
+            resp = await session.post(
                 self.token_url,
                 data=data,
+                headers=headers,
                 timeout=aiohttp.ClientTimeout(total=30),
-            ) as resp:
-                if resp.status >= 400:
-                    body = await resp.text()
-                    _LOGGER.error(
-                        "Token exchange failed — status=%s body=%s",
-                        resp.status,
-                        body,
-                    )
-                resp.raise_for_status()
-                return await resp.json()
+            )
+            return resp, await resp.read()
+
+    async def _token_request(self, data: dict) -> dict:
+        """Exchange the authorization code for tokens.
+
+        Replaces HA's version, which cannot send custom headers. Refreshes do
+        not come through here; see async_refresh_token. HA's config flow
+        handles the aiohttp errors raised here.
+        """
+        resp, body = await self._post_token({**data, "client_id": self.client_id})
+        if resp.status >= 400:
+            _LOGGER.warning(
+                "Token exchange failed — region=%s status=%s body=%s",
+                self._region,
+                resp.status,
+                " ".join(body.decode(errors="replace").split())[:200],
+            )
+        resp.raise_for_status()
+        return await resp.json()
 
     async def async_refresh_token(self, token: dict) -> dict:
         """Refresh tokens, handling B2C which returns text/html on session expiry."""
@@ -142,8 +165,6 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             bool(token.get("refresh_token")),
         )
 
-        # Use a fresh ClientSession (not the shared HA session) to avoid stale
-        # persistent connections to B2C which cause repeated HTML responses.
         refresh_data: dict = {
             "client_id": self.client_id,
             "grant_type": "refresh_token",
@@ -151,30 +172,34 @@ class MazdaOAuth2Implementation(LocalOAuth2ImplementationWithPkce):
             "scope": " ".join(OAUTH2_AUTH[self._region]["scopes"]),
         }
 
-        async with aiohttp.ClientSession(
-            headers={"User-Agent": MAZDA_USER_AGENT}
-        ) as session:
-            resp = await session.post(
-                self.token_url,
-                data=refresh_data,
-                timeout=aiohttp.ClientTimeout(total=30),
-            )
-            content_type = resp.headers.get("Content-Type", "")
-            _LOGGER.debug(
-                "Token refresh response — status=%s Content-Type=%s",
-                resp.status,
-                content_type,
-            )
-            body = await resp.read()
+        resp, body = await self._post_token(refresh_data)
+        content_type = resp.headers.get("Content-Type", "")
+        _LOGGER.debug(
+            "Token refresh response — status=%s Content-Type=%s",
+            resp.status,
+            content_type,
+        )
 
         # Azure AD B2C transiently returns text/html instead of JSON (e.g. during
         # service hiccups). This is NOT a permanent auth failure — raise a regular
         # exception so the coordinator retries on the next update cycle.
         # ConfigEntryAuthFailed is reserved for confirmed permanent failures (JSON error).
         if "text/html" in content_type:
+            # A 403 page comes from Mazda's edge, before the request reaches B2C.
+            # It says nothing about the refresh token, so it also just retries.
+            if resp.status == 403:
+                _LOGGER.warning(
+                    "Mazda's sign-in server blocked the token refresh "
+                    "(HTTP 403, region=%s). Will retry on next update cycle.",
+                    self._region,
+                )
+                raise Exception(
+                    "Mazda's sign-in server blocked the token refresh (HTTP 403) — will retry"
+                )
             _LOGGER.warning(
-                "B2C returned HTML on token refresh (token_age=%.1f min). "
+                "B2C returned HTML on token refresh (status=%s token_age=%.1f min). "
                 "Treating as transient — will retry on next update cycle.",
+                resp.status,
                 token_age_min if token_age_min is not None else -1,
             )
             raise Exception("B2C token refresh returned HTML — transient, will retry")
