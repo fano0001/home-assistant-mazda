@@ -171,5 +171,8 @@ Even if you pull to refresh in mymazda, the latest timestamp for vehicle status 
 ## Multiple Devices Detected
 Each MyMazda account can only be signed into one device at a time. To use the integration and the MyMazda app simultaneously, a secondary driver account can be created just for Home Assistant and provide access to the vehicle.
 
+## Why is "Tire pressure last updated" off by an hour or in the future?
+Mazda sends this time from the vehicle's clock, without a time zone, and the integration reads it in Home Assistant's time zone. If the vehicle's clock is incorrect, for example not changed for daylight saving time, the sensor is off by the same amount. Update the clock in the vehicle and the next drive's reading will be correct. A vehicle in another time zone than Home Assistant is affected the same way. Other "last updated" sensors don't use the vehicle's clock.
+
 # Translations
 The integration is available in English and German. Translation pull requests are welcome: copy [`translations/en.json`](https://github.com/fano0001/home-assistant-mazda/blob/main/custom_components/mazda_cs/translations/en.json) to `translations/<language>.json` (using Home Assistant's language code, `fr` for example), translate the values, and leave the keys and placeholders such as `{authorize_url}` unchanged. Anything left untranslated falls back to English.
