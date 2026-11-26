@@ -192,7 +192,7 @@ async def test_manual_paste_creates_entry(
         )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Mazda (dri•••@exa•••.com)"
+    assert result["title"] == "Mazda (dr•••@ex•••.com)"
     assert result["result"].unique_id == _SUB
     assert result["data"]["region"] == "MNAO"
     # Push is on by default for a new entry
@@ -379,7 +379,7 @@ async def test_internal_id_failure_does_not_block_setup(
     result = await _finish_manual(hass, "MME")
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Mazda (dri•••@exa•••.com)"
+    assert result["title"] == "Mazda (dr•••@ex•••.com)"
     assert "conductor_internal_id" not in result["data"]
 
 

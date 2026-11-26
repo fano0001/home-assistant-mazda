@@ -87,7 +87,7 @@ async def test_v1_upgrade_keeps_push_choice_and_masks_title(
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry) is True
-    assert entry.title == "Mazda (ale•••er@exa•••.com)"
+    assert entry.title == "Mazda (al•••er@ex•••.com)"
     # Push is never turned on for an upgraded entry on its own.
     assert not entry.options.get(CONF_ENABLE_PUSH, False)
 
@@ -170,14 +170,14 @@ async def test_migrate_entry_v2_3_to_v2_4_removes_dev_sensors_switch(
 @pytest.mark.parametrize(
     ("title", "expected"),
     [
-        ("Mazda (alexander@example.com)", "Mazda (ale•••er@exa•••.com)"),
-        ("alexander@example.com", "Mazda (ale•••er@exa•••.com)"),
+        ("Mazda (alexander@example.com)", "Mazda (al•••er@ex•••.com)"),
+        ("alexander@example.com", "Mazda (al•••er@ex•••.com)"),
         # Not set by this integration, or already free of an address.
         ("Alex's Mazda", "Alex's Mazda"),
         ("Alex alexander@example.com", "Alex alexander@example.com"),
         ("Mazda (1a2b3c4d)", "Mazda (1a2b3c4d)"),
-        ("Mazda (ale•••er@exa•••.com)", "Mazda (ale•••er@exa•••.com)"),
-        ("Mazda (•••@exa•••.com)", "Mazda (•••@exa•••.com)"),
+        ("Mazda (al•••er@ex•••.com)", "Mazda (al•••er@ex•••.com)"),
+        ("Mazda (•••@ex•••.com)", "Mazda (•••@ex•••.com)"),
     ],
 )
 async def test_migrate_entry_v2_4_to_v2_5_masks_email_title(

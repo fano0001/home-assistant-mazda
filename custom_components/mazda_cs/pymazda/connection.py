@@ -220,21 +220,19 @@ def tail(value, keep: int = 4) -> str:
 def mask_email(email: str) -> str:
     """Mask an email address, leaving enough to tell two accounts apart.
 
-    A local part under 9 characters shows its first half, rounded down, so never
-    all of it; a longer one also shows its end, for plus-addresses. The domain
-    shows its first half, at most 3 characters, and its ending: a personal domain
-    can identify its owner. Returns "" for anything that is not an email address.
+    The local part shows its first 2 characters (none if it has only 1), and from
+    9 characters also its last 2, for plus-addresses. The dots are always the
+    same, so they do not reveal its length. The domain shows only its first 2
+    characters and its ending: a personal domain can identify its owner. Returns
+    "" for anything that is not an email address.
     """
     local, _, domain = email.strip().rpartition("@")
     name, _, ending = domain.rpartition(".")
     if not local or not name:
         return ""
-    if len(local) >= 9:
-        head, end = local[:3], local[-2:]
-    else:
-        head, end = local[: len(local) // 2], ""
-    domain_head = name[: min(len(name) // 2, 3)]
-    return f"{head}•••{end}@{domain_head}•••.{ending}"
+    head = local[:2] if len(local) > 1 else ""
+    end = local[-2:] if len(local) >= 9 else ""
+    return f"{head}•••{end}@{name[:2]}•••.{ending}"
 
 
 def _connection_error(ex: BaseException) -> MazdaConnectionException:
