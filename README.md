@@ -1,12 +1,37 @@
 
+<p align="center">
+  <a href="https://github.com/fano0001/home-assistant-mazda/actions/workflows/tests.yaml?query=branch%3Amain">
+    <img src="https://img.shields.io/github/actions/workflow/status/fano0001/home-assistant-mazda/tests.yaml?branch=main&label=tests&logo=github&style=flat-square" alt="Tests">
+  </a>
+  <a href="https://github.com/fano0001/home-assistant-mazda/actions/workflows/hassfest.yaml?query=branch%3Amain">
+    <img src="https://img.shields.io/github/actions/workflow/status/fano0001/home-assistant-mazda/hassfest.yaml?branch=main&label=hassfest&logo=home-assistant&logoColor=fff&style=flat-square" alt="hassfest">
+  </a>
+  <a href="https://github.com/fano0001/home-assistant-mazda/actions/workflows/validate.yaml?query=branch%3Amain">
+    <img src="https://img.shields.io/github/actions/workflow/status/fano0001/home-assistant-mazda/validate.yaml?branch=main&label=HACS%20validation&logo=github&style=flat-square" alt="HACS validation">
+  </a>
+</p>
+<p align="center">
+  <a href="https://hacs.xyz/docs/faq/custom_repositories/">
+    <img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square" alt="HACS Custom">
+  </a>
+  <a href="https://github.com/fano0001/home-assistant-mazda/releases/latest">
+    <img src="https://img.shields.io/github/v/release/fano0001/home-assistant-mazda?style=flat-square" alt="Latest release">
+  </a>
+  <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffano0001%2Fhome-assistant-mazda%2Fmain%2Fhacs.json&query=%24.homeassistant&prefix=%E2%89%A5%20&label=Home%20Assistant&logo=home-assistant&logoColor=fff&color=41BDF5&style=flat-square" alt="Minimum Home Assistant version">
+  <a href="https://github.com/astral-sh/ruff">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square" alt="Ruff">
+  </a>
+  <img src="https://img.shields.io/github/license/fano0001/home-assistant-mazda?style=flat-square" alt="License">
+</p>
+
 # Introduction
 This is a fork of the Mazda Connected Services integration originally written by bdr99 that has been packaged into a HACS compatible custom integration. The original code was part of the Home Assistant core integrations prior to a DMCA takedown notice issue by Mazda Motor Corporation.  It should restore all functionality previously available in the core integration.
 
 # Installation
 
-## With HACS
+## With Marketplace (HACS)
 
-1. Add this repository as a custom repository in HACS.
+1. Add this repository as a custom repository in Marketplace (HACS).
 2. Download the integration.
 3. Restart Home Assistant
 
@@ -17,6 +42,9 @@ Copy the `mazda_cs` directory, from `custom_components` in this repository,
 and place it inside your Home Assistant Core installation's `custom_components` directory. Restart Home Assistant prior to moving on to the `Setup` section.
 
 `Note`: If installing manually, in order to be alerted about new releases, you will need to subscribe to releases from this repository.
+
+## Enable Updating to Pre-releases (betas/alphas)
+If you'd like to help with improving the integration, you can enable updating to pre-releases by clicking the three dots in the upper right on the integration page and selecting `Include Pre-releases`. Be mindful of accidentally updating to hot-fixes on lower versions, which can cause issues (skip these, a hot fix to the beta will follow).
 
 # Authentication
 
