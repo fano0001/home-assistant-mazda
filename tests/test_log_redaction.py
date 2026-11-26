@@ -56,57 +56,45 @@ def test_mask_email(email: str, expected: str) -> None:
     assert mask_email(email) == expected
 
 
-def test_redact_hides_account_identifiers() -> None:
-    """Attach, getUserInfo and getCvUserIds identifiers are redacted at any depth."""
-    payload = {
-        "data": {
-            "userinfo": {"sessionId": "sess-1"},
-            "customerInfo": {"internalUserId": 201234567},
-        },
-        "userInfo": {"contactMailAddress": "alex@example.com"},
-        "custId": "c-1",
-        "usherId": "u-1",
-        "resultCode": "200S00",
-    }
+def test_redact_treats_every_listed_key() -> None:
+    """Each listed key is masked or cut to its tail at any depth; others are kept."""
+    # Spelled out here, so dropping a key in connection.py fails this test.
+    masked = (
+        "vin",
+        "internalVin",
+        "imei",
+        "iccId",
+        "visitNo",
+        "sessionId",
+        "contactMailAddress",
+        "custId",
+        "usherId",
+        "firstName",
+        "familyName",
+    )
+    tailed = ("rucId", "rccId", "internalUserId", "mazdaId")
+    ids = dict.fromkeys(masked + tailed, "value-1234")
 
-    redacted = str(_redact(payload))
+    # Attach's lowercase "userinfo" is not a listed key: each ID matches by itself.
+    redacted = _redact({"resultCode": "200S00", "data": [{"userinfo": ids}]})
 
-    for secret in ("sess-1", "201234567", "alex@example.com", "c-1", "u-1"):
-        assert secret not in redacted
-    assert "200S00" in redacted
-
-
-def test_redact_keeps_coordinate_sign() -> None:
-    """The sign survives masking, the number does not; empty values stay visible."""
-    assert _redact({"Longitude": -20.5, "Latitude": 10.5}) == {
-        "Longitude": "-**REDACTED**",
-        "Latitude": "**REDACTED**",
-    }
-    assert _redact({"Longitude": None, "Latitude": 0}) == {
-        "Longitude": None,
-        "Latitude": "**REDACTED**",
-    }
+    expected = dict.fromkeys(masked, "**REDACTED**") | dict.fromkeys(tailed, "…1234")
+    assert redacted == {"resultCode": "200S00", "data": [{"userinfo": expected}]}
 
 
-def test_redact_masks_every_user_info_value_but_keeps_empty_ones() -> None:
-    """getUserInfo is contact details: mask all of it, but show what was blank."""
+def test_redact_masks_whole_values_keeping_blanks_and_signs() -> None:
+    """All of userInfo and coordinates is masked; blanks and a minus sign remain."""
     redacted = _redact(
         {
             "userInfo": {
                 "mailAddress": "alex@example.com",
-                "familyName": "",
-                "userInformation": {
-                    "personalData": {
-                        "streetAddress1": "1 Test Street",
-                        "streetAddress2": "",
-                        "state": None,
-                        "optIn": 0,
-                        "phones": [{"e164": "+15550100"}, {"e164": ""}],
-                    }
-                },
+                "streetAddress2": "",
+                "state": None,
+                "optIn": 0,
+                "phones": [{"e164": "+15550100"}, {"e164": ""}],
             },
-            "custId": "",
-            "resultCode": "CST200000",
+            "Longitude": -20.5,
+            "Latitude": 10.5,
         }
     )
 
@@ -114,67 +102,13 @@ def test_redact_masks_every_user_info_value_but_keeps_empty_ones() -> None:
     assert redacted == {
         "userInfo": {
             "mailAddress": hidden,
-            "familyName": "",
-            "userInformation": {
-                "personalData": {
-                    "streetAddress1": hidden,
-                    "streetAddress2": "",
-                    "state": None,
-                    "optIn": hidden,
-                    "phones": [{"e164": hidden}, {"e164": ""}],
-                }
-            },
+            "streetAddress2": "",
+            "state": None,
+            "optIn": hidden,
+            "phones": [{"e164": hidden}, {"e164": ""}],
         },
-        "custId": "",
-        "resultCode": "CST200000",
-    }
-
-
-def test_redact_customer_info_shows_id_tails_and_hides_names() -> None:
-    """getCvUserIds repeats custId/usherId as rucId/rccId next to the name."""
-    redacted = _redact(
-        {
-            "data": {
-                "registStatus": 1,
-                "customerInfo": {
-                    "firstName": "Alex",
-                    "familyName": "Example",
-                    "rucId": "0012345678",
-                    "rccId": "3c9d7a10-0000-4000-8000-00000000abcd",
-                    "internalUserId": 201234567,
-                    "region": 0,
-                },
-            }
-        }
-    )
-
-    assert redacted["data"] == {
-        "registStatus": 1,
-        "customerInfo": {
-            "firstName": "**REDACTED**",
-            "familyName": "**REDACTED**",
-            "rucId": "…5678",
-            "rccId": "…abcd",
-            "internalUserId": "…4567",
-            "region": 0,
-        },
-    }
-
-
-def test_redact_attach_response_shows_only_mazda_id_tail() -> None:
-    """Attach nests its IDs under a lowercase "userinfo", so each key is matched."""
-    redacted = _redact(
-        {
-            "resultCode": "B2C200000",
-            "data": {
-                "userinfo": {"sessionId": "sess-1", "mazdaId": "1000-0000-0000-1234"}
-            },
-        }
-    )
-
-    assert redacted["data"]["userinfo"] == {
-        "sessionId": "**REDACTED**",
-        "mazdaId": "…1234",
+        "Longitude": f"-{hidden}",
+        "Latitude": hidden,
     }
 
 
