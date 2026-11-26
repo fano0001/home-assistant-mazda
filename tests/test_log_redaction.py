@@ -161,6 +161,23 @@ def test_redact_customer_info_shows_id_tails_and_hides_names() -> None:
     }
 
 
+def test_redact_attach_response_shows_only_mazda_id_tail() -> None:
+    """Attach nests its IDs under a lowercase "userinfo", so each key is matched."""
+    redacted = _redact(
+        {
+            "resultCode": "B2C200000",
+            "data": {
+                "userinfo": {"sessionId": "sess-1", "mazdaId": "1000-0000-0000-1234"}
+            },
+        }
+    )
+
+    assert redacted["data"]["userinfo"] == {
+        "sessionId": "**REDACTED**",
+        "mazdaId": "…1234",
+    }
+
+
 @pytest.mark.parametrize(
     ("value", "expected"),
     [(VIN, "…1234"), ("ab", "…ab"), (None, "(MISSING)"), ("", "(MISSING)")],

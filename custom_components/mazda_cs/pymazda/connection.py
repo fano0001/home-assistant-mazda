@@ -165,8 +165,8 @@ _LOG_REDACT_KEYS = {
 }
 
 # Account IDs shown only by their tail. getCvUserIds repeats custId and usherId
-# as rucId and rccId.
-_LOG_TAIL_KEYS = {"rucId", "rccId", "internalUserId"}
+# as rucId and rccId; attach returns mazdaId.
+_LOG_TAIL_KEYS = {"rucId", "rccId", "internalUserId", "mazdaId"}
 
 
 def _mask(data):
