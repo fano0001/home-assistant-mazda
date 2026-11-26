@@ -1,6 +1,7 @@
 """Tests for MCS wire-format limits, push delivery, reconnects and dead links."""
 
 import asyncio
+import logging
 import time
 from unittest.mock import AsyncMock, MagicMock
 
@@ -86,8 +87,13 @@ def _idle_client(**kwargs) -> McsClient:
     return client
 
 
-async def test_failed_login_backs_off(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A rejected login tears the link down; reconnect waits double up to 900 s."""
+async def test_failed_login_backs_off(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A rejected login tears the link down; reconnect waits double up to 900 s.
+
+    Only the rejection on the first try is not logged as an error.
+    """
     states: list[bool] = []
     client = _idle_client(on_connection_state=states.append)
     failed = LoginResponse()
@@ -100,10 +106,17 @@ async def test_failed_login_backs_off(monkeypatch: pytest.MonkeyPatch) -> None:
     fake = _ModuleAsyncio(client, stop_after=11)
     monkeypatch.setattr(_mcs, "asyncio", fake)
 
-    await client._listen()
+    with caplog.at_level(logging.DEBUG):
+        await client._listen()
 
     assert fake.sleeps == [3, 6, 12, 24, 48, 96, 192, 384, 768, 900, 900]
     assert True not in states
+    levels = [
+        r.levelno
+        for r in caplog.records
+        if r.getMessage().startswith("MCS: login failed")
+    ]
+    assert levels == [logging.DEBUG] + [logging.ERROR] * 10
 
 
 async def test_connect_failures_back_off(monkeypatch: pytest.MonkeyPatch) -> None:

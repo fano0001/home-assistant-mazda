@@ -352,7 +352,17 @@ class McsClient:
                 msg.id, msg.jid, msg.stream_id, msg.server_timestamp, error_code, error_msg,
             )
             if has_error and error_code != 0:
-                _LOGGER.error("MCS: login failed — error_code=%d message=%r", error_code, error_msg)
+                # A just-issued device secret can be rejected on the first try
+                # and accepted on the retry. Every later login follows a backoff,
+                # which raises the delay above the minimum.
+                _LOGGER.log(
+                    logging.DEBUG
+                    if self._reconnect_delay == _RECONNECT_DELAY_MIN
+                    else logging.ERROR,
+                    "MCS: login failed — error_code=%d message=%r",
+                    error_code,
+                    error_msg,
+                )
                 raise ConnectionResetError(f"MCS login failed: {error_code}")
             _LOGGER.info("MCS: logged in successfully")
             self._persistent_ids = []
