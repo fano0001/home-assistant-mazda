@@ -164,9 +164,12 @@ async def test_login_sent_does_not_report_connected(
 async def test_monitor_dead_link_threshold(
     monkeypatch: pytest.MonkeyPatch, silent_heartbeats: float, dropped: bool
 ) -> None:
-    """A link is dropped only after two unanswered pings; otherwise it is pinged."""
+    """A link is dropped only after two unanswered pings; otherwise it is pinged.
+
+    A dead link is aborted, not closed gracefully, so _recv unblocks at once.
+    """
     client = _idle_client()
-    client._writer = MagicMock()
+    client._writer = writer = MagicMock()
     client._last_message_time = time.monotonic() - silent_heartbeats * client._client_hb
     monkeypatch.setattr(client, "_send", AsyncMock())
     monkeypatch.setattr(client, "_close_writer", AsyncMock())
@@ -175,6 +178,7 @@ async def test_monitor_dead_link_threshold(
     await client._monitor()
 
     assert client._close_writer.await_count == int(dropped)
+    assert writer.transport.abort.call_count == int(dropped)
     assert client._send.await_count == int(not dropped)
 
 

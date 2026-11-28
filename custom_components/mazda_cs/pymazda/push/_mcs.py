@@ -463,9 +463,11 @@ class McsClient:
             ):
                 age = time.monotonic() - self._last_message_time
                 if age >= _DEAD_LINK_HEARTBEATS * self._client_hb:
-                    # Two pings went unanswered. Closing unblocks _recv, so
-                    # _listen reconnects instead of waiting on the OS to give up.
+                    # Two pings went unanswered. Aborting unblocks _recv at once,
+                    # so _listen reconnects. A graceful close would wait 30 s
+                    # for a TLS close_notify the dead peer never sends.
                     _LOGGER.debug("MCS: no traffic for %.0fs, dropping connection", age)
+                    self._writer.transport.abort()
                     await self._close_writer()
                 elif age >= self._client_hb:
                     try:
